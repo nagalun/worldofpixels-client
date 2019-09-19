@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<head>
+<title>OWOP dev</title>
+<style>
+td,tr,table {
+	border-spacing: 0;
+	padding: 0;
+}
+img {
+	display: block;
+}
+</style>
+<script src="/owop.js" async defer></script>
+</head>
+<body>
+hi:
+<a href="https://uvias.com/api/loginto/owop">Login</a>
+<a href="https://uvias.com/logoff?service=owop">Logoff</a>
+<p>nothing much here yet, but here is what the server sends you:</p>
+<span id="log">
+</span>
+<p>And server status:</p>
+<iframe src="/api/status" style="width: 100%;"></iframe>
+<!--<table cellspacing="0">
+<tr>
+	<td><img src="/api/worlds/main/view/-2/-2"></td>
+	<td><img src="/api/worlds/main/view/-1/-2"></td>
+	<td><img src="/api/worlds/main/view/0/-2"></td>
+	<td><img src="/api/worlds/main/view/1/-2"></td>
+</tr>
+<tr>
+	<td><img src="/api/worlds/main/view/-2/-1"></td>
+	<td><img src="/api/worlds/main/view/-1/-1"></td>
+	<td><img src="/api/worlds/main/view/0/-1"></td>
+	<td><img src="/api/worlds/main/view/1/-1"></td>
+</tr>
+<tr>
+	<td><img src="/api/worlds/main/view/-2/0"></td>
+	<td><img src="/api/worlds/main/view/-1/0"></td>
+	<td><img src="/api/worlds/main/view/0/0"></td>
+	<td><img src="/api/worlds/main/view/1/0"></td>
+</tr>
+<tr>
+	<td><img src="/api/worlds/main/view/-2/1"></td>
+	<td><img src="/api/worlds/main/view/-1/1"></td>
+	<td><img src="/api/worlds/main/view/0/1"></td>
+	<td><img src="/api/worlds/main/view/1/1"></td>
+</tr>
+</table>-->
+<script>
+var l = document.getElementById("log");
+console.log = function(...a) {
+	this(...a);
+	l.append(...a, document.createElement('br'));
+	//if (a[0].indexOf("main") != -1) reloadimgs();
+}.bind(console.log);
+
+function reloadimgs() {
+	[...document.getElementsByTagName("img")].forEach(e => {
+		if (e.complete && e.naturalHeight == 0) {
+			e.src = e.src;
+		}
+	});
+}
+</script>
+</body>
+</html>
