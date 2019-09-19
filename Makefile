@@ -21,15 +21,15 @@ LD_DBG   =
 CPPFLAGS += -std=c++17
 CPPFLAGS += -MMD -MP
 
-.PHONY: all rel dirs clean
+.PHONY: all rel dirs static clean
 
 all: CPPFLAGS += $(OPT_DBG)
 all: LDFLAGS += $(LD_DBG)
-all: dirs $(TARGET)
+all: dirs static $(TARGET)
 
 rel: CPPFLAGS += $(OPT_REL)
 rel: LDFLAGS  += $(LD_REL)
-rel: dirs $(TARGET)
+rel: dirs static $(TARGET)
 
 $(TARGET): $(OBJ_FILES)
 	$(CXX) $(LDFLAGS) -o $@ $^ $(LDLIBS)
@@ -37,11 +37,13 @@ $(TARGET): $(OBJ_FILES)
 dirs:
 	mkdir -p build out
 
+static:
+	cp -RT static/ out/
+
 build/%.o: src/%.cpp
 	$(CXX) $(CPPFLAGS) -c -o $@ $<
 
 clean:
 	- $(RM) -r build
-	- rmdir out
 
 -include $(DEP_FILES)
