@@ -13,13 +13,14 @@ CC  = emcc
 TARGET    = out/owop.js
 
 OPT_REL   = -O2
-LD_REL    = -s
+LD_REL    = --closure 1 -O2 # for post-compile emscripten stuff
 
 OPT_DBG  = -g3
 LD_DBG   =
 
-CPPFLAGS += -std=c++17
+CPPFLAGS += -std=c++17 -fno-exceptions
 CPPFLAGS += -MMD -MP
+LDFLAGS  += -s FILESYSTEM=0 -s ENVIRONMENT=web
 
 .PHONY: all rel dirs static clean
 

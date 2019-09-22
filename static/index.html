@@ -48,10 +48,9 @@ hi:
 </tr>
 </table>-->
 <script>
-var l = document.getElementById("log");
 console.log = function(...a) {
 	this(...a);
-	l.append(...a, document.createElement('br'));
+	document.getElementById("log").append(...a, document.createElement('br'));
 	//if (a[0].indexOf("main") != -1) reloadimgs();
 }.bind(console.log);
 
