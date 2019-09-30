@@ -1,32 +1,34 @@
-#include "jswebsockets.hpp"
-
 #include <cstdint>
 #include <cstddef>
+#include <cstdio>
 #include <cctype>
+#include <map>
+#include <string>
 
-void ws_open(void *) {
-	puts("opened");
+#include "Client.hpp"
+
+void e(std::map<u8, std::function<void(std::string)>>& m) {
+	m.emplace(u8(0), [] (std::string ee) {
+		std::puts(ee.c_str());
+	});
 }
 
-void ws_close(void *, std::uint16_t code) {
-	puts("closed");
-}
-
-void ws_msg(void *, char * buf, std::size_t sz, bool) {
-	for (int i = 0; i < sz; i++) {
-		if (!std::isprint(buf[i])) {
-			buf[i] = '?';
-		}
-	}
-
-	fwrite(buf, sizeof(char), sz, stdout);
-	putchar('\n');
+void test() {
+	std::map<u8, std::function<void(std::string)>> tmap;
+	e(tmap);
+	std::string ewr("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+	std::string er("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+	std::string wr("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+	std::string ew("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+	std::string rwr("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+	u8 trash[60] = {0};
+	tmap.find(0)->second(ewr + "hello");
 }
 
 int main() {
-	js_ws_on_open(ws_open);
-	js_ws_on_close(ws_close);
-	js_ws_on_message(ws_msg);
+	Client c;
+	//test();
 
-	js_ws_open("wss://dev.ourworldofpixels.com", 30, "OWOP", 4);
+	c.open("main");
+	//test();
 }

@@ -15,12 +15,16 @@ TARGET    = out/owop.js
 OPT_REL   = -O2
 LD_REL    = --closure 1 -O2 # for post-compile emscripten stuff
 
-OPT_DBG  = -g3
-LD_DBG   =
+OPT_DBG  = -g4 -s ASSERTIONS=2 -s STACK_OVERFLOW_CHECK=2 -s DEMANGLE_SUPPORT=1
+LD_DBG   = -g4 -s ASSERTIONS=2 -s STACK_OVERFLOW_CHECK=2 -s DEMANGLE_SUPPORT=1
+
+EM_FEATURES = #-s USE_LIBPNG=1 -s USE_WEBGL2=1
+CPPFLAGS += $(EM_FEATURES)
+LDFLAGS  += $(EM_FEATURES)
 
 CPPFLAGS += -std=c++17 -fno-exceptions
 CPPFLAGS += -MMD -MP
-LDFLAGS  += -s FILESYSTEM=0 -s ENVIRONMENT=web
+LDFLAGS  += -s ENVIRONMENT=web #-s WEBGL2_BACKWARDS_COMPATIBILITY_EMULATION=1
 
 .PHONY: all rel dirs static clean
 
