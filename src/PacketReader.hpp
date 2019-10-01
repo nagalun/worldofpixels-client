@@ -1,13 +1,13 @@
 #pragma once
 
-#include <map>
+#include <unordered_map>
 #include <functional>
 
 #include "explints.hpp"
 
 class PacketReader {
 	using OpCode = u8;
-	std::map<OpCode, std::function<void(const u8 *, sz_t)>> handlers;
+	std::unordered_map<OpCode, std::function<void(const u8 *, sz_t)>> handlers;
 
 public:
 	PacketReader();

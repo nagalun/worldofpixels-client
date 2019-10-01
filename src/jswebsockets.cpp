@@ -5,9 +5,6 @@
 #include <cstdlib>
 #include <cstring>
 
-#include <string>
-#include <cstdio>
-
 static char * msg_buf = nullptr;
 static std::size_t msg_buf_sz = 0;
 
@@ -46,15 +43,13 @@ EM_JS(bool, js_ws_open, (const char * url, std::size_t len, const char * proto, 
 	Module.JSWS.ws.onopen = Module['_js_ws_call_on_open'];
 	Module.JSWS.ws.onclose = function(e) { Module['_js_ws_call_on_close'](e.code); };
 	Module.JSWS.ws.onmessage = function(e) {
-		console.log("message data size: ", e.data.byteLength);
 		var data = e.data;
 		if (data.byteLength > Module.JSWS.bufSize) {
 			Module.JSWS.bufPtr = Module['_js_ws_prepare_msg_buffer'](data.byteLength);
-			console.log("got buffer ptr: ", Module.JSWS.bufPtr);
 			Module.JSWS.bufSize = Module['HEAP32'][Module.JSWS.bufPtr / Int32Array.BYTES_PER_ELEMENT];
 		}
 
-		//Module['HEAPU8'].set(new Uint8Array(data), Module.JSWS.bufPtr);
+		Module['HEAPU8'].set(new Uint8Array(data), Module.JSWS.bufPtr);
 		Module['_js_ws_call_on_message'](data.byteLength);
 	};
 
@@ -103,15 +98,11 @@ char * js_ws_prepare_msg_buffer(std::size_t sz) {
 
 	if (sz > msg_buf_sz) {
 		std::free(msg_buf);
-//	std::fputs("allocating buffer of size: ", stdout);
-//	std::puts(std::to_string(int(sz)).c_str());
 		msg_buf = static_cast<char *>(std::malloc(sz));
 		msg_buf_sz = sz;
 	}
 
-	std::fputs("returning buf ptr: ", stdout);
-	std::puts(std::to_string(int(msg_buf)).c_str());
-	//std::memcpy(msg_buf, &msg_buf_sz, sizeof(std::size_t));
+	std::memcpy(msg_buf, &msg_buf_sz, sizeof(std::size_t));
 	return msg_buf;
 }
 

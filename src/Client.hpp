@@ -1,17 +1,21 @@
 #pragma once
 
 #include <memory>
+#include <unordered_map>
 #include <string>
 #include <string_view>
 
 #include "PacketReader.hpp"
 #include "explints.hpp"
 
-//#include "World.hpp"
+#include "World.hpp"
+#include "User.hpp"
 
 class Client {
 	PacketReader pr;
-	//std::unique_ptr<World> world;
+	std::unordered_map<User::Id, User> users;
+	std::unique_ptr<World> world;
+	User::Id selfUid;
 
 public:
 	Client();
