@@ -93,6 +93,11 @@ void Client::wsOpen() {
 
 void Client::wsClose(u16 code) {
 	std::printf("[Client] Ws closed: %u\n", code);
+	preJoinSelfCursorData = nullptr;
+	world = nullptr;
+	users.clear();
+	selfUid = 0;
+	globalCursorCount = 0;
 }
 
 void Client::wsMessage(const char * buf, sz_t s, bool) {

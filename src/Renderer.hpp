@@ -3,6 +3,8 @@
 #include <utility>
 #include <vector>
 
+#include <glm/ext/matrix_float4x4.hpp>
+
 #include "Camera.hpp"
 #include "Chunk.hpp"
 
@@ -13,6 +15,9 @@ class Renderer : public Camera {
 	int ctxInfo;
 	int vpWidth;
 	int vpHeight;
+	glm::mat4 view; // view matrix
+	glm::mat4 projection;
+	glm::mat4 model;
 
 public:
 	Renderer(World&);
@@ -32,11 +37,15 @@ private:
 
 	void getViewportSize();
 
+	bool setupView();
+	bool setupProjection();
+	bool setupRenderingContext();
+
 	bool activateRenderingContext();
 	void destroyRenderingContext();
+
 	void startRenderLoop();
 	void stopRenderLoop();
 
 	static void doRender(void *);
-	static int emEvent(int, const void *, void *);
 };
