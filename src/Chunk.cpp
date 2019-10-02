@@ -1,6 +1,8 @@
 #include "Chunk.hpp"
 
-#include <emscripten/fetch.h>
+#include <cstdio>
+
+#include <emscripten.h>
 
 #include "rle.hpp"
 
@@ -18,15 +20,18 @@ static_assert((Chunk::size % Chunk::protectionAreaSize) == 0,
 static_assert((Chunk::pc & (Chunk::pc - 1)) == 0,
 	"size / protectionAreaSize must result in a power of 2");
 
-static void destroyFetch(emscripten_fetch_t * e) {
-	emscripten_fetch_close(e);
+static void destroyWget(void * e) {
+	if (e) {
+		emscripten_async_wget2_abort(reinterpret_cast<int>(e));
+		//std::printf("Cancelled chunk request\n");
+	}
 }
 
 Chunk::Chunk(Pos x, Pos y, World& w)
 : w(w),
   x(x),
   y(y),
-  loaderRequest(nullptr, destroyFetch),
+  loaderRequest(nullptr, destroyWget),
   canUnload(false),
   protectionsLoaded(false) { // to check if I need to 0-fill the protection array
 	bool readerCalled = false;
@@ -36,18 +41,13 @@ Chunk::Chunk(Pos x, Pos y, World& w)
 		return true;
 	});
 
-	emscripten_fetch_attr_t attr;
-	emscripten_fetch_attr_init(&attr);
-	strcpy(attr.requestMethod, "GET");
-
-	attr.attributes = EMSCRIPTEN_FETCH_LOAD_TO_MEMORY;
-	attr.onsuccess = Chunk::loadCompleted;
-	attr.onerror = Chunk::loadFailed;
-	attr.userData = this;
-
-	loaderRequest.reset(emscripten_fetch(&attr, w.getChunkUrl(x, y)));
+	loaderRequest.reset(reinterpret_cast<void *>(emscripten_async_wget2_data(
+			w.getChunkUrl(x, y), "GET", nullptr, this, true,
+			Chunk::loadCompleted, Chunk::loadFailed, nullptr)));
 
 	preventUnloading(false);
+
+	std::printf("[Chunk] Created (%i, %i)\n", x, y);
 }
 
 bool Chunk::setPixel(u16 x, u16 y, RGB_u clr) {
@@ -95,12 +95,21 @@ void Chunk::preventUnloading(bool state) {
 	canUnload = !state;
 }
 
-void Chunk::loadCompleted(emscripten_fetch_t * e) {
-	Chunk& c = *static_cast<Chunk *>(e->userData);
-	if (e->status == 200) {
-		const u8 * buf = reinterpret_cast<const u8 *>(e->data);
-		// disgusting const cast
-		c.data.readFileOnMem(const_cast<u8 *>(buf), e->numBytes);
+Chunk::Key Chunk::key(Chunk::Pos x, Chunk::Pos y) {
+	union {
+		struct {
+			Chunk::Pos x;
+			Chunk::Pos y;
+		};
+		Chunk::Key xy;
+	} k = {x, y};
+	return k.xy;
+}
+
+void Chunk::loadCompleted(unsigned, void * e, void * buf, unsigned len) {
+	Chunk& c = *static_cast<Chunk *>(e);
+	if (len) {
+		c.data.readFileOnMem(static_cast<u8 *>(buf), len);
 	} else { // 204
 		c.data.allocate(Chunk::size, Chunk::size, c.w.getBackgroundColor());
 	}
@@ -113,13 +122,18 @@ void Chunk::loadCompleted(emscripten_fetch_t * e) {
 	c.loaderRequest = nullptr;
 
 	c.w.signalChunkLoaded(c);
+
+	std::printf("[Chunk] Loaded (%i, %i)\n", c.x, c.y);
 }
 
-void Chunk::loadFailed(emscripten_fetch_t * e) {
-	Chunk& c = *static_cast<Chunk *>(e->userData);
+void Chunk::loadFailed(unsigned, void * e, int code, const char * err) {
+	Chunk& c = *static_cast<Chunk *>(e);
 	// what do?
 	//c.data.allocate(Chunk::size, Chunk::size, c.w.getBackgroundColor());
 	c.preventUnloading(false);
 	c.protectionData.fill(0);
+
+	std::printf("[Chunk] Load failed (%i, %i): %s\n", c.x, c.y, err);
+
 	c.loaderRequest = nullptr;
 }

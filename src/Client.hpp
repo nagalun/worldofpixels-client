@@ -9,16 +9,20 @@
 #include "explints.hpp"
 
 #include "World.hpp"
+#include "SelfCursor.hpp"
 #include "User.hpp"
 
 class Client {
 	PacketReader pr;
 	std::unordered_map<User::Id, User> users;
 	std::unique_ptr<World> world;
+	std::unique_ptr<SelfCursor> preJoinSelfCursorData;
 	User::Id selfUid;
+	u32 globalCursorCount;
 
 public:
 	Client();
+	~Client();
 
 	bool open(std::string_view worldToJoin);
 	void close();

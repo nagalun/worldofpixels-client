@@ -7,13 +7,23 @@
 
 #include "PacketDefinitions.hpp"
 
-Client::Client() {
+Client::Client()
+: selfUid(0) {
 	js_ws_on_open(Client::doWsOpen);
 	js_ws_on_close(Client::doWsClose);
 	js_ws_on_message(Client::doWsMessage);
 	js_ws_set_user_data(this);
 
 	registerPacketTypes();
+}
+
+Client::~Client() {
+	if (js_ws_get_ready_state() != EWsReadyState::CLOSED) {
+		js_ws_close(4001);
+	}
+
+	js_ws_set_user_data(nullptr); // prev ptr won't be valid when i return
+	std::puts("[Client] Destroyed");
 }
 
 bool Client::open(std::string_view worldToJoin) {
@@ -45,16 +55,18 @@ void Client::registerPacketTypes() {
 		std::printf("AuthError: %s\n", processor.c_str());
 	});
 
-	pr.on<CursorData>([] (net::Cursor selfCur, net::Bucket paint, net::Bucket chat, bool canChat, bool canPaint) {
+	pr.on<CursorData>([this] (net::Cursor selfCur, net::Bucket paint, net::Bucket chat, bool canChat, bool canPaint) {
 		auto [cid, x, y, step, tid] = selfCur;
 		auto [prate, pper, pallowance] = paint;
 		auto [crate, cper, callowance] = chat;
 
 		std::printf("CursorData: ID=%u X=%i Y=%i Step=%u ToolID=%u PBucketRate=%u PBucketPer=%u PBucketAllowance=%f CBucketRate=%u CBucketPer=%u CBucketAllowance=%f CanChat=%u CanPaint=%u\n",
 				cid, x, y, step, tid, prate, pper, pallowance, crate, cper, callowance, canChat, canPaint);
+
+		preJoinSelfCursorData = std::make_unique<SelfCursor>(users.at(selfUid), cid, x, y, step, tid, Bucket(prate, pper, pallowance), Bucket(crate, cper, callowance), canChat, canPaint);
 	});
 
-	pr.on<WorldData>([] (std::string worldName, std::string motd, u32 bgClr, bool restricted, std::optional<User::Id> owner) {
+	pr.on<WorldData>([this] (std::string worldName, std::string motd, u32 bgClr, bool restricted, std::optional<User::Id> owner) {
 		std::printf("WorldData: Name=%s BgClr=%X Restricted=%u Owner=",
 				worldName.c_str(), bgClr, restricted);
 		if (owner) {
@@ -64,29 +76,28 @@ void Client::registerPacketTypes() {
 		}
 
 		std::puts(motd.c_str());
+
+		world = std::make_unique<World>(std::move(worldName), std::move(preJoinSelfCursorData), RGB_u{.rgb = bgClr}, restricted, std::move(owner));
 	});
 
-	pr.on<Stats>([] (u32 worldCursors, u32 globalCursors) {
+	pr.on<Stats>([this] (u32 worldCursors, u32 globalCursors) { // this is only received if we're in a world
 		std::printf("Stats: CursorsInWorld=%u CursorsInServer=%u\n", worldCursors, globalCursors);
+		world->setCursorCount(worldCursors);
+		globalCursorCount = globalCursors;
 	});
 }
 
 void Client::wsOpen() {
-	std::puts("Ws opened");
+	std::puts("[Client] Ws opened");
 }
 
 void Client::wsClose(u16 code) {
-	std::string cstr(std::to_string(code));
-	std::fputs("Ws closed: ", stdout);
-	std::puts(cstr.c_str());
+	std::printf("[Client] Ws closed: %u\n", code);
 }
 
 void Client::wsMessage(const char * buf, sz_t s, bool) {
 	if (!pr.read(reinterpret_cast<const u8 *>(buf), s)) {
-		std::string opc(std::to_string(u16(buf[0])));
-		std::fputs("Unknown message received, opcode: ", stderr);
-		std::fputs(opc.c_str(), stderr);
-		std::fputc('\n', stderr);
+		std::fprintf(stderr, "[Client] Unknown message received, opcode: %u\n", buf[0]);
 	}
 }
 
@@ -96,7 +107,9 @@ void Client::doWsOpen(void * d) {
 }
 
 void Client::doWsClose(void * d, u16 code) {
-	static_cast<Client *>(d)->wsClose(code);
+	if (d) { // ws closes after Client gets destroyed
+		static_cast<Client *>(d)->wsClose(code);
+	}
 }
 
 void Client::doWsMessage(void * d, char * buf, sz_t s, bool txt) {

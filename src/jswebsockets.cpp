@@ -19,8 +19,6 @@ EM_JS(bool, js_ws_open, (const char * url, std::size_t len, const char * proto, 
 	if (!Module.JSWS) {
 		Module.JSWS = {
 			ws: null,
-			td: new TextDecoder('utf-8'),
-			te: new TextEncoder('utf-8'),
 			bufSize: 0,
 			bufPtr: -1
 		};
@@ -31,8 +29,8 @@ EM_JS(bool, js_ws_open, (const char * url, std::size_t len, const char * proto, 
 	}
 
 	try {
-		var urlstr = Module.JSWS.td.decode(Module['HEAPU8'].subarray(url, url + len));
-		var protostr = Module.JSWS.td.decode(Module['HEAPU8'].subarray(proto, proto + protoLen));
+		var urlstr = Module.TXT.decode(url, len);
+		var protostr = Module.TXT.decode(proto, protoLen);
 		Module.JSWS.ws = new WebSocket(urlstr, protostr);
 	} catch (e) {
 		console.log('js_ws_open:', e);
@@ -65,7 +63,7 @@ EM_JS(void, js_ws_send, (const char * buf, std::size_t len), {
 });
 
 EM_JS(void, js_ws_send_str, (const char * buf, std::size_t len), {
-	Module.JSWS.ws.send(Module.JSWS.td.decode(Module['HEAPU8'].subarray(buf, buf + len)));
+	Module.JSWS.ws.send(Module.TXT.decode(buf, len));
 });
 
 EM_JS(EWsReadyState, js_ws_get_ready_state, (void), {

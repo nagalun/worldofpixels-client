@@ -17,7 +17,6 @@ constexpr u8 popc(u32 n) {
 }
 
 class World;
-struct emscripten_fetch_t;
 
 class Chunk {
 public:
@@ -42,7 +41,7 @@ private:
 	PngImage data;
 	std::array<u32, pc * pc> protectionData; // split one chunk to protection cells
 	// with specific per-world, or general uvias roles
-	std::unique_ptr<emscripten_fetch_t, void(*)(emscripten_fetch_t *)> loaderRequest;
+	std::unique_ptr<void, void(*)(void *)> loaderRequest;
 	bool canUnload;
 	bool protectionsLoaded;
 
@@ -61,7 +60,9 @@ public:
 	bool shouldUnload() const;
 	void preventUnloading(bool);
 
+	static Key key(Pos, Pos);
+
 private:
-	static void loadCompleted(emscripten_fetch_t *);
-	static void loadFailed(emscripten_fetch_t *);
+	static void loadCompleted(unsigned, void * e, void * buf, unsigned len);
+	static void loadFailed(unsigned, void * e, int code, const char * err);
 };

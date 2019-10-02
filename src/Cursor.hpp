@@ -37,4 +37,6 @@ public:
 
 	User& getUser() const;
 	Tid getToolId() const;
+	
+	void setPos(WorldPos, WorldPos, Step);
 };
