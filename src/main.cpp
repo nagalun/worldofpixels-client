@@ -3,6 +3,8 @@
 #include <emscripten/html5.h>
 
 #include <memory>
+#include <exception>
+#include <new>
 
 #include "jstext.hpp"
 
@@ -13,6 +15,13 @@ int main() {
 	emscripten_set_beforeunload_callback(nullptr, [] (int, const void *, void *) -> const char * {
 		cl = nullptr;
 		return nullptr;
+	});
+
+	std::set_new_handler([] {
+		std::puts("OOM detected");
+		if (!cl->freeMemory()) {
+			std::terminate();
+		}
 	});
 
 	cl = std::make_unique<Client>();

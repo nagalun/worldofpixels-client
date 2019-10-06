@@ -42,11 +42,18 @@ private:
 	std::array<u32, pc * pc> protectionData; // split one chunk to protection cells
 	// with specific per-world, or general uvias roles
 	std::unique_ptr<void, void(*)(void *)> loaderRequest;
+	//u32 texUnit;
+	u32 texHdl;
 	bool canUnload;
 	bool protectionsLoaded;
 
 public:
 	Chunk(Pos x, Pos y, World&);
+
+	~Chunk();
+
+	Pos getX() const;
+	Pos getY() const;
 
 	bool setPixel(u16 x, u16 y, RGB_u);
 	RGB_u getPixel(u16 x, u16 y) const;
@@ -59,6 +66,9 @@ public:
 	bool isReady() const;
 	bool shouldUnload() const;
 	void preventUnloading(bool);
+
+	u32 getGlTexture();
+	void deleteTexture();
 
 	static Key key(Pos, Pos);
 

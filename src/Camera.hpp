@@ -12,4 +12,10 @@ public:
 	float getX() const;
 	float getY() const;
 	float getZoom() const;
+
+	void setX(float);
+	void setY(float);
+	void setZoom(float);
+	
+	void translate(float, float);
 };

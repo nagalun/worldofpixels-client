@@ -37,6 +37,16 @@ void Client::close() {
 	js_ws_close(4000);
 }
 
+bool Client::freeMemory() {
+	if (world && (world->freeMemory() /*|| world->freeMemory(true)*/)) {
+		return true;
+	}
+
+	std::puts("[Client] Couldn't free any memory. Fasten your seatbelts.");
+	return false;
+}
+
+
 void Client::registerPacketTypes() {
 	pr.on<AuthProgress>([] (std::string currentProcessor) {
 		std::printf("AuthProgress: %s\n", currentProcessor.c_str());

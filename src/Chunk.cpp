@@ -3,6 +3,7 @@
 #include <cstdio>
 
 #include <emscripten.h>
+#include <GLES2/gl2.h>
 
 #include "rle.hpp"
 
@@ -20,9 +21,21 @@ static_assert((Chunk::size % Chunk::protectionAreaSize) == 0,
 static_assert((Chunk::pc & (Chunk::pc - 1)) == 0,
 	"size / protectionAreaSize must result in a power of 2");
 
+EM_JS(void, actually_abort_async_wget2, (int hdl), {
+	var http = Browser.wgetRequests[hdl];
+	if (http) {
+		http.onload = null;
+		http.onerror = null;
+		http.onprogress = null;
+		http.onabort = null;
+		http.abort();
+		delete Browser.wgetRequests[hdl];
+	}
+});
+
 static void destroyWget(void * e) {
 	if (e) {
-		emscripten_async_wget2_abort(reinterpret_cast<int>(e));
+		actually_abort_async_wget2(reinterpret_cast<int>(e));
 		//std::printf("Cancelled chunk request\n");
 	}
 }
@@ -32,6 +45,7 @@ Chunk::Chunk(Pos x, Pos y, World& w)
   x(x),
   y(y),
   loaderRequest(nullptr, destroyWget),
+  texHdl(0),
   canUnload(false),
   protectionsLoaded(false) { // to check if I need to 0-fill the protection array
 	bool readerCalled = false;
@@ -48,6 +62,20 @@ Chunk::Chunk(Pos x, Pos y, World& w)
 	preventUnloading(false);
 
 	std::printf("[Chunk] Created (%i, %i)\n", x, y);
+}
+
+Chunk::~Chunk() {
+	std::puts("[Chunk] Destroyed");
+	deleteTexture();
+	w.signalChunkUnloaded(*this);
+}
+
+Chunk::Pos Chunk::getX() const {
+	return x;
+}
+
+Chunk::Pos Chunk::getY() const {
+	return y;
 }
 
 bool Chunk::setPixel(u16 x, u16 y, RGB_u clr) {
@@ -88,11 +116,39 @@ bool Chunk::isReady() const {
 }
 
 bool Chunk::shouldUnload() const {
-	return canUnload;
+	// request aborting doesn't always work
+	return canUnload && isReady();
 }
 
 void Chunk::preventUnloading(bool state) {
 	canUnload = !state;
+}
+
+u32 Chunk::getGlTexture() {
+	if (!texHdl) {
+		if (const u8 * d = data.getData()) {
+			glActiveTexture(GL_TEXTURE0);
+			glGenTextures(1, &texHdl);
+			glBindTexture(GL_TEXTURE_2D, texHdl);
+
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB,
+					data.getWidth(), data.getHeight(),
+					0, GL_RGB, GL_UNSIGNED_BYTE, d);
+
+			glBindTexture(GL_TEXTURE_2D, 0);
+		}
+	}
+
+	return texHdl;
+}
+
+void Chunk::deleteTexture() {
+	glDeleteTextures(1, &texHdl);
 }
 
 Chunk::Key Chunk::key(Chunk::Pos x, Chunk::Pos y) {
@@ -108,6 +164,7 @@ Chunk::Key Chunk::key(Chunk::Pos x, Chunk::Pos y) {
 
 void Chunk::loadCompleted(unsigned, void * e, void * buf, unsigned len) {
 	Chunk& c = *static_cast<Chunk *>(e);
+	c.preventUnloading(true);
 	if (len) {
 		c.data.readFileOnMem(static_cast<u8 *>(buf), len);
 	} else { // 204
@@ -118,8 +175,8 @@ void Chunk::loadCompleted(unsigned, void * e, void * buf, unsigned len) {
 		c.protectionData.fill(0);
 	}
 
-	c.preventUnloading(false);
 	c.loaderRequest = nullptr;
+	c.preventUnloading(false);
 
 	c.w.signalChunkLoaded(c);
 
@@ -128,12 +185,13 @@ void Chunk::loadCompleted(unsigned, void * e, void * buf, unsigned len) {
 
 void Chunk::loadFailed(unsigned, void * e, int code, const char * err) {
 	Chunk& c = *static_cast<Chunk *>(e);
+	c.preventUnloading(true);
 	// what do?
 	//c.data.allocate(Chunk::size, Chunk::size, c.w.getBackgroundColor());
-	c.preventUnloading(false);
 	c.protectionData.fill(0);
 
 	std::printf("[Chunk] Load failed (%i, %i): %s\n", c.x, c.y, err);
 
 	c.loaderRequest = nullptr;
+	c.preventUnloading(false);
 }

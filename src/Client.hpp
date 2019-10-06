@@ -27,6 +27,8 @@ public:
 	bool open(std::string_view worldToJoin);
 	void close();
 
+	bool freeMemory();
+
 private:
 	void registerPacketTypes();
 

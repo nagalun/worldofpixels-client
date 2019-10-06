@@ -4,20 +4,33 @@
 
 World::World(std::string name, std::unique_ptr<SelfCursor> me, RGB_u bgClr, bool restricted, std::optional<User::Id> owner)
 : name(std::move(name)),
+  bgClr(bgClr),
+  r(*this),
   me(std::move(me)),
   owner(std::move(owner)),
-  r(*this),
-  bgClr(bgClr),
   cursorCount(1),
   drawingRestricted(restricted) {
 	std::puts("[World] Created");
-	
+
 	r.loadMissingChunks();
 }
 
 void World::setCursorCount(u32 c) {
 	cursorCount = c;
 }
+
+bool World::freeMemory(bool tryHarder) {
+	//auto chosenOne = chunks.end();
+	for (auto it = chunks.begin(); it != chunks.end(); ++it) {
+		if (it->second.shouldUnload() && !r.isChunkVisible(it->second)) {
+			chunks.erase(it);
+			return true;
+		}
+	}
+
+	return false;
+}
+
 
 Chunk& World::getOrLoadChunk(Chunk::Pos x, Chunk::Pos y) {
 	return chunks.try_emplace(Chunk::key(x, y), x, y, *this).first->second;
@@ -36,5 +49,9 @@ const char * World::getChunkUrl(Chunk::Pos x, Chunk::Pos y) {
 }
 
 void World::signalChunkLoaded(Chunk& c) {
-	// TODO: notify renderer
+	r.useChunk(c);
+}
+
+void World::signalChunkUnloaded(Chunk& c) {
+	r.unuseChunk(c);
 }
