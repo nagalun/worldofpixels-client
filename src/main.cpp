@@ -1,17 +1,21 @@
 #include "Client.hpp"
 
+#include <emscripten.h>
 #include <emscripten/html5.h>
 
 #include <memory>
 #include <exception>
 #include <new>
 
-#include "jstext.hpp"
-
 static std::unique_ptr<Client> cl;
 
 int main() {
-	js_txt_init();
+	EM_ASM(window['OWOP'] = Module.api = {});
+
+#ifdef DEBUG
+	EM_ASM(Module.api['module'] = Module);
+#endif
+
 	emscripten_set_beforeunload_callback(nullptr, [] (int, const void *, void *) -> const char * {
 		cl = nullptr;
 		return nullptr;

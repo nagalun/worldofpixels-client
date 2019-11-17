@@ -23,12 +23,12 @@ class Renderer : public Camera {
 	int vpHeight;
 	glm::mat4 view; // view matrix
 	glm::mat4 projection;
-	glm::mat4 projectionInv; // inverse
 	u32 chunkProgram;
 	u32 tbuf;
 	u32 chunkUnifView;
 	u32 chunkUnifProj;
-	u32 chunkUnifProjInv;
+	u32 chunkUnifZoom;
+	u32 chunkUnifChunkSize;
 	u32 chunkUnifTex;
 	u32 chunkUnifOffset;
 	u32 fxProgram;
@@ -50,11 +50,16 @@ public:
 	void useChunk(Chunk&);
 	void unuseChunk(Chunk&);
 
+	void setPos(float, float);
+	void setZoom(float);
+	void translate(float, float);
+
 private:
 	void render();
 
 	void updateUnifViewMatrix();
 	void updateUnifProjMatrix();
+	void updateUnifZoom();
 	void getViewportSize();
 
 	u32 buildProgram(std::string_view vertexShader, std::string_view fragmentShader);
@@ -64,6 +69,8 @@ private:
 	bool setupShaders();
 	bool setupRenderingContext();
 
+	bool resizeCanvas(int w, int h);
+	bool resizeRenderingContext();
 	bool activateRenderingContext();
 	void destroyRenderingContext();
 

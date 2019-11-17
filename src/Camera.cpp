@@ -17,11 +17,8 @@ float Camera::getZoom() const {
 	return zoom;
 }
 
-void Camera::setX(float nx) {
+void Camera::setPos(float nx, float ny) {
 	x = nx;
-}
-
-void Camera::setY(float ny) {
 	y = ny;
 }
 
@@ -30,7 +27,6 @@ void Camera::setZoom(float nz) {
 }
 
 void Camera::translate(float dx, float dy) {
-	x += dx;
-	y += dy;
+	setPos(x + dx, y + dy);
 }
 

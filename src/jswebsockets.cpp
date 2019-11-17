@@ -29,8 +29,8 @@ EM_JS(bool, js_ws_open, (const char * url, std::size_t len, const char * proto, 
 	}
 
 	try {
-		var urlstr = Module.TXT.decode(url, len);
-		var protostr = Module.TXT.decode(proto, protoLen);
+		var urlstr = UTF8ToString(url, len);
+		var protostr = UTF8ToString(proto, protoLen);
 		Module.JSWS.ws = new WebSocket(urlstr, protostr);
 	} catch (e) {
 		console.log('js_ws_open:', e);
@@ -63,7 +63,7 @@ EM_JS(void, js_ws_send, (const char * buf, std::size_t len), {
 });
 
 EM_JS(void, js_ws_send_str, (const char * buf, std::size_t len), {
-	Module.JSWS.ws.send(Module.TXT.decode(buf, len));
+	Module.JSWS.ws.send(UTF8ToString(buf, len));
 });
 
 EM_JS(EWsReadyState, js_ws_get_ready_state, (void), {

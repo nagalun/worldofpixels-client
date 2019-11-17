@@ -26,19 +26,30 @@ namespace pktdetail {
 # define __try      try
 # define __catch(X) catch(X)
 # define __throw throw
-# define BUFFER_ERROR std::length_error(std::string(__PRETTY_FUNCTION__) + ":" + std::to_string(__LINE__))
+# ifdef DEBUG
+#  define BUFFER_ERROR std::length_error(std::string(__PRETTY_FUNCTION__) + ":" + std::to_string(__LINE__))
+# else
+#  define BUFFER_ERROR std::length_error()
+# endif
 #else
 # define __try      if (true)
 # define __catch(X) if (false)
 # define __throw
-# define BUFFER_ERROR do {\
+# ifdef DEBUG
+#  define BUFFER_ERROR do { \
 		std::fputs("BUFFER_ERROR ON ", stderr); \
 		std::fputs(__PRETTY_FUNCTION__, stderr); \
 		std::fputc(':', stderr); \
 		std::fputs(STR(__LINE__), stderr); \
 		std::fputc('\n', stderr); \
 		std::terminate(); \
-	} while(false)
+	} while (false)
+# else
+#  define BUFFER_ERROR do { \
+		std::fputs("BUFFER_ERROR\n", stderr); \
+		std::terminate(); \
+	} while (false)
+# endif
 #endif
 
 

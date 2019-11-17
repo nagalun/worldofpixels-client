@@ -1,13 +1,32 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>OWOP dev</title>
-<script src="/owop.js" async defer></script>
+	<title>OWOP dev</title>
+	<style>
+		#world {
+			position: fixed;
+			top: 0;
+			left: 0;
+			width: 100vw;
+			height: 100vh;
+		}
+
+		#login {
+			position: fixed;
+			top: 0;
+			left: 0;
+			background-color: #FFF;
+		}
+	</style>
+	<script src="/owop.js" async defer></script>
+	<script>window.addEventListener('load', () => {AppOWOP()});</script>
 </head>
 <body>
-hi:
-<a href="https://uvias.com/api/loginto/owop">Login</a>
-<a href="https://uvias.com/logoff?service=owop">Logoff</a><br>
-<canvas id="world" width="800" height="600"></canvas>
+	<canvas id="world"></canvas>
+	<div id="login">
+		hi:
+		<a href="https://uvias.com/api/loginto/owop">Login</a>
+		<a href="https://uvias.com/logoff?service=owop">Logoff</a><br>
+	</div>
 </body>
 </html>

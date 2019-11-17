@@ -39,25 +39,41 @@ void main() {
 constexpr std::string_view chunkFragment = R"(#version 100
 precision mediump float;
 
-uniform mediump mat4 view;
-uniform mediump mat4 projInv;
-uniform highp vec2 chunkOffset;
+uniform mediump float chunkSize;
+uniform mediump float zoom;
 uniform sampler2D tex;
 
 varying vec2 vTexCoordV;
 
-#define fmod(x,y) (x)-floor((x)/(y))*(y)
+#define fmod(x,y) ((x)-floor((x)/(y))*(y))
 
 void main() {
 	gl_FragColor = texture2D(tex, vTexCoordV);
-	highp vec2 pos = (projInv * gl_FragCoord).xy;
 
-    highp float yLine = fmod(pos.y + 0.0, 2.0);
-    highp float xLine = fmod(pos.x + 0.0, 2.0);
+	vec2 pixelPos = vTexCoordV * chunkSize;
 
-    if((yLine >= -0.1 && yLine <= 0.1) || (xLine >= -0.1 && xLine <= 0.1)) {
-        gl_FragColor = gl_FragColor * vec4(0.5, 0.5, 0.5, 1.0);
-    }
+	if (fmod(pixelPos.x * zoom, 2.0) <= 1.0 ^^ fmod(pixelPos.y * zoom, 2.0) <= 1.0) {
+		return;
+	}
+
+	highp vec2 lineCs = fmod(pixelPos, chunkSize) * zoom;
+	highp vec2 line16 = fmod(pixelPos, 16.0) * zoom;
+	highp vec2 line1  = fmod(pixelPos, 1.0)  * zoom;
+
+	lowp float mult = 0.8;
+	if (zoom <= 4.0) {
+		mult = max(0.8, min(1.0, 2.0 - zoom / 2.0));
+	}
+
+	if (lineCs.x <= 1.0 || lineCs.y <= 1.0) {
+		mult -= 0.4;
+	} else if (line16.x <= 1.0 || line16.y <= 1.0) {
+		mult -= 0.2;
+	}
+
+	if (line1.x <= 1.0 || line1.y <= 1.0) {
+		gl_FragColor = gl_FragColor * vec4(mult, mult, mult, 1.0);
+	}
 }
 )";
 
@@ -89,7 +105,7 @@ Renderer::Renderer(World& w)
 		std::abort();
 	}
 
-	startRenderLoop();
+	setZoom(16.f);
 	std::printf("[Renderer] Initialized\n");
 }
 
@@ -100,8 +116,8 @@ Renderer::~Renderer() {
 }
 
 void Renderer::loadMissingChunks() {
-	float hVpWidth = vpWidth / 2.f;
-	float hVpHeight = vpHeight / 2.f;
+	float hVpWidth = vpWidth / 2.f / getZoom();
+	float hVpHeight = vpHeight / 2.f / getZoom();
 	float tlx = std::floor((getX() - hVpWidth) / Chunk::size);
 	float tly = std::floor((getY() - hVpHeight) / Chunk::size);
 	float brx = std::floor((getX() + hVpWidth) / Chunk::size);
@@ -137,11 +153,31 @@ void Renderer::unuseChunk(Chunk& c) {
 
 }
 
+void Renderer::setPos(float x, float y) {
+	Camera::setPos(x, y);
+	setupView();
+	glUseProgram(chunkProgram);
+	updateUnifViewMatrix();
+}
+
+void Renderer::setZoom(float z) {
+	Camera::setZoom(z);
+	setupProjection();
+	glUseProgram(chunkProgram);
+	updateUnifProjMatrix();
+	updateUnifZoom();
+}
+
+void Renderer::translate(float dx, float dy) {
+	setPos(getX() + dx, getY() + dy);
+}
+
 void Renderer::render() {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+	//translate(0.f, 0.01f);
 	float czoom = getZoom();
-		//translate(0.f, 0.1f);
+	setZoom(czoom <= 1.f ? 1.f : czoom - 0.0125f);
 
 	/*if (getY() < 1200.f && getX() == 0.f) {
 		translate(0.f, 1.0f);
@@ -153,10 +189,12 @@ void Renderer::render() {
 		translate(0.f, -1.0f);
 		setZoom(czoom >= 2.0f ? 2.0f : czoom + 0.025f);
 	} else {
-		setX(0.0f);
+		setPos(0.0f, getY());
 		setZoom(16.f);
 	}*/
 
+
+	czoom = getZoom();
 	float hVpWidth = vpWidth / 2.f / czoom;
 	float hVpHeight = vpHeight / 2.f / czoom;
 	float tlx = std::floor((getX() - hVpWidth) / Chunk::size);
@@ -164,18 +202,16 @@ void Renderer::render() {
 	float brx = std::floor((getX() + hVpWidth) / Chunk::size);
 	float bry = std::floor((getY() + hVpHeight) / Chunk::size);
 
-	view = glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(-getX(), -getY(), 0.f)), glm::vec3(1.f, 1.f, 1.f));
-	setupProjection();
-
 	glUseProgram(chunkProgram);
 	glBindBuffer(GL_ARRAY_BUFFER, tbuf);
 	glEnableVertexAttribArray(attrVPos);
 	glEnableVertexAttribArray(attrVTexCoord);
 
-	glActiveTexture(GL_TEXTURE0);
-	glUniform1i(chunkUnifTex, 0);
-	glUniformMatrix4fv(chunkUnifView, 1, GL_FALSE, glm::value_ptr(view));
-	updateUnifProjMatrix();
+	//glActiveTexture(GL_TEXTURE0);
+	//glUniform1i(chunkUnifTex, 0);
+
+	//setupView();
+	//updateUnifViewMatrix();
 	for (; tly <= bry; tly += 1.f) {
 		for (float tlx2 = tlx; tlx2 <= brx; tlx2 += 1.f) {
 			Chunk& c = w.getOrLoadChunk(tlx2, tly);
@@ -190,18 +226,20 @@ void Renderer::render() {
 
 
 
-	pauseRendering();
+	//pauseRendering();
 }
 
 void Renderer::updateUnifViewMatrix() {
-	glUseProgram(chunkProgram);
 	glUniformMatrix4fv(chunkUnifView, 1, GL_FALSE, glm::value_ptr(view));
 }
 
 void Renderer::updateUnifProjMatrix() {
-	glUseProgram(chunkProgram);
 	glUniformMatrix4fv(chunkUnifProj, 1, GL_FALSE, glm::value_ptr(projection));
-	glUniformMatrix4fv(chunkUnifProjInv, 1, GL_FALSE, glm::value_ptr(projectionInv));
+}
+
+void Renderer::updateUnifZoom() {
+	//std::printf("[Renderer] Zoom: %f\n", getZoom());
+	glUniform1f(chunkUnifZoom, getZoom());
 }
 
 GLuint Renderer::buildProgram(std::string_view vertexShader, std::string_view fragmentShader) {
@@ -299,52 +337,67 @@ GLuint Renderer::buildProgram(std::string_view vertexShader, std::string_view fr
 
 
 bool Renderer::setupView() {
-	setZoom(16.f);
+	view = glm::translate(glm::mat4(1.0f), glm::vec3(-getX(), -getY(), 0.f));
 
 	//view = glm::lookAt(eye, center, up);
 	return true;
 }
 
 bool Renderer::setupProjection() {
-	float vpHalfW = vpWidth / 2.0f / getZoom();
-	float vpHalfH = vpHeight / 2.0f / getZoom();
-	float aspect = static_cast<float>(vpWidth) / static_cast<float>(vpHeight);
+	float vpHalfW = vpWidth / 2.0f;
+	float vpHalfH = vpHeight / 2.0f;
+
+	float vpHalfZoomedW = std::floor(vpHalfW) / getZoom();
+	float vpHalfZoomedH = std::ceil(vpHalfH) / getZoom();
 
 	// left, right, bottom, top, near, far
-	projection = glm::ortho(-vpHalfW, vpHalfW, vpHalfH, -vpHalfH, 0.5f, 1.5f);
-	//projection = glm::frustum(-vpHalfW, vpHalfW, vpHalfH, -vpHalfH, 0.5f, 1.5f);
-	//projection = glm::perspective(glm::radians(45.f), aspect, 0.5f, 1.5f);
+	projection = glm::ortho(-vpHalfZoomedW, vpHalfZoomedW, vpHalfZoomedH, -vpHalfZoomedH, 0.5f, 1.5f);
 	projection = glm::scale(projection, glm::vec3(1.f, 1.f, -1.f));
 
-	projectionInv = glm::inverse(projection);
 	//std::puts(glm::to_string(projection).c_str());
 	return true;
 }
 
 bool Renderer::setupShaders() {
 	chunkProgram = buildProgram(chunkVertex, chunkFragment);
-	chunkUnifView    = glGetUniformLocation(chunkProgram, "view");
-	chunkUnifProj    = glGetUniformLocation(chunkProgram, "proj");
-	chunkUnifProjInv = glGetUniformLocation(chunkProgram, "projInv");
-	chunkUnifOffset   = glGetUniformLocation(chunkProgram, "chunkOffset");
-	chunkUnifTex     = glGetUniformLocation(chunkProgram, "tex");
+	chunkUnifView      = glGetUniformLocation(chunkProgram, "view");
+	chunkUnifProj      = glGetUniformLocation(chunkProgram, "proj");
+	chunkUnifZoom      = glGetUniformLocation(chunkProgram, "zoom");
+	chunkUnifChunkSize = glGetUniformLocation(chunkProgram, "chunkSize");
+	chunkUnifOffset    = glGetUniformLocation(chunkProgram, "chunkOffset");
+	chunkUnifTex       = glGetUniformLocation(chunkProgram, "tex");
 
+	glUseProgram(chunkProgram);
+	glUniform1i(chunkUnifTex, 0);
+	glUniform1f(chunkUnifChunkSize, static_cast<float>(Chunk::size));
 	updateUnifViewMatrix();
 	updateUnifProjMatrix();
+	updateUnifZoom();
 
 	return chunkProgram;
+}
+
+bool Renderer::resizeRenderingContext() {
+	getViewportSize();
+	glViewport(0, 0, vpWidth, vpHeight);
+	setupProjection();
+	glUseProgram(chunkProgram);
+	updateUnifProjMatrix();
+	resumeRendering();
+	return true;
 }
 
 bool Renderer::setupRenderingContext() {
 	glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &maxTexUnits);
 	std::printf("[Renderer] Max texture units: %i\n", maxTexUnits);
-	glViewport(0, 0, vpWidth, vpHeight);
+
+	startRenderLoop();
+	resizeRenderingContext();
 
 	RGB_u bgClr = w.getBackgroundColor();
 	glClearColor(bgClr.r / 255.f, bgClr.g / 255.f, bgClr.b / 255.f, 0.5f);
 
 	setupView();
-	setupProjection();
 	setupShaders();
 
 	glGenBuffers(1, &tbuf);
@@ -355,7 +408,6 @@ bool Renderer::setupRenderingContext() {
 	glVertexAttribPointer(attrVPos, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), nullptr);
 
 	glVertexAttribPointer(attrVTexCoord, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *)(2 * sizeof(float)));
-
 
 	return true;
 }

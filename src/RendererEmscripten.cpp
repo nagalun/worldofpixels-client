@@ -7,6 +7,11 @@
 
 static const char * targetCanvas = "#world";
 
+EM_JS(void, get_window_size, (int * width, int * height), {
+	Module['HEAP32'][width / Int32Array.BYTES_PER_ELEMENT] = window.innerWidth;
+	Module['HEAP32'][height / Int32Array.BYTES_PER_ELEMENT] = window.innerHeight;
+});
+
 static int emEvent(int eventType, const void *, void * r) {
 	std::printf("[Renderer] Context event fired: %i\n", eventType);
 	return false;
@@ -23,6 +28,10 @@ void Renderer::pauseRendering() {
 void Renderer::getViewportSize() {
 	emscripten_get_canvas_element_size(targetCanvas, &vpWidth, &vpHeight);
 	std::printf("[Renderer] Viewport size: %ix%i\n", vpWidth, vpHeight);
+}
+
+bool Renderer::resizeCanvas(int w, int h) {
+	return emscripten_set_canvas_element_size(targetCanvas, w, h) == EMSCRIPTEN_RESULT_SUCCESS;
 }
 
 bool Renderer::activateRenderingContext() {
@@ -43,9 +52,23 @@ bool Renderer::activateRenderingContext() {
 		return false;
 	}
 
+	const char * windowTarget = nullptr;
+	windowTarget += 2; // look in __findEventTarget
+
 	emscripten_set_webglcontextlost_callback(targetCanvas, this, true, emEvent);
 	emscripten_set_webglcontextrestored_callback(targetCanvas, this, true, emEvent);
-	getViewportSize();
+	emscripten_set_resize_callback(windowTarget, this, true, +[] (int, const EmscriptenUiEvent * ev, void * rp) -> EM_BOOL {
+		Renderer& r = *static_cast<Renderer *>(rp);
+		r.resizeCanvas(ev->windowInnerWidth, ev->windowInnerHeight);
+		r.resizeRenderingContext();
+		return true;
+	});
+
+	int scrWidth;
+	int scrHeight;
+
+	get_window_size(&scrWidth, &scrHeight);
+	resizeCanvas(scrWidth, scrHeight);
 
 	return setupRenderingContext();
 }

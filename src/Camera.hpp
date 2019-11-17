@@ -13,8 +13,7 @@ public:
 	float getY() const;
 	float getZoom() const;
 
-	void setX(float);
-	void setY(float);
+	void setPos(float, float);
 	void setZoom(float);
 	
 	void translate(float, float);
