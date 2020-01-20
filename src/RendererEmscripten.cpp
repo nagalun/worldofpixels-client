@@ -34,12 +34,15 @@ bool Renderer::resizeCanvas(int w, int h) {
 	return emscripten_set_canvas_element_size(targetCanvas, w, h) == EMSCRIPTEN_RESULT_SUCCESS;
 }
 
-bool Renderer::activateRenderingContext() {
+bool Renderer::activateRenderingContext(bool webgl1) {
 	EmscriptenWebGLContextAttributes attr;
 	emscripten_webgl_init_context_attributes(&attr);
 
 	attr.alpha = false;
 	attr.antialias = false;
+	if (!webgl1) {
+		attr.majorVersion = 2;
+	}
 
 	ctxInfo = emscripten_webgl_create_context(targetCanvas, &attr);
 	if (ctxInfo < 0) {
@@ -52,12 +55,9 @@ bool Renderer::activateRenderingContext() {
 		return false;
 	}
 
-	const char * windowTarget = nullptr;
-	windowTarget += 2; // look in __findEventTarget
-
 	emscripten_set_webglcontextlost_callback(targetCanvas, this, true, emEvent);
 	emscripten_set_webglcontextrestored_callback(targetCanvas, this, true, emEvent);
-	emscripten_set_resize_callback(windowTarget, this, true, +[] (int, const EmscriptenUiEvent * ev, void * rp) -> EM_BOOL {
+	emscripten_set_resize_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, this, true, +[] (int, const EmscriptenUiEvent * ev, void * rp) -> EM_BOOL {
 		Renderer& r = *static_cast<Renderer *>(rp);
 		r.resizeCanvas(ev->windowInnerWidth, ev->windowInnerHeight);
 		r.resizeRenderingContext();
@@ -70,11 +70,16 @@ bool Renderer::activateRenderingContext() {
 	get_window_size(&scrWidth, &scrHeight);
 	resizeCanvas(scrWidth, scrHeight);
 
+	std::printf("[Renderer] Created rendering context with WebGL %c\n", webgl1 ? '1' : '2');
+
 	return setupRenderingContext();
 }
 
 void Renderer::destroyRenderingContext() {
 	if (ctxInfo > 0) {
+		emscripten_set_webglcontextlost_callback(targetCanvas, nullptr, true, nullptr);
+		emscripten_set_webglcontextrestored_callback(targetCanvas, nullptr, true, nullptr);
+		emscripten_set_resize_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, nullptr, true, nullptr);
 		if (EMSCRIPTEN_RESULT err = emscripten_webgl_destroy_context(ctxInfo)) {
 			std::fprintf(stderr, "[Renderer] Context destruction failed: %i\n", err);
 		}

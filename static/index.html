@@ -2,7 +2,13 @@
 <html>
 <head>
 	<title>OWOP dev</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
 	<style>
+		body, html {
+			overflow: hidden;
+			touch-action: none;
+		}
+
 		#world {
 			position: fixed;
 			top: 0;
@@ -19,7 +25,15 @@
 		}
 	</style>
 	<script src="/owop.js" async defer></script>
-	<script>window.addEventListener('load', () => {AppOWOP()});</script>
+	<script>
+		window.addEventListener('load', () => { AppOWOP(); });
+		window.addEventListener('wheel', e => {
+			if (e.ctrlKey) {
+				e.preventDefault();
+				return false;
+			}
+		}, {passive: false});
+	</script>
 </head>
 <body>
 	<canvas id="world"></canvas>

@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <stdexcept>
 #include <vector>
+#include <cstdint>
 
 namespace rle {
 
@@ -72,7 +73,7 @@ sz_t getItems(u8 * in, sz_t size) {
 	if (itemSize != sizeof(T)) {
 		return 0;
 	}
-	
+
 	return numItems;
 }
 
@@ -99,6 +100,14 @@ bool decompress(u8* in, sz_t inSize, T* output, sz_t outMaxItems) {
 		return false;
 	}
 
+	// WASM doesn't like unaligned accesses/stores, so let's align the data
+	constexpr std::size_t alignment = std::max({alignof(u16), alignof(T)});
+	static_assert(alignment <= sizeof(u16) * 3, "Alignment requirements too strict to decompress");
+	if (std::size_t offset = reinterpret_cast<std::uintptr_t>(curr) % alignment) {
+		std::move(curr, curr + (inSize - (curr - in)), curr - offset);
+		curr -= offset;
+	}
+
 	cPoint* pt = reinterpret_cast<cPoint*>(curr);
 	curr += numRptPoints * sizeof(cPoint);
 	T* data = reinterpret_cast<T*>(curr);
@@ -115,7 +124,7 @@ bool decompress(u8* in, sz_t inSize, T* output, sz_t outMaxItems) {
 	while (j < numItems) {
 		output[j++] = data[k++];
 	}
-	
+
 	return true;
 }
 

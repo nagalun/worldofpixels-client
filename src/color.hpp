@@ -10,6 +10,6 @@ union RGB_u {
 		u8 g;
 		u8 b;
 		u8 a;
-	};
+	} c;
 	u32 rgb;
 };

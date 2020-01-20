@@ -1,16 +1,22 @@
 #include "Camera.hpp"
 
+#include <cmath>
+
 Camera::Camera()
 : x(0.f),
   y(0.f),
-  zoom(1.f) { }
+  zoom(16.f) { }
 
 float Camera::getX() const {
-	return x;
+	float integ;
+	float fract = std::modf(x, &integ);
+	return integ + std::round(fract * zoom) / zoom;
 }
 
 float Camera::getY() const {
-	return y;
+	float integ;
+	float fract = std::modf(y, &integ);
+	return integ + std::round(fract * zoom) / zoom;
 }
 
 float Camera::getZoom() const {

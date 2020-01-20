@@ -18,39 +18,40 @@
 
 #include "jswebsockets.hpp"
 
-namespace pktdetail {
 #define STR_HELPER(x) #x
 #define STR(x) STR_HELPER(x)
 
 #if __cpp_exceptions
-# define __try      try
-# define __catch(X) catch(X)
-# define __throw throw
-# ifdef DEBUG
-#  define BUFFER_ERROR std::length_error(std::string(__PRETTY_FUNCTION__) + ":" + std::to_string(__LINE__))
-# else
-#  define BUFFER_ERROR std::length_error()
-# endif
+#	define __try      try
+#	define __catch(X) catch(X)
+#	define __throw    throw
+#	ifdef DEBUG
+#		define BUFFER_ERROR std::length_error(std::string(__PRETTY_FUNCTION__) + ":" + std::to_string(__LINE__))
+#	else
+#		define BUFFER_ERROR std::length_error()
+#	endif
 #else
-# define __try      if (true)
-# define __catch(X) if (false)
-# define __throw
-# ifdef DEBUG
-#  define BUFFER_ERROR do { \
-		std::fputs("BUFFER_ERROR ON ", stderr); \
-		std::fputs(__PRETTY_FUNCTION__, stderr); \
-		std::fputc(':', stderr); \
-		std::fputs(STR(__LINE__), stderr); \
-		std::fputc('\n', stderr); \
-		std::terminate(); \
-	} while (false)
-# else
-#  define BUFFER_ERROR do { \
-		std::fputs("BUFFER_ERROR\n", stderr); \
-		std::terminate(); \
-	} while (false)
-# endif
+#	define __try      if (true)
+#	define __catch(X) if (false)
+#	define __throw
+#	ifdef DEBUG
+#		define BUFFER_ERROR do { \
+			std::fputs("BUFFER_ERROR ON ", stderr); \
+			std::fputs(__PRETTY_FUNCTION__, stderr); \
+			std::fputc(':', stderr); \
+			std::fputs(STR(__LINE__), stderr); \
+			std::fputc('\n', stderr); \
+			std::terminate(); \
+		} while (false)
+#	else
+#		define BUFFER_ERROR do { \
+			std::fputs("BUFFER_ERROR\n", stderr); \
+			std::terminate(); \
+		} while (false)
+#	endif
 #endif
+
+namespace pktdetail {
 
 
 //////////////////////////////
@@ -446,12 +447,6 @@ readFromBuf(const u8 *& b, sz_t remaining) {
 	return std::nullopt;
 }
 
-#undef BUFFER_ERROR
-#undef __throw
-#undef __catch
-#undef __try
-#undef STR
-#undef STR_HELPER
 } // namespace pktdetail
 
 template<u8 opCode, typename... Args>
@@ -462,9 +457,7 @@ std::tuple<Args...> Packet<opCode, Args...>::fromBuffer(const u8 * buffer, sz_t 
 	// fast size check
 	constexpr sz_t expectedSize = add(sizeof(Args)...);
 	if (are_all_arithmetic<Args...>::value && expectedSize != size) {
-		std::fputs("Buffer too small/big", stderr);
-		std::terminate();
-		//throw std::length_error("Buffer too small/big");
+		__throw BUFFER_ERROR;
 	}
 
 	return std::tuple<Args...>{readFromBuf<Args>(buffer, size - (buffer - start))...};
@@ -490,3 +483,10 @@ void Packet<opCode, Args...>::send(Args... args) {
 
 	js_ws_send(reinterpret_cast<char *>(start), size);
 }
+
+#undef BUFFER_ERROR
+#undef __throw
+#undef __catch
+#undef __try
+#undef STR
+#undef STR_HELPER

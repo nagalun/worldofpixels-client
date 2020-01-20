@@ -10,10 +10,11 @@
 static std::unique_ptr<Client> cl;
 
 int main() {
-	EM_ASM(window['OWOP'] = Module.api = {});
+	// argless EM_ASM causes warnings/errors with -Wall
+	EM_ASM({window['OWOP'] = Module.api = {}}, 0);
 
 #ifdef DEBUG
-	EM_ASM(Module.api['module'] = Module);
+	EM_ASM({Module.api['module'] = Module}, 0);
 #endif
 
 	emscripten_set_beforeunload_callback(nullptr, [] (int, const void *, void *) -> const char * {

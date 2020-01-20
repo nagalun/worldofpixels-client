@@ -3,18 +3,40 @@
 #include <cstdio>
 #include <optional>
 
+#include <emscripten/html5.h>
+
 #include "jswebsockets.hpp"
 
 #include "PacketDefinitions.hpp"
 
 Client::Client()
-: selfUid(0) {
+: im(EMSCRIPTEN_EVENT_TARGET_WINDOW),
+  aClient(im.mkAdapter("Client", -1)),
+  selfUid(0),
+  globalCursorCount(0),
+  tickTimer(emscripten_set_interval(Client::doTick, 1000.0 / Client::ticksPerSec, this)) {
 	js_ws_on_open(Client::doWsOpen);
 	js_ws_on_close(Client::doWsClose);
 	js_ws_on_message(Client::doWsMessage);
 	js_ws_set_user_data(this);
 
 	registerPacketTypes();
+
+	iTest = aClient.add("Print Test", {{"A"}}, T_ONPRESS | T_ONHOLD | T_ONRELEASE, [] (const auto&, auto t, const auto&) {
+		switch (t) {
+			case T_ONPRESS:
+				std::printf("[Client] Test success: T_ONPRESS\n");
+				break;
+
+			case T_ONHOLD:
+				std::printf("[Client] Test success: T_ONHOLD\n");
+				break;
+
+			case T_ONRELEASE:
+				std::printf("[Client] Test success: T_ONRELEASE\n");
+				break;
+		}
+	});
 }
 
 Client::~Client() {
@@ -23,6 +45,7 @@ Client::~Client() {
 	}
 
 	js_ws_set_user_data(nullptr); // prev ptr won't be valid when i return
+	emscripten_clear_interval(tickTimer);
 	std::puts("[Client] Destroyed");
 }
 
@@ -38,7 +61,7 @@ void Client::close() {
 }
 
 bool Client::freeMemory() {
-	if (world && (world->freeMemory() /*|| world->freeMemory(true)*/)) {
+	if (world && (world->freeMemory() || world->freeMemory(true))) {
 		return true;
 	}
 
@@ -87,7 +110,9 @@ void Client::registerPacketTypes() {
 
 		std::puts(motd.c_str());
 
-		world = std::make_unique<World>(std::move(worldName), std::move(preJoinSelfCursorData), RGB_u{.rgb = bgClr}, restricted, std::move(owner));
+		RGB_u bgClrU;
+		bgClrU.rgb = bgClr;
+		world = std::make_unique<World>(im, std::move(worldName), std::move(preJoinSelfCursorData), bgClrU, restricted, std::move(owner));
 	});
 
 	pr.on<Stats>([this] (u32 worldCursors, u32 globalCursors) { // this is only received if we're in a world
@@ -95,6 +120,13 @@ void Client::registerPacketTypes() {
 		world->setCursorCount(worldCursors);
 		globalCursorCount = globalCursors;
 	});
+}
+
+void Client::tick() {
+	im.tick();
+	if (world) {
+		world->tick();
+	}
 }
 
 void Client::wsOpen() {
@@ -129,4 +161,8 @@ void Client::doWsClose(void * d, u16 code) {
 
 void Client::doWsMessage(void * d, char * buf, sz_t s, bool txt) {
 	static_cast<Client *>(d)->wsMessage(buf, s, txt);
+}
+
+void Client::doTick(void * d) {
+	static_cast<Client *>(d)->tick();
 }

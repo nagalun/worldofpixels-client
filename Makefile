@@ -12,17 +12,18 @@ CC  = emcc
 # also builds owop.wasm
 TARGET    = out/owop.js
 
-OPT_REL   = -O2
+OPT_REL   = -O2 -s FILESYSTEM=0
 LD_REL    = --closure 1 $(OPT_REL) # for post-compile emscripten stuff
 
-LD_DBG   = -g4 -s ASSERTIONS=2 -s STACK_OVERFLOW_CHECK=2 -s DEMANGLE_SUPPORT=1 -s SAFE_HEAP=1
-OPT_DBG  = -D DEBUG=1 $(LD_DBG)
+LD_DBG   = -fsanitize=undefined -g4 -s ASSERTIONS=2 -s STACK_OVERFLOW_CHECK=2 -s DEMANGLE_SUPPORT=1 -s FILESYSTEM=1
+OPT_DBG := -D DEBUG=1 $(LD_DBG)
+LD_DBG  += --source-map-base "http://localhost:21002/vfs/1/9clH1bkfZxeEum8u/workspace/owop-client/"
 
-EM_FEATURES = -s USE_LIBPNG=1 -s USE_SDL=0 # -s USE_WEBGL2=1
+EM_FEATURES = -s USE_LIBPNG=1 -s USE_SDL=0 -s MAX_WEBGL_VERSION=2
 CPPFLAGS += $(EM_FEATURES)
 LDFLAGS  += $(EM_FEATURES)
 
-CPPFLAGS += -std=c++17 -fno-exceptions
+CPPFLAGS += -std=c++17 -fno-exceptions -W -Wall -Wextra -pedantic-errors -Wno-unused-parameter
 CPPFLAGS += -MMD -MP
 
 # GLM config
@@ -32,8 +33,8 @@ CPPFLAGS += -I ./lib/glm/
 # Libs to use
 LDFLAGS  += -lGL
 
-LDFLAGS  += -s FILESYSTEM=0 -s ENVIRONMENT=web -s TOTAL_MEMORY=32MB #-s WEBGL2_BACKWARDS_COMPATIBILITY_EMULATION=1
-LDFLAGS  += -s DISABLE_DEPRECATED_FIND_EVENT_TARGET_BEHAVIOR=1 -s ABORTING_MALLOC=0 -s MALLOC=emmalloc
+LDFLAGS  += -s ENVIRONMENT=web -s TOTAL_MEMORY=4MB -s TOTAL_STACK=32KB -s WEBGL2_BACKWARDS_COMPATIBILITY_EMULATION=1
+LDFLAGS  += -s DISABLE_DEPRECATED_FIND_EVENT_TARGET_BEHAVIOR=1 -s ABORTING_MALLOC=0 #-s MALLOC=emmalloc
 LDFLAGS  += -s EXPORT_NAME=AppOWOP -s MODULARIZE=1 -s STRICT=1
 
 .PHONY: all rel dirs static clean

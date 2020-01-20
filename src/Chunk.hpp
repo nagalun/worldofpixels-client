@@ -43,9 +43,10 @@ private:
 	// with specific per-world, or general uvias roles
 	std::unique_ptr<void, void(*)(void *)> loaderRequest;
 	//u32 texUnit;
-	u32 texHdl;
+	mutable u32 texHdl;
 	bool canUnload;
 	bool protectionsLoaded;
+	u8 downscaling;
 
 public:
 	Chunk(Pos x, Pos y, World&);
@@ -67,7 +68,7 @@ public:
 	bool shouldUnload() const;
 	void preventUnloading(bool);
 
-	u32 getGlTexture();
+	u32 getGlTexture() const;
 	void deleteTexture();
 
 	static Key key(Pos, Pos);

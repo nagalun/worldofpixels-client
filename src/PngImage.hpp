@@ -20,7 +20,7 @@ class PngImage { // TODO: optionally support alpha
 public:
 	PngImage();
 	PngImage(u8* filebuf, sz_t len);
-	PngImage(u32 w, u32 h, RGB_u = {255, 255, 255});
+	PngImage(u32 w, u32 h, RGB_u = {{255, 255, 255, 255}});
 
 	u8 getChannels() const;
 	u32 getWidth() const;
@@ -39,4 +39,6 @@ public:
 	void allocate(u32 w, u32 h, RGB_u);
 	void readFileOnMem(u8 * filebuf, sz_t len);
 	void writeFileOnMem(std::vector<u8>& out);
+	void nearestDownscale(u32 division);
+	void freeMem();
 };

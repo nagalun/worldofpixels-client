@@ -19,11 +19,20 @@ struct img_t {
 
 static void pngError(png_structp pngPtr, png_const_charp msg) {
 	puts(msg);
-	std::abort();
+	//std::abort();
 }
 
 static void pngWarning(png_structp pngPtr, png_const_charp msg) {
 	puts(msg);
+}
+
+static void * pngMalloc(png_structp pngPtr, png_size_t length) {
+	// new calls the oom handler, unlike malloc
+	return ::operator new(length);
+}
+
+static void pngFree(png_structp pngPtr, void * ptr) {
+	::operator delete(ptr);
 }
 
 static void pngReadData(png_structp pngPtr, png_bytep data, png_size_t length) {
@@ -46,7 +55,8 @@ static int pngReadChunkCb(png_structp pngPtr, png_unknown_chunkp chunk) {
 static struct img_t loadPng(u8* fbuffer, int len, u8 chans,
 		std::map<std::string, std::function<bool(u8*, sz_t)>>& chunkReaders) {
 	// create png_struct with the custom error handlers
-	png_structp pngPtr = png_create_read_struct(PNG_LIBPNG_VER_STRING, nullptr, pngError, pngWarning);
+	png_structp pngPtr = png_create_read_struct_2(PNG_LIBPNG_VER_STRING, nullptr, pngError, pngWarning,
+			nullptr, pngMalloc, pngFree);
 	if (!pngPtr) {
 		puts("loadPng: png_create_read_struct failed");
 		std::terminate();
@@ -93,14 +103,14 @@ static struct img_t loadPng(u8* fbuffer, int len, u8 chans,
 
 	auto out(std::make_unique<u8[]>(pngWidth * pngHeight * chans));
 
-	png_uint_32 rowBytes = png_get_rowbytes(pngPtr, infoPtr);
+	//png_uint_32 rowBytes = png_get_rowbytes(pngPtr, infoPtr);
 
-	png_bytep rowPointers[pngHeight];
+	std::vector<png_bytep> rowPointers(pngHeight);
 	for (png_uint_32 row = 0; row < pngHeight; row++) {
 		rowPointers[row] = (png_bytep)(out.get() + row * pngWidth * chans);
 	}
 
-	png_read_image(pngPtr, rowPointers);
+	png_read_image(pngPtr, rowPointers.data());
 
 	png_read_end(pngPtr, infoPtr);
 	png_destroy_read_struct(&pngPtr, &infoPtr, nullptr);
@@ -130,8 +140,8 @@ static void encodePng(size_t pngWidth, size_t pngHeight, u8 chans, const u8* dat
 	}
 
 	sz_t actualChunkCount = 0;
-	std::unique_ptr<u8[]> toDelete[chunkWriters.size()];
-	png_unknown_chunk_t chunkArr[chunkWriters.size()];
+	std::vector<std::unique_ptr<u8[]>> toDelete(chunkWriters.size());
+	std::vector<png_unknown_chunk_t> chunkArr(chunkWriters.size());
 
 	for (auto& chunk : chunkWriters) {
 		png_unknown_chunkp unk = &chunkArr[actualChunkCount];
@@ -158,22 +168,22 @@ static void encodePng(size_t pngWidth, size_t pngHeight, u8 chans, const u8* dat
 
 	//png_set_compression_level(pngPtr, 4);
 
-	png_bytep rowPointers[pngHeight];
+	std::vector<png_bytep> rowPointers(pngHeight);
 	for (png_uint_32 row = 0; row < pngHeight; row++) {
 		rowPointers[row] = (png_bytep)(data + (row * pngWidth * chans));
 	}
 
-	png_set_rows(pngPtr, infoPtr, rowPointers);
+	png_set_rows(pngPtr, infoPtr, rowPointers.data());
 	png_set_write_fn(pngPtr, iodata, iofun, nullptr);
 
 	png_write_info_before_PLTE(pngPtr, infoPtr);
 
 	if (actualChunkCount > 0) {
-		png_set_unknown_chunks(pngPtr, infoPtr, chunkArr, actualChunkCount);
+		png_set_unknown_chunks(pngPtr, infoPtr, chunkArr.data(), actualChunkCount);
 	}
 
 	png_write_info(pngPtr, infoPtr);
-	png_write_image(pngPtr, rowPointers);
+	png_write_image(pngPtr, rowPointers.data());
 	png_write_end(pngPtr, infoPtr);
 
 	png_destroy_write_struct(&pngPtr, &infoPtr);
@@ -223,22 +233,22 @@ void PngImage::applyTransform(std::function<RGB_u(u32 x, u32 y)> func) {
 RGB_u PngImage::getPixel(u32 x, u32 y) const {
 	u8 * d = data.get();
 	u8 c = getChannels();
-	return {
+	return {{
 		d[(y * w + x) * c],
 		d[(y * w + x) * c + 1],
 		d[(y * w + x) * c + 2],
 		c == 4 ? d[(y * w + x) * c + 3] : u8(255)
-	};
+	}};
 }
 
 void PngImage::setPixel(u32 x, u32 y, RGB_u clr) {
 	u8 * d = data.get();
 	u8 c = getChannels();
-	d[(y * w + x) * c] = clr.r;
-	d[(y * w + x) * c + 1] = clr.g;
-	d[(y * w + x) * c + 2] = clr.b;
+	d[(y * w + x) * c] = clr.c.r;
+	d[(y * w + x) * c + 1] = clr.c.g;
+	d[(y * w + x) * c + 2] = clr.c.b;
 	if (c == 4) {
-		d[(y * w + x) * c + 3] = clr.a;
+		d[(y * w + x) * c + 3] = clr.c.a;
 	}
 
 }
@@ -277,3 +287,25 @@ void PngImage::writeFileOnMem(std::vector<u8>& out) {
 	out.clear();
 	encodePng(w, h, getChannels(), data.get(), pngWriteDataToMem, static_cast<void*>(&out), chunkWriters);
 }
+
+void PngImage::nearestDownscale(u32 division) {
+	float newW = w / division;
+	float newH = h / division;
+	PngImage newData(newW, newH);
+	for (float y = 0; y < newH; y++) {
+		for (float x = 0; x < newW; x++) {
+			newData.setPixel(x, y, getPixel(x / newW * w, y / newH * h));
+		}
+	}
+
+	w = newW;
+	h = newH;
+	data = std::move(newData.data);
+}
+
+void PngImage::freeMem() {
+	data = nullptr;
+	w = 0;
+	h = 0;
+}
+

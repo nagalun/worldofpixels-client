@@ -1,10 +1,12 @@
 #include "Chunk.hpp"
 
 #include <cstdio>
+#include <cmath>
 
 #include <emscripten.h>
 #include <GLES2/gl2.h>
 
+#include "BufferHelper.hpp"
 #include "rle.hpp"
 
 #include "World.hpp"
@@ -47,9 +49,8 @@ Chunk::Chunk(Pos x, Pos y, World& w)
   loaderRequest(nullptr, destroyWget),
   texHdl(0),
   canUnload(false),
-  protectionsLoaded(false) { // to check if I need to 0-fill the protection array
-	bool readerCalled = false;
-
+  protectionsLoaded(false), // to check if I need to 0-fill the protection array
+  downscaling(std::min(std::max(1.f, std::floor(1.f / w.getCamera().getZoom())), 16.f)) {
 	data.setChunkReader("woPp", [this] (u8 * d, sz_t size) {
 		protectionsLoaded = rle::decompress(d, size, protectionData.data(), protectionData.size());
 		return true;
@@ -59,13 +60,13 @@ Chunk::Chunk(Pos x, Pos y, World& w)
 			w.getChunkUrl(x, y), "GET", nullptr, this, true,
 			Chunk::loadCompleted, Chunk::loadFailed, nullptr)));
 
-	preventUnloading(false);
+	//std::printf("[Chunk] Created (%i, %i)\n", x, y);
 
-	std::printf("[Chunk] Created (%i, %i)\n", x, y);
+	preventUnloading(false);
 }
 
 Chunk::~Chunk() {
-	std::puts("[Chunk] Destroyed");
+	//std::puts("[Chunk] Destroyed");
 	deleteTexture();
 	w.signalChunkUnloaded(*this);
 }
@@ -84,7 +85,7 @@ bool Chunk::setPixel(u16 x, u16 y, RGB_u clr) {
 
 	if (data.getPixel(x, y).rgb != clr.rgb) {
 		data.setPixel(x, y, clr);
-		// TODO: send setPixel packet
+		// TODO: send setPixel packet and update texture
 		return true;
 	}
 
@@ -117,14 +118,14 @@ bool Chunk::isReady() const {
 
 bool Chunk::shouldUnload() const {
 	// request aborting doesn't always work
-	return canUnload && isReady();
+	return canUnload;
 }
 
 void Chunk::preventUnloading(bool state) {
 	canUnload = !state;
 }
 
-u32 Chunk::getGlTexture() {
+u32 Chunk::getGlTexture() const {
 	if (!texHdl) {
 		if (const u8 * d = data.getData()) {
 			glActiveTexture(GL_TEXTURE0);
@@ -148,7 +149,9 @@ u32 Chunk::getGlTexture() {
 }
 
 void Chunk::deleteTexture() {
-	glDeleteTextures(1, &texHdl);
+	if (texHdl) {
+		glDeleteTextures(1, &texHdl);
+	}
 }
 
 Chunk::Key Chunk::key(Chunk::Pos x, Chunk::Pos y) {
@@ -156,19 +159,24 @@ Chunk::Key Chunk::key(Chunk::Pos x, Chunk::Pos y) {
 		struct {
 			Chunk::Pos x;
 			Chunk::Pos y;
-		};
+		} p;
 		Chunk::Key xy;
-	} k = {x, y};
+	} k = {{x, y}};
 	return k.xy;
 }
 
 void Chunk::loadCompleted(unsigned, void * e, void * buf, unsigned len) {
 	Chunk& c = *static_cast<Chunk *>(e);
 	c.preventUnloading(true);
-	if (len) {
+	// so since i can't easily check http.status, I quickly check if the file
+	// received looks like a real png file.
+	if (len > 4 && buf::readLE<u32>(static_cast<u8 *>(buf)) == 0x474E5089) {
 		c.data.readFileOnMem(static_cast<u8 *>(buf), len);
-	} else { // 204
-		c.data.allocate(Chunk::size, Chunk::size, c.w.getBackgroundColor());
+		if (c.downscaling > 1) {
+			c.data.nearestDownscale(c.downscaling);
+		}
+	} else { // 204, or other error
+		c.data.allocate(1/*Chunk::size*/, 1/*Chunk::size*/, c.w.getBackgroundColor());
 	}
 
 	if (!c.protectionsLoaded) {
@@ -176,11 +184,15 @@ void Chunk::loadCompleted(unsigned, void * e, void * buf, unsigned len) {
 	}
 
 	c.loaderRequest = nullptr;
+
+	c.getGlTexture();
+	c.data.freeMem();
+
 	c.preventUnloading(false);
 
 	c.w.signalChunkLoaded(c);
 
-	std::printf("[Chunk] Loaded (%i, %i)\n", c.x, c.y);
+	std::printf("[Chunk] Loaded (%i, %i) [%u]\n", c.x, c.y, c.downscaling);
 }
 
 void Chunk::loadFailed(unsigned, void * e, int code, const char * err) {
@@ -193,5 +205,6 @@ void Chunk::loadFailed(unsigned, void * e, int code, const char * err) {
 	std::printf("[Chunk] Load failed (%i, %i): %s\n", c.x, c.y, err);
 
 	c.loaderRequest = nullptr;
+
 	c.preventUnloading(false);
 }

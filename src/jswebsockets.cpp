@@ -67,7 +67,7 @@ EM_JS(void, js_ws_send_str, (const char * buf, std::size_t len), {
 });
 
 EM_JS(EWsReadyState, js_ws_get_ready_state, (void), {
-	return Module.JSWS.ws ? Module.JSWS.ws.readyState : WebSocket.CLOSED;
+	return Module.JSWS && Module.JSWS.ws ? Module.JSWS.ws.readyState : WebSocket.CLOSED;
 });
 
 
@@ -90,13 +90,15 @@ void js_ws_on_message(void (*cb)(void *, char *, std::size_t, bool)) {
 
 EMSCRIPTEN_KEEPALIVE
 char * js_ws_prepare_msg_buffer(std::size_t sz) {
-	if (sz < sizeof(std::size_t)) {
-		sz = sizeof(std::size_t);
+	if (sz < sizeof(std::size_t) || sz % sizeof(std::size_t)) {
+		sz += sizeof(std::size_t) - (sz % sizeof(std::size_t));
 	}
 
 	if (sz > msg_buf_sz) {
-		std::free(msg_buf);
-		msg_buf = static_cast<char *>(std::malloc(sz));
+		// use new std::size_t[] because we need the buffer to be aligned to it
+		// also use over malloc to allow calling of OOM handler
+		delete msg_buf;
+		msg_buf = reinterpret_cast<char *>(new std::size_t[sz / sizeof(std::size_t)]);
 		msg_buf_sz = sz;
 	}
 

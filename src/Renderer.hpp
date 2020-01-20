@@ -7,7 +7,6 @@
 #include <glm/ext/matrix_float4x4.hpp>
 
 #include "explints.hpp"
-#include "IdSys.hpp"
 
 #include "Camera.hpp"
 #include "Chunk.hpp"
@@ -16,8 +15,6 @@ class World;
 
 class Renderer : public Camera {
 	World& w;
-	// texUnit 0 will be reserved for temporary gl uses
-	IdSys<u32> texUnits;
 	int ctxInfo;
 	int vpWidth;
 	int vpHeight;
@@ -42,11 +39,14 @@ public:
 
 	~Renderer();
 
+	sz_t getMaxVisibleChunks() const;
+
 	void resumeRendering();
 	void pauseRendering();
 
 	void loadMissingChunks();
-	bool isChunkVisible(Chunk&);
+	bool isChunkVisible(Chunk::Pos x, Chunk::Pos y) const;
+	bool isChunkVisible(const Chunk&) const;
 	void useChunk(Chunk&);
 	void unuseChunk(Chunk&);
 
@@ -71,7 +71,7 @@ private:
 
 	bool resizeCanvas(int w, int h);
 	bool resizeRenderingContext();
-	bool activateRenderingContext();
+	bool activateRenderingContext(bool webgl1 = false);
 	void destroyRenderingContext();
 
 	void startRenderLoop();
