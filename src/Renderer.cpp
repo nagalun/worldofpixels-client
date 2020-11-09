@@ -191,6 +191,7 @@ void Renderer::render() {
 	float bry = std::floor((getY() + hVpHeight) / Chunk::size);
 
 	glUseProgram(chunkProgram);
+	
 	glBindBuffer(GL_ARRAY_BUFFER, tbuf);
 	glEnableVertexAttribArray(attrVPos);
 	glEnableVertexAttribArray(attrVTexCoord);

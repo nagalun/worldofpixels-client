@@ -1,0 +1,42 @@
+{
+  "short_name": "OWOP",
+  "name": "Our World Of Pixels",
+  "description": "Pixel madness",
+  "icons": [
+    {
+      "src": "/img/app/owop-72.png",
+      "type": "image/png",
+      "sizes": "72x72",
+      "purpose": "any"
+    },
+    {
+      "src": "/img/app/owop-96.png",
+      "type": "image/png",
+      "sizes": "96x96",
+      "purpose": "any"
+    },
+    {
+      "src": "/img/app/owop-2x-144.png",
+      "type": "image/png",
+      "sizes": "144x144",
+      "purpose": "any"
+    },
+    {
+      "src": "/img/app/owop-2x-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any"
+    },
+    {
+      "src": "/img/app/owop-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any"
+    }
+  ],
+  "start_url": "/?type=pwa",
+  "background_color": "#111114",
+  "display": "standalone",
+  "scope": "/",
+  "theme_color": "#2E2E2F"
+}

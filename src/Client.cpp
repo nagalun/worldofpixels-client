@@ -3,43 +3,57 @@
 #include <cstdio>
 #include <optional>
 
+#include <emscripten.h>
 #include <emscripten/html5.h>
 
 #include "jswebsockets.hpp"
+#include "audio.hpp"
 
 #include "PacketDefinitions.hpp"
 
+// TODO: Translate strings
+
+EM_JS(void, set_client_status, (const char * buf, std::size_t len), {
+	var el = document.getElementById("status");
+	el.innerHTML = UTF8ToString(buf, len);
+});
+
+EM_JS(void, set_loadscreen_visible, (bool s), {
+	var el = document.getElementById("loader");
+	if (s) {
+		el.classList.remove("ok");
+	} else {
+		el.classList.add("ok");
+	}
+});
+
+EM_JS(void, set_login_prompt_visible, (bool s), {
+	var el = document.getElementById("login");
+	if (s) {
+		el.classList.add("show");
+	} else {
+		el.classList.remove("show");
+	}
+});
+
 Client::Client()
-: im(EMSCRIPTEN_EVENT_TARGET_WINDOW),
+: im(EMSCRIPTEN_EVENT_TARGET_WINDOW, "#world"),
   aClient(im.mkAdapter("Client", -1)),
   selfUid(0),
   globalCursorCount(0),
-  tickTimer(emscripten_set_interval(Client::doTick, 1000.0 / Client::ticksPerSec, this)) {
+  tickTimer(emscripten_set_interval(Client::doTick, 1000.0 / Client::ticksPerSec, this)),
+  lastError(CE_NONE) {
 	js_ws_on_open(Client::doWsOpen);
 	js_ws_on_close(Client::doWsClose);
 	js_ws_on_message(Client::doWsMessage);
 	js_ws_set_user_data(this);
 
 	registerPacketTypes();
-
-	iTest = aClient.add("Print Test", {{"A"}}, T_ONPRESS | T_ONHOLD | T_ONRELEASE, [] (const auto&, auto t, const auto&) {
-		switch (t) {
-			case T_ONPRESS:
-				std::printf("[Client] Test success: T_ONPRESS\n");
-				break;
-
-			case T_ONHOLD:
-				std::printf("[Client] Test success: T_ONHOLD\n");
-				break;
-
-			case T_ONRELEASE:
-				std::printf("[Client] Test success: T_ONRELEASE\n");
-				break;
-		}
-	});
 }
 
 Client::~Client() {
+	setStatus("Unloading...");
+
 	if (js_ws_get_ready_state() != EWsReadyState::CLOSED) {
 		js_ws_close(4001);
 	}
@@ -50,6 +64,8 @@ Client::~Client() {
 }
 
 bool Client::open(std::string_view worldToJoin) {
+	setStatus("Connecting...");
+
 	std::string url("wss://dev.ourworldofpixels.com/");
 	url += worldToJoin;
 
@@ -70,13 +86,20 @@ bool Client::freeMemory() {
 }
 
 
+void Client::setStatus(std::string_view s) {
+	set_client_status(s.data(), s.size());
+}
+
 void Client::registerPacketTypes() {
-	pr.on<AuthProgress>([] (std::string currentProcessor) {
+	pr.on<AuthProgress>([this] (std::string currentProcessor) {
+		setStatus("Authenticating... (" + currentProcessor + ")");
 		std::printf("AuthProgress: %s\n", currentProcessor.c_str());
 	});
 
 	pr.on<AuthOk>([this] (User::Id _selfUid, std::string username, User::Rep totRep,
 			UviasRank::Id rid, std::string rankName, bool isSuperUser, bool canSelfManage) {
+		setStatus("Joining world...");
+
 		std::printf("AuthOk: Uid=%llX Username=%s TotalRep=%i RankId=%u RankName=%s SuperUser=%u CanSelfManage=%u\n",
 			_selfUid, username.c_str(), totRep, rid, rankName.c_str(), isSuperUser, canSelfManage);
 
@@ -84,8 +107,25 @@ void Client::registerPacketTypes() {
 		users.try_emplace(selfUid, selfUid, totRep, UviasRank(rid, std::move(rankName), isSuperUser, canSelfManage), std::move(username));
 	});
 
-	pr.on<AuthError>([] (std::string processor) {
+	pr.on<AuthError>([this] (std::string processor) {
+		setStatus("Auth error: " + processor);
 		std::printf("AuthError: %s\n", processor.c_str());
+
+		if (processor == "SessionChecker") {
+			lastError = CE_SESSION;
+		} else if (processor == "BanChecker") {
+			lastError = CE_BAN;
+		} else if (processor == "WorldChecker") {
+			lastError = CE_WORLD;
+		} else if (processor == "HeaderChecker") {
+			lastError = CE_HEADER;
+		} else if (processor == "ProxyChecker") {
+			lastError = CE_PROXY;
+		} else if (processor == "CaptchaChecker") {
+			lastError = CE_CAPTCHA;
+		} else {
+			lastError = CE_NONE;
+		}
 	});
 
 	pr.on<CursorData>([this] (net::Cursor selfCur, net::Bucket paint, net::Bucket chat, bool canChat, bool canPaint) {
@@ -113,6 +153,9 @@ void Client::registerPacketTypes() {
 		RGB_u bgClrU;
 		bgClrU.rgb = bgClr;
 		world = std::make_unique<World>(im, std::move(worldName), std::move(preJoinSelfCursorData), bgClrU, restricted, std::move(owner));
+
+		set_loadscreen_visible(false);
+		playAudioId("a-join");
 	});
 
 	pr.on<Stats>([this] (u32 worldCursors, u32 globalCursors) { // this is only received if we're in a world
@@ -130,11 +173,49 @@ void Client::tick() {
 }
 
 void Client::wsOpen() {
+	setStatus("Connected!");
 	std::puts("[Client] Ws opened");
 }
 
 void Client::wsClose(u16 code) {
+	if (code != 4004) {
+		setStatus("Disconnected!");
+	} else {
+		switch (lastError) {
+			case CE_SESSION:
+				setStatus("Not logged in!");
+				set_login_prompt_visible(true);
+				break;
+
+			case CE_PROXY:
+				setStatus("The server is not allowing proxy/VPN connections.");
+				break;
+
+			case CE_CAPTCHA:
+				setStatus("Captcha token was invalid! Refresh and try again.");
+				break;
+
+			case CE_BAN:
+				setStatus("You're banned!"); // todo: time remaining and reason
+				break;
+
+			case CE_WORLD:
+				setStatus("Invalid world name! Allowed characters are a..z, 0..9, '_' and '.'");
+				break;
+
+			case CE_HEADER:
+				setStatus("Can't connect from this domain, m8.");
+				break;
+
+			default:
+				setStatus("weird error happened lol");
+				break;
+		}
+	}
+
+	set_loadscreen_visible(true);
 	std::printf("[Client] Ws closed: %u\n", code);
+
 	preJoinSelfCursorData = nullptr;
 	world = nullptr;
 	users.clear();

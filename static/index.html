@@ -1,12 +1,15 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<title>OWOP dev</title>
+	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+	<title>OWOP dev</title>
+
 	<style>
 		body, html {
 			overflow: hidden;
 			touch-action: none;
+			font-family: sans-serif;
 		}
 
 		#world {
@@ -17,30 +20,118 @@
 			height: 100vh;
 		}
 
-		#login {
+		#login, #game-data {
+			display: none;
+		}
+
+		#login.show {
+			display: block;
+		}
+
+		#loader a {
+			color: #429cea;
+		}
+
+		#loader {
 			position: fixed;
 			top: 0;
 			left: 0;
-			background-color: #FFF;
+			width: 100vw;
+			height: 100vh;
+			background: url("/img/bg.png");
+			background-color: #111114;
+			color: #FFF;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			opacity: 1;
+			visibility: visible;
+			transition: visibility .5s, opacity .5s;
+			touch-action: initial;
+		}
+
+		#loader.ok {
+			opacity: 0;
+			visibility: hidden;
+		}
+
+		#logo {
+			display: grid;
+			max-width: 80%;
+			text-align: center;
+			align-items: center;
+			justify-items: center;
+		}
+
+		#logo img {
+			grid-column: 1;
+			grid-row: 1;
+			image-rendering: pixelated;
+			user-select: none;
 		}
 	</style>
+
+	<noscript>
+		<style>
+			#status, #login {
+				display: none;
+			}
+		</style>
+	</noscript>
+
 	<script src="/owop.js" async defer></script>
 	<script>
-		window.addEventListener('load', () => { AppOWOP(); });
-		window.addEventListener('wheel', e => {
+		"use strict";
+
+		window.addEventListener('load', function() {
+			var st = document.getElementById("status");
+			st.innerHTML = 'Loading OWOP...';
+
+			var lastSlash = location.href.lastIndexOf("/") + 1;
+			var worldName = location.href.slice(lastSlash).toLowerCase();
+
+			AppOWOP(worldName.length ? {arguments: [worldName]} : undefined)
+			.then(function() {
+				st.innerHTML = "Initializing...";
+			});
+		});
+
+		window.addEventListener('wheel', function(e) {
 			if (e.ctrlKey) {
 				e.preventDefault();
 				return false;
 			}
 		}, {passive: false});
+
+		if (navigator.serviceWorker) {
+			navigator.serviceWorker.register('/sw.js');
+		}
 	</script>
+
+	<link rel="manifest" href="/manifest.webmanifest">
 </head>
 <body>
 	<canvas id="world"></canvas>
-	<div id="login">
-		hi:
-		<a href="https://uvias.com/api/loginto/owop">Login</a>
-		<a href="https://uvias.com/logoff?service=owop">Logoff</a><br>
+	<div id="loader">
+		<div id="logo">
+			<img draggable="false" src="/img/planet.gif" width="200">
+			<img draggable="false" src="/img/banner.gif" width="180">
+			<noscript>
+				<p>World Of Pixels is an (almost) infinite canvas where you can draw online with other people, or explore many user created worlds.</p>
+				<p>But to use the website, you first need to <a href="http://www.enable-javascript.com/" target="_blank">enable javascript</a>!</p>
+			</noscript>
+			<span id="status">Loading data...</span>
+			<div id="login">
+				<p>To play OWOP, you must...</p>
+				<a href="https://uvias.com/api/loginto/owop">...login with Uvias</a>
+				<!--<a href="https://uvias.com/logoff?service=owop">Logoff</a><br>-->
+			</div>
+		</div>
+	</div>
+	<div id="game-data">
+		<audio id="a-join"><source src="/sfx/join.mp3"></audio>
+		<audio id="a-btn"><source src="/sfx/button.mp3"></audio>
+		<audio id="a-pixel"><source src="/sfx/pixel.mp3"></audio>
 	</div>
 </body>
 </html>

@@ -13,6 +13,16 @@
 #include "SelfCursor.hpp"
 #include "User.hpp"
 
+enum EConnectError {
+	CE_NONE,
+	CE_PROXY,
+	CE_CAPTCHA,
+	CE_BAN,
+	CE_SESSION,
+	CE_WORLD,
+	CE_HEADER
+};
+
 // UBSan complains that the class is not aligned to 16-bytes
 // when constructing it with make_unique...
 class alignas(32) Client {
@@ -29,8 +39,7 @@ private:
 	User::Id selfUid;
 	u32 globalCursorCount;
 	long tickTimer;
-
-	std::shared_ptr<ImAction> iTest;
+	EConnectError lastError;
 
 public:
 	Client();
@@ -42,6 +51,7 @@ public:
 	bool freeMemory();
 
 private:
+	void setStatus(std::string_view);
 	void registerPacketTypes();
 
 	void tick();

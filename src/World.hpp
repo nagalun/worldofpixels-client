@@ -6,6 +6,7 @@
 #include <queue>
 #include <unordered_map>
 
+#include "InputManager.hpp"
 #include "Chunk.hpp"
 #include "Cursor.hpp"
 #include "SelfCursor.hpp"
@@ -15,10 +16,7 @@
 #include "explints.hpp"
 #include "color.hpp"
 
-class InputAdapter;
-class ImAction;
-
-class World {
+class alignas(32) World {
 public:
 	using Pos = i32;
 
@@ -37,17 +35,18 @@ private:
 	u32 cursorCount;
 	InputAdapter& aWorld;
 
-	std::shared_ptr<ImAction> iPrintCoords;
-	std::shared_ptr<ImAction> iRoundCoords;
-	std::shared_ptr<ImAction> iCamUp;
-	std::shared_ptr<ImAction> iCamDown;
-	std::shared_ptr<ImAction> iCamLeft;
-	std::shared_ptr<ImAction> iCamRight;
-	std::shared_ptr<ImAction> iCamZoomIn;
-	std::shared_ptr<ImAction> iCamZoomOut;
-	std::shared_ptr<ImAction> iCamZoomWh;
-	std::shared_ptr<ImAction> iCamPanWh;
-	std::shared_ptr<ImAction> iCamPanMo;
+	ImAction iPrintCoords;
+	ImAction iRoundCoords;
+	ImAction iCamUp;
+	ImAction iCamDown;
+	ImAction iCamLeft;
+	ImAction iCamRight;
+	ImAction iCamZoomIn;
+	ImAction iCamZoomOut;
+	ImAction iCamZoomWh;
+	ImAction iCamPanWh;
+	ImAction iCamPanMo;
+	ImAction iCamTouch;
 
 	bool drawingRestricted;
 

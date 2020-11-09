@@ -3,108 +3,156 @@
 #include <algorithm>
 #include <memory>
 #include <cctype>
+#include <cstdio>
 
 #include <emscripten/html5.h>
 
-// TOTHINK: input "adapters" instead of contexts on actions?
-// [Base, ActiveTool, UiCurrentWindow] (maybe sort by priority)
-// adapters can cancel events, and link to other adapters
-
 // maybe tool handlers should get selfcursor's mouse coords instead of using inputmanager's
 
-Keybind::Keybind(std::vector<std::string> kbKeys, EPointerEvents mButtons)
-: kbKeys(std::move(kbKeys)),
-  mButtons(mButtons) { }
+Keybind::Keybind(EKeyModifiers mods, std::string button)
+: button(std::move(button)),
+  mods(mods) { }
 
-const std::vector<std::string>& Keybind::getKeyboardKeys() const {
-	return kbKeys;
+Keybind::Keybind(EKeyModifiers mods, const char * button)
+: Keybind(mods, std::string(button)) { }
+
+Keybind::Keybind(EKeyModifiers mods, EPointerButtons button)
+: mods(mods) {
+	switch (button) {
+		case P_MPRIMARY:
+			this->button = "LCLICK";
+			break;
+
+		case P_MSECONDARY:
+			this->button = "RCLICK";
+			break;
+
+		case P_MMIDDLE:
+			this->button = "MCLICK";
+			break;
+
+		case P_MFOURTH: // not the best names
+			this->button = "4CLICK";
+			break;
+
+		case P_MFIFTH:
+			this->button = "5CLICK";
+			break;
+
+		default:
+			// throw not possible
+			std::fprintf(stderr, "[Keybind] Trying to make a keybind with multiple/no mouse buttons! (%d)\n", button);
+			break;
+	}
 }
 
-EPointerEvents Keybind::getPointerEvents() const {
-	return mButtons;
+Keybind::Keybind(std::string button)
+: Keybind(M_NONE, std::move(button)) { }
+
+Keybind::Keybind(const char * button)
+: Keybind(std::string(button)) { }
+
+Keybind::Keybind(EPointerButtons button)
+: Keybind(M_NONE, button) { }
+
+const std::string& Keybind::getButton() const {
+	return button;
 }
 
-bool Keybind::hasKbKeys() const {
-	return !kbKeys.empty();
+EKeyModifiers Keybind::getModifiers() const {
+	return mods;
 }
 
-bool Keybind::isMixed() const {
-	return mButtons && !kbKeys.empty();
-}
+bool Keybind::looseMatch(EKeyModifiers m, EPointerButtons btn) const {
+	char match = '\x00';
+	switch (btn) {
+		case P_MPRIMARY:
+			match = 'L';
+			break;
 
-// loose or strict match depending on parameter's .isMixed()
-bool Keybind::canActivate(const Keybind& k) const {
-	EPointerEvents m = k.getPointerEvents();
-	if (!k.isMixed() && m) {
-		return (getPointerEvents() & m) == m;
+		case P_MSECONDARY:
+			match = 'R';
+			break;
+
+		case P_MMIDDLE:
+			match = 'M';
+			break;
+
+		case P_MFOURTH:
+			match = '4';
+			break;
+
+		case P_MFIFTH:
+			match = '5';
+			break;
+
+		default:
+			break;
 	}
 
-	const std::vector<std::string>& binding = k.getKeyboardKeys();
-
-	if (binding.size() > kbKeys.size() || kbKeys.empty()) {
-		return false;
-	}
-
-	auto bit = binding.begin();
-	auto kbit = std::find(kbKeys.begin(), kbKeys.end(), *bit);
-	for (; kbit != kbKeys.end() && bit != binding.end(); ++kbit, ++bit) {
-		if (*kbit != *bit) {
-			return false;
-		}
-	}
-
-	return k.isMixed()
-		? kbit == kbKeys.end() && bit == binding.end() // keys are at the end of array
-			&& (getPointerEvents() & m) == m
-		: bit == binding.end();
+	return (m & mods) == mods && button.size() == 6 && button[0] == match;
 }
 
-bool Keybind::contains(const char * key) const {
-	return std::find_if(kbKeys.begin(), kbKeys.end(), [key] (const auto& str) {
-		return str == key;
-	}) != kbKeys.end();
+bool Keybind::looseMatch(EKeyModifiers m, const char * key) const {
+	return (m & mods) == mods && key == button;
+}
+
+bool Keybind::looseMatch(EKeyModifiers m, const std::string& key) const {
+	return (m & mods) == mods && key == button;
 }
 
 // always strict checking
 bool Keybind::operator ==(const Keybind& kb) const {
-	return mButtons == kb.mButtons && kbKeys == kb.kbKeys;
+	return mods == kb.mods && button == kb.button;
 }
 
 bool Keybind::operator  <(const Keybind& kb) const {
-	if (kbKeys.size() < kb.kbKeys.size()) {
+	if (button < kb.button) {
 		return true;
 	}
 
-	if (kbKeys.size() > kb.kbKeys.size()) {
+	if (button > kb.button) {
 		return false;
 	}
 
-	if (kbKeys < kb.kbKeys) {
-		return true;
-	}
-
-	if (kbKeys > kb.kbKeys) {
-		return false;
-	}
-
-	return mButtons < kb.mButtons;
+	return mods < kb.mods;
 }
 
 
+ImAction::Event::Event(EActionTriggers a)
+: activationType(a),
+  rejected(false) { }
 
-ImAction::ImAction(std::string name, u8 trg, InputAdapter& adapter,
-		std::function<void(const Keybind&, EActionTriggers, const InputInfo&)> cb)
+EActionTriggers ImAction::Event::getActivationType() const {
+	return activationType;
+}
+
+void ImAction::Event::reject() {
+	rejected = true;
+}
+
+ImAction::ImAction(InputAdapter& adapter, std::string name, u8 trg,
+	std::function<void(ImAction::Event&, const InputInfo&)> cb)
 : name(std::move(name)),
   cb(std::move(cb)),
   adapter(adapter),
   enabled(true),
-  bindable(true),
-  trg((EActionTriggers)trg) { }
+  bindingsChanged(false),
+  trg((EActionTriggers)trg) {
+  	if (trg & T_ONHOLD) {
+  		// ONHOLD implies ONPRESS
+  		this->trg = (EActionTriggers)(trg | T_ONPRESS);
+  	}
+
+	adapter.add(this);
+}
+
+ImAction::ImAction(InputAdapter& adapter, std::string name,
+	std::function<void(ImAction::Event&, const InputInfo&)> cb)
+: ImAction(adapter, std::move(name), T_ONPRESS, std::move(cb)) { }
 
 ImAction::~ImAction() {
-	// The shared_ptr is considered expired when we get here, so, the weak_ptr
-	// will not be able to .lock() this object. That's why we guess with .expired()
-	adapter.del(name);
+	adapter.del(this);
 	std::printf("[~ImAction]\n");
 }
 
@@ -120,18 +168,80 @@ bool ImAction::isEnabled() const {
 	return enabled;
 }
 
+bool ImAction::haveBindingsChanged() const {
+	return bindingsChanged;
+}
+
+template<typename T>
+const Keybind * ImAction::getMatch(EKeyModifiers m, const T key) const {
+	for (const Keybind& k : bindings) {
+		if (k.looseMatch(m, key)) {
+			return &k;
+		}
+	}
+
+	return nullptr;
+}
+
+template const Keybind * ImAction::getMatch<const char *>(EKeyModifiers m, const char *) const;
+
+const Keybind * ImAction::getMatch(EKeyModifiers m, const InputInfo& ii) const {
+	for (const Keybind& k : bindings) {
+		if (k.looseMatch(m, ii.getButtons())) {
+			return &k;
+		}
+	}
+
+	return nullptr;
+}
+
+std::vector<Keybind>& ImAction::getBindings() {
+	return bindings;
+}
+
+const std::vector<Keybind>& ImAction::getBindings() const {
+	return bindings;
+}
+
+void ImAction::addKeybind(Keybind kb) {
+	bindings.emplace_back(std::move(kb));
+	std::sort(bindings.begin(), bindings.end(), [] (const auto& a, const auto& b) {
+		return !(a < b);
+	});
+
+	bindingsChanged = true;
+}
+
+void ImAction::setDefaultKeybind(Keybind kb) {
+	if (bindings.empty()) {
+		bindings.emplace_back(std::move(kb));
+	}
+}
+
+void ImAction::setDefaultKeybinds(std::vector<Keybind> kbs) {
+	if (bindings.empty()) {
+		bindings = std::move(kbs);
+	}
+}
+
 void ImAction::setEnabled(bool s) {
 	enabled = s;
 }
 
-void ImAction::setCb(std::function<void(const Keybind&, EActionTriggers, const InputInfo&)> cb) {
+void ImAction::setCb(std::function<void(ImAction::Event& e, const InputInfo&)> cb) {
 	this->cb = std::move(cb);
 }
 
-bool ImAction::operator()(const Keybind& k, EActionTriggers activationType, const InputInfo& ii) {
+void ImAction::clearBindingsChanged() {
+	bindingsChanged = false;
+}
+
+
+bool ImAction::operator()(EActionTriggers activationType, const InputInfo& ii) {
 	if (getTriggers() & activationType) {
-		cb(k, activationType, ii);
-		return true;
+		ImAction::Event e(activationType);
+		cb(e, ii);
+		return !e.rejected;
 	}
 
 	return false;
@@ -141,13 +251,67 @@ bool ImAction::operator ==(const ImAction& rhs) const {
 	return name == rhs.name;
 }
 
+
+InputInfo::Pointer::Pointer()
+: lastX(0),
+  lastY(0),
+  x(0),
+  y(0),
+  btns(P_NONE),
+  type(InputInfo::Pointer::MOUSE),
+  active(false) { }
+
+int InputInfo::Pointer::getX() const { return x; }
+int InputInfo::Pointer::getY() const { return y; }
+int InputInfo::Pointer::getDx() const { return x - lastX; }
+int InputInfo::Pointer::getDy() const { return y - lastY; }
+int InputInfo::Pointer::getLastX() const { return lastX; }
+int InputInfo::Pointer::getLastY() const { return lastY; }
+EPointerButtons InputInfo::Pointer::getButtons() const { return btns; }
+bool InputInfo::Pointer::isActive() const { return active; }
+
+void InputInfo::Pointer::set(int nx, int ny, EPointerButtons nbtns, EType ntype) {
+	set(nx, ny, ntype);
+	btns = nbtns;
+}
+
+void InputInfo::Pointer::set(int nx, int ny, EType ntype) {
+	if (active) {
+		lastX = x;
+		lastY = y;
+	} else {
+		lastX = nx;
+		lastY = ny;
+	}
+
+	x = nx;
+	y = ny;
+	type = ntype;
+
+	active = true;
+}
+
+void InputInfo::Pointer::set(EPointerButtons nbtns, EType ntype) {
+	btns = nbtns;
+	type = ntype;
+
+	active = true;
+}
+
+void InputInfo::Pointer::setActive(bool s) {
+	active = s;
+}
+
+
 InputInfo::InputInfo()
 : wheelDx(0.0),
   wheelDy(0.0),
-  lastMouseX(0),
-  lastMouseY(0),
-  mouseX(0),
-  mouseY(0) { }
+  updatedPointer(&pointers[0]),
+  currentModifiers(M_NONE) { }
+
+EKeyModifiers InputInfo::getModifiers() const {
+	return currentModifiers;
+}
 
 double InputInfo::getWheelDx() const {
 	return wheelDx;
@@ -157,37 +321,49 @@ double InputInfo::getWheelDy() const {
 	return wheelDy;
 }
 
-int InputInfo::getLastMouseX() const {
-	return lastMouseX;
+int InputInfo::getX() const { return updatedPointer->getX(); }
+int InputInfo::getY() const { return updatedPointer->getY(); }
+int InputInfo::getDx() const { return updatedPointer->getDx(); }
+int InputInfo::getDy() const { return updatedPointer->getDy(); }
+int InputInfo::getLastX() const { return updatedPointer->getLastX(); }
+int InputInfo::getLastY() const { return updatedPointer->getLastY(); }
+EPointerButtons InputInfo::getButtons() const { return updatedPointer->getButtons(); }
+
+const std::vector<const InputInfo::Pointer*>& InputInfo::getActivePointers() const {
+	if (ptrListOutdated) {
+		activePointers.clear();
+
+		for (const InputInfo::Pointer& p : pointers) {
+			if (p.isActive()) {
+				activePointers.push_back(&p);
+			}
+		}
+
+		ptrListOutdated = false;
+	}
+
+	return activePointers;
 }
 
-int InputInfo::getLastMouseY() const {
-	return lastMouseY;
+const InputInfo::Pointer& InputInfo::getPointer(int id) const {
+	return pointers[id % pointers.size()];
 }
 
-int InputInfo::getMouseX() const {
-	return mouseX;
+InputInfo::Pointer& InputInfo::getPointer(int id) {
+	ptrListOutdated = true;
+	InputInfo::Pointer * p = &pointers[id % pointers.size()];
+	updatedPointer = p;
+	return *p;
 }
 
-int InputInfo::getMouseY() const {
-	return mouseY;
+void InputInfo::setModifiers(EKeyModifiers m) {
+	currentModifiers = m;
 }
 
 void InputInfo::setWheel(double dx, double dy) {
 	wheelDx = dx;
 	wheelDy = dy;
 }
-
-void InputInfo::setMouse(int x, int y) {
-	mouseX = x;
-	mouseY = y;
-}
-
-void InputInfo::updateLastMouse() {
-	lastMouseX = mouseX;
-	lastMouseY = mouseY;
-}
-
 
 InputStorage::InputStorage() {
 	std::printf("[InputStorage] TODO loading\n");
@@ -197,19 +373,24 @@ InputStorage::~InputStorage() {
 	std::printf("[~InputStorage] TODO saving\n");
 }
 
-std::optional<Keybind> InputStorage::popStoredKeybind(const std::string& name) {
-	auto it = savedBindings.find(name);
-	if (it != savedBindings.end()) {
-		Keybind kb = std::move(it->second);
-		savedBindings.erase(it);
-		return kb;
+void InputStorage::popStoredKeybinds(const std::string& name, std::function<void(Keybind)> cb) {
+	auto its = savedBindings.equal_range(name);
+
+	for (auto i = its.first; i != its.second; ++i) {
+		cb(std::move(i->second));
 	}
 
-	return std::nullopt;
+	savedBindings.erase(its.first, its.second);
 }
 
-void InputStorage::storeKeybind(std::string name, Keybind kb) {
-	savedBindings.emplace(std::move(name), std::move(kb));
+void InputStorage::storeKeybinds(const std::string& name, std::vector<Keybind>& v) {
+	auto hint = savedBindings.upper_bound(name);
+
+	for (auto it = v.begin(); it != v.end(); ++it) {
+		savedBindings.emplace_hint(hint, name, std::move(*it));
+	}
+
+	v.clear();
 }
 
 
@@ -224,10 +405,14 @@ InputAdapter::InputAdapter(InputAdapter * parent, InputStorage& is, std::string 
 
 InputAdapter::~InputAdapter() {
 	std::printf("[~InputAdapter] Del %s\n", context.c_str());
-	if (bindings.size() > 0) {
-		std::printf("[~InputAdapter] %lu bindings still registered on adapter ", bindings.size());
+	if (actions.size() > 0) {
+		std::printf("[~InputAdapter] %lu actions still registered on adapter ", actions.size());
 		std::printf("%s!!\n", getFullContext().c_str()); // could segfault if any parent is deleted before this
 	}
+}
+
+const std::string& InputAdapter::getContext() const {
+	return context;
 }
 
 std::string InputAdapter::getFullContext() const {
@@ -235,91 +420,103 @@ std::string InputAdapter::getFullContext() const {
 }
 
 InputAdapter& InputAdapter::mkAdapter(std::string context, int priority) {
-	auto ok = linkedAdapters.emplace(this, storage, std::move(context), priority);
-	// No, the object's order won't change, c++.
-	return const_cast<InputAdapter&>(*ok.first);
+	auto it = std::find_if(linkedAdapters.begin(), linkedAdapters.end(), [&context] (const InputAdapter& a) {
+		return a.getContext() == context;
+	});
+
+	if (it != linkedAdapters.end()) {
+		return *it;
+	}
+
+	it = std::upper_bound(linkedAdapters.begin(), linkedAdapters.end(), priority, [] (const int a, const InputAdapter& b) {
+		return b.priority > a;
+	});
+
+	if (it != linkedAdapters.end()) {
+		it = linkedAdapters.emplace(it, this, storage, std::move(context), priority);
+	} else {
+		it = linkedAdapters.emplace(linkedAdapters.end(), this, storage, std::move(context), priority);
+	}
+
+	return *it;
 }
 
 void InputAdapter::tick(const InputInfo& ii) const {
-	for (const auto& adapter : linkedAdapters) {
-		adapter.tick(ii);
-	}
-
-	for (const auto& binding : activeBindings) {
-		// SLOW
-		if (auto act = binding->second.lock()) {
-			(*act)(binding->first, T_ONHOLD, ii);
-		}
-	}
+	matchEvent(T_ONHOLD, ii);
 }
 
-bool InputAdapter::matchDown(const Keybind& currentKeys, const char * pressedKey,
-		EActionTriggers lastTrigger, const InputInfo& ii) {
+template<typename T>
+bool InputAdapter::matchDown(const T key, const InputInfo& ii) {
 	if (!enabled) {
 		return false;
 	}
 
-	for (auto it = linkedAdapters.rbegin(); it != linkedAdapters.rend(); ++it) {
-		// TODO: change the set for a linked list or vector to get rid of cast
-		InputAdapter& adapter = const_cast<InputAdapter&>(*it);
-		if (adapter.matchDown(currentKeys, pressedKey, lastTrigger, ii)) {
+	for (auto it = linkedAdapters.begin(); it != linkedAdapters.end(); ++it) {
+		InputAdapter& adapter = *it;
+		if (adapter.matchDown(key, ii)) {
 			return true;
 		}
 	}
 
-	// from more complex (long) bindings to less, prioritize
-	for (auto it = bindings.rbegin(); it != bindings.rend(); it++) {
-		EPointerEvents bindMbtns = it->first.getPointerEvents();
+	bool consumed = false;
+	for (auto it = actions.begin(); it != actions.end(); it++) {
+		if (!(*it)->isEnabled()) {
+			continue;
+		}
 
-		if ((pressedKey
-					? it->first.contains(pressedKey)
-					: (bindMbtns & currentKeys.getPointerEvents()) == bindMbtns
-						&& (!it->first.hasKbKeys() || it->first.isMixed()))
-				&& std::find(activeBindings.begin(), activeBindings.end(), it) == activeBindings.end()
-				&& currentKeys.canActivate(it->first)) {
-			auto act = it->second.lock();
-			if (!act || !act->isEnabled()) {
+		// bug: if the action's keybind changes, onrelease may not be fired
+		if (const Keybind * k = (*it)->getMatch(ii.getModifiers(), key)) {
+			if (std::find(activeActions.begin(), activeActions.end(), *it) != activeActions.end()
+					|| ((*it)->getTriggers() & T_ONPRESS && !(**it)(T_ONPRESS, ii))) {
 				continue;
 			}
 
-			if (act->getTriggers() & T_ONPRESS) {
-				(*act)(it->first, T_ONPRESS, ii);
+			if ((*it)->getTriggers() & (T_ONHOLD | T_ONRELEASE | T_ONMOVE
+					| T_ONCANCEL | T_ONWHEEL | T_ONLEAVE)) {
+				activeActions.emplace_back(*it);
 			}
 
-			if (act->getTriggers() & (T_ONHOLD | T_ONRELEASE)) {
-				activeBindings.emplace_back(it);
-			}
-
-			return true;
+			consumed = true;
 		}
 	}
 
-	return false;
+	return consumed;
 }
 
-bool InputAdapter::matchUp(const Keybind& currentKeys, const char * releasedKey,
-		EActionTriggers lastTrigger, const InputInfo& ii) {
-	bool consumed = false;
+template bool InputAdapter::matchDown<const char *>(const char *, const InputInfo&);
+template bool InputAdapter::matchDown<EPointerButtons>(const EPointerButtons, const InputInfo&);
 
-	for (auto it = linkedAdapters.rbegin(); it != linkedAdapters.rend(); ++it) {
-		// TODO: change the set for a linked list or vector to get rid of cast
-		InputAdapter& adapter = const_cast<InputAdapter&>(*it);
-		consumed |= adapter.matchUp(currentKeys, releasedKey, lastTrigger, ii);
+void InputAdapter::matchEvent(EActionTriggers trigger, const InputInfo& ii) const {
+	for (const auto& adapter : linkedAdapters) {
+		adapter.matchEvent(trigger, ii);
 	}
 
-	for (auto it = activeBindings.begin(); it != activeBindings.end();) {
-		// double iterator!
-		EPointerEvents bindMbtns = (*it)->first.getPointerEvents();
+	for (auto it = actions.begin(); it != actions.end(); it++) {
+		// actions that don't register ONPRESS always get events like move, wheel, etc, except hold
+		if ((!((*it)->getTriggers() & T_ONPRESS) && trigger != T_ONHOLD)
+				|| std::find(activeActions.begin(), activeActions.end(), *it) != activeActions.end()) {
+			(**it)(trigger, ii);
+		}
+	}
+}
 
-		if ((currentKeys.getPointerEvents() & bindMbtns) != bindMbtns
-				|| (releasedKey && (*it)->first.contains(releasedKey))) {
-			if (auto act = (*it)->second.lock()) {
-				if (lastTrigger != T_ONRELEASE || (act->getTriggers() & T_ONPRESS)) {
-					(*act)((*it)->first, T_ONRELEASE, ii);
-				}
+template<typename T>
+bool InputAdapter::matchUp(const T releasedKey, EActionTriggers lastTrigger,
+		const InputInfo& ii) {
+	bool consumed = false;
+
+	for (auto it = linkedAdapters.begin(); it != linkedAdapters.end(); ++it) {
+		InputAdapter& adapter = *it;
+		consumed |= adapter.matchUp(releasedKey, lastTrigger, ii);
+	}
+
+	for (auto it = activeActions.begin(); it != activeActions.end();) {
+		if (const Keybind * k = (*it)->getMatch(M_ALL, releasedKey)) {
+			if (lastTrigger != T_ONRELEASE || ((*it)->getTriggers() & T_ONPRESS)) {
+				(**it)(T_ONRELEASE, ii);
 			}
 
-			it = activeBindings.erase(it);
+			it = activeActions.erase(it);
 			consumed = true;
 		} else {
 			++it;
@@ -329,60 +526,59 @@ bool InputAdapter::matchUp(const Keybind& currentKeys, const char * releasedKey,
 	return consumed;
 }
 
+template bool InputAdapter::matchUp<const char *>(const char *, EActionTriggers, const InputInfo&);
+template bool InputAdapter::matchUp<EPointerButtons>(const EPointerButtons, EActionTriggers, const InputInfo&);
 
-std::shared_ptr<ImAction> InputAdapter::add(std::string name, Keybind defaultKb, u8 trg,
-		std::function<void(const Keybind&, EActionTriggers, const InputInfo&)> cb) {
-	std::string fullName(getFullContext() + '/' + name);
-	std::optional<Keybind> customKeybind(storage.popStoredKeybind(fullName));
-
-	auto act = std::make_shared<ImAction>(std::move(name), trg, *this, std::move(cb));
-	auto ok = bindings.emplace(customKeybind.value_or(defaultKb), act);
-
-	if (!ok.second) {
-		auto act2 = ok.first->second.lock();
-		std::printf("[InputAdapter] Duplicate keybind!!!: '%s' with '%s', (",
-			fullName.c_str(), act2 ? act2->getName().c_str() : "[deleted]");
-	} else {
-		std::printf("[InputAdapter] Registered binding: %s (", fullName.c_str());
+void InputAdapter::releaseAll(const InputInfo& ii) {
+	for (auto it = linkedAdapters.begin(); it != linkedAdapters.end(); ++it) {
+		it->releaseAll(ii);
 	}
 
-	for (const std::string& key : ok.first->first.getKeyboardKeys()) {
-		std::printf("%s + ", key.c_str());
-	}
-
-	std::printf("MB[%d])\n", ok.first->first.getPointerEvents());
-
-	return act;
-}
-
-void InputAdapter::del(const std::string& name) {
-	// to work correctly this function assumes that the actions are deleted one at a time
-	std::string fullName(getFullContext() + '/' + name);
-	for (auto it = bindings.begin(); it != bindings.end();) {
-		if (it->second.expired()) {
-			// TODO: ignore if default keybind
-			storage.storeKeybind(fullName, it->first);
-			it = bindings.erase(it);
-		} else {
-			++it;
+	for (auto it = activeActions.begin(); it != activeActions.end();) {
+		// adapters that don't listen to onpress haven't received anything yet
+		// so no need to send cancel & release
+		if ((*it)->getTriggers() & T_ONPRESS) {
+			(**it)(T_ONCANCEL, ii);
+			(**it)(T_ONRELEASE, ii);
 		}
+
+		it = activeActions.erase(it);
 	}
 }
 
-bool InputAdapter::setKeybinding(const std::shared_ptr<ImAction>& act, Keybind kb) {
-	auto it = std::find_if(bindings.begin(), bindings.end(), [&act] (const auto& e) {
-		return !act.owner_before(e.second) && !e.second.owner_before(act);
+
+void InputAdapter::add(ImAction * a) {
+	std::string fullName(getFullContext() + '/' + a->getName());
+
+	storage.popStoredKeybinds(fullName, [a] (Keybind kb) {
+		a->addKeybind(std::move(kb));
 	});
 
-	if (it == bindings.end()) {
-		bindings.emplace(std::move(kb), act);
-	} else {
-		auto binding = bindings.extract(it);
-		binding.key() = std::move(kb);
-		bindings.insert(std::move(binding));
+	a->clearBindingsChanged();
+
+	std::printf("[InputAdapter] Registered action: %s\n", fullName.c_str());
+	actions.push_back(a);
+}
+
+void InputAdapter::del(ImAction * a) {
+	if (a->haveBindingsChanged()) {
+		std::string fullName(getFullContext() + '/' + a->getName());
+		storage.storeKeybinds(fullName, a->getBindings());
 	}
 
-	return true;
+	auto it = std::find(actions.begin(), actions.end(), a);
+	if (it != actions.end()) {
+		actions.erase(it);
+	}
+
+	it = std::find(activeActions.begin(), activeActions.end(), a);
+	if (it != activeActions.end()) {
+		if ((*it)->getTriggers() & T_ONPRESS) {
+			//(*it)(T_ONRELEASE, ???);
+		}
+
+		activeActions.erase(it);
+	}
 }
 
 bool InputAdapter::operator <(const InputAdapter& rhs) const {
@@ -399,140 +595,141 @@ bool InputAdapter::operator <(const InputAdapter& rhs) const {
 
 
 
-
-InputManager::InputManager(const char * targetElement)
+InputManager::InputManager(const char * kbTargetElement, const char * ptrTargetElement)
 : InputAdapter(nullptr, *this, "Base"),
-  targetElement(targetElement),
+  kbTargetElement(kbTargetElement),
+  ptrTargetElement(ptrTargetElement),
   lastTrigger(T_ONPRESS) {
-	emscripten_set_keydown_callback(targetElement, this, true, InputManager::handleKeyEvent);
-	emscripten_set_keyup_callback(targetElement, this, true, InputManager::handleKeyEvent);
-	emscripten_set_blur_callback(targetElement, this, true, InputManager::handleFocusEvent);
+	emscripten_set_keydown_callback(kbTargetElement, this, true, InputManager::handleKeyEvent);
+	emscripten_set_keyup_callback(kbTargetElement, this, true, InputManager::handleKeyEvent);
+	emscripten_set_blur_callback(kbTargetElement, this, true, InputManager::handleFocusEvent);
 
-	emscripten_set_mousemove_callback(targetElement, this, true, InputManager::handleMouseEvent);
-	emscripten_set_mousedown_callback(targetElement, this, true, InputManager::handleMouseEvent);
-	emscripten_set_mouseup_callback(targetElement, this, true, InputManager::handleMouseEvent);
+	emscripten_set_mousemove_callback(ptrTargetElement, this, true, InputManager::handleMouseEvent);
+	emscripten_set_mousedown_callback(ptrTargetElement, this, true, InputManager::handleMouseEvent);
+	emscripten_set_mouseup_callback(ptrTargetElement, this, true, InputManager::handleMouseEvent);
+	emscripten_set_mouseleave_callback(ptrTargetElement, this, true, InputManager::handleMouseEvent);
+	emscripten_set_mouseenter_callback(ptrTargetElement, this, true, InputManager::handleMouseEvent);
 
-	emscripten_set_wheel_callback(targetElement, this, true, InputManager::handleWheelEvent);
+	emscripten_set_touchstart_callback(ptrTargetElement, this, true, InputManager::handleTouchEvent);
+	emscripten_set_touchend_callback(ptrTargetElement, this, true, InputManager::handleTouchEvent);
+	emscripten_set_touchmove_callback(ptrTargetElement, this, true, InputManager::handleTouchEvent);
+	emscripten_set_touchcancel_callback(ptrTargetElement, this, true, InputManager::handleTouchEvent);
 
-	std::printf("[InputManager] Initialized. Target element: %s\n",
-			targetElement == EMSCRIPTEN_EVENT_TARGET_WINDOW ? "window" : targetElement);
+	emscripten_set_wheel_callback(ptrTargetElement, this, true, InputManager::handleWheelEvent);
+
+	std::printf("[InputManager] Initialized. Target elements: keyboard=%s mouse=%s\n",
+			kbTargetElement == EMSCRIPTEN_EVENT_TARGET_WINDOW ? "window" : kbTargetElement,
+			ptrTargetElement == EMSCRIPTEN_EVENT_TARGET_WINDOW ? "window" : ptrTargetElement);
 }
 
 InputManager::~InputManager() {
-	emscripten_clear_interval(tickIntervalId);
+	emscripten_set_keydown_callback(kbTargetElement, nullptr, true, nullptr);
+	emscripten_set_keyup_callback(kbTargetElement, nullptr, true, nullptr);
+	emscripten_set_blur_callback(kbTargetElement, nullptr, true, nullptr);
 
-	emscripten_set_keydown_callback(targetElement, nullptr, true, nullptr);
-	emscripten_set_keyup_callback(targetElement, nullptr, true, nullptr);
-	emscripten_set_blur_callback(targetElement, nullptr, true, nullptr);
+	emscripten_set_mousemove_callback(ptrTargetElement, nullptr, true, nullptr);
+	emscripten_set_mousedown_callback(ptrTargetElement, nullptr, true, nullptr);
+	emscripten_set_mouseup_callback(ptrTargetElement, nullptr, true, nullptr);
+	emscripten_set_mouseleave_callback(ptrTargetElement, nullptr, true, nullptr);
+	emscripten_set_mouseenter_callback(ptrTargetElement, nullptr, true, nullptr);
 
-	emscripten_set_mousemove_callback(targetElement, nullptr, true, nullptr);
-	emscripten_set_mousedown_callback(targetElement, nullptr, true, nullptr);
-	emscripten_set_mouseup_callback(targetElement, nullptr, true, nullptr);
+	emscripten_set_touchstart_callback(ptrTargetElement, nullptr, true, nullptr);
+	emscripten_set_touchend_callback(ptrTargetElement, nullptr, true, nullptr);
+	emscripten_set_touchmove_callback(ptrTargetElement, nullptr, true, nullptr);
+	emscripten_set_touchcancel_callback(ptrTargetElement, nullptr, true, nullptr);
 
-	emscripten_set_wheel_callback(targetElement, nullptr, true, nullptr);
+	emscripten_set_wheel_callback(ptrTargetElement, nullptr, true, nullptr);
 	std::printf("[~InputManager]\n");
-}
-
-void InputManager::printHeldKeys() const {
-	std::printf("[");
-	for (std::size_t i = 0; i < kbKeys.size(); i++) {
-		if (i != 0) {
-			std::printf(", ");
-		}
-
-		std::printf("%s", kbKeys[i].c_str());
-	}
-
-	std::printf("]\n");
 }
 
 void InputManager::tick() {
 	InputAdapter::tick(*this);
-	InputInfo::updateLastMouse();
 }
 
 bool InputManager::keyDown(const char * key) {
-	std::printf("[InputManager] KEYDOWN: key=%s kbKeys=", key);
+	std::printf("[InputManager] KEYDOWN: mods=%d key=%s\n", InputInfo::getModifiers(), key);
 
-	bool handled = false;
-	auto it = std::find(kbKeys.begin(), kbKeys.end(), key);
-	if (it == kbKeys.end()) {
-		kbKeys.emplace_back(key);
-		printHeldKeys();
-		handled = matchDown(*this, key, lastTrigger, *this);
-	} else {
-		printHeldKeys();
-	}
-
+	bool handled = matchDown(key, *this);
 	lastTrigger = T_ONPRESS;
 
 	return handled;
 }
 
 bool InputManager::keyUp(const char * key) {
-	std::printf("[InputManager] KEYUP: key=%s kbKeys=", key);
+	std::printf("[InputManager] KEYUP: mods=%d key=%s\n", InputInfo::getModifiers(), key);
 
-	bool handled = false;
-	auto it = std::find(kbKeys.begin(), kbKeys.end(), key);
-	if (it != kbKeys.end()) {
-		kbKeys.erase(it);
-		printHeldKeys();
-		handled = matchUp(*this, key, lastTrigger, *this);
-	} else {
-		printHeldKeys();
-	}
-
+	bool handled = matchUp(key, lastTrigger, *this);
 	lastTrigger = T_ONRELEASE;
 
 	return handled;
 }
 
-bool InputManager::mouseDown(int changed, int buttons) {
-	std::printf("[InputManager] MDOWN: changes=%d buttons=%d\n", changed, buttons);
+bool InputManager::pointerDown(int id, Ptr::EType t, EPointerButtons changed, EPointerButtons buttons) {
+	using Ptr = InputInfo::Pointer;
+	std::printf("[InputManager] MDOWN: id=%d type=%c mods=%d changes=%d buttons=%d\n",
+			id, t == Ptr::MOUSE ? 'M' : 'T', InputInfo::getModifiers(), changed, buttons);
 
-	mButtons = static_cast<EPointerEvents>(buttons);
+	InputInfo::getPointer(id).set(buttons, t);
 
-	matchDown(*this, nullptr, lastTrigger, *this);
-
-	return false;
-}
-
-bool InputManager::mouseUp(int changed, int buttons) {
-	std::printf("[InputManager] MUP: changes=%d buttons=%d\n", changed, buttons);
-
-	mButtons = static_cast<EPointerEvents>(buttons);
-
-	matchUp(*this, nullptr, lastTrigger, *this);
+	lastTrigger = T_ONPRESS;
+	matchDown(changed, *this);
 
 	return false;
 }
 
-bool InputManager::mouseMove(int x, int y) {
+bool InputManager::pointerUp(int id, Ptr::EType t, EPointerButtons changed, EPointerButtons buttons) {
+	using Ptr = InputInfo::Pointer;
+	std::printf("[InputManager] MUP: id=%d type=%c mods=%d changes=%d buttons=%d\n",
+			id, t == Ptr::MOUSE ? 'M' : 'T', InputInfo::getModifiers(), changed, buttons);
+
+	InputInfo::getPointer(id).set(buttons, t);
+
+	matchUp(changed, lastTrigger, *this);
+
+	return false;
+}
+
+void InputManager::pointerMove(int id, Ptr::EType t, int x, int y) {
 	//std::printf("[InputManager] MMOVE: x=%d y=%d\n", x, y);
-	InputInfo::setMouse(x, y);
-	return false;
+	InputInfo::getPointer(id).set(x, y, t);
+	matchEvent(T_ONMOVE, *this);
 }
 
-bool InputManager::wheel(double dx, double dy, [[maybe_unused]] int type) {
+void InputManager::pointerCancel(int id, Ptr::EType t) {
+	matchEvent(T_ONCANCEL, *this);
+}
+
+void InputManager::pointerEnter(int id, Ptr::EType t) {
+	InputInfo::getPointer(id).setActive(true);
+}
+
+void InputManager::pointerLeave(int id, Ptr::EType t) {
+	InputInfo::getPointer(id).setActive(false);
+	matchEvent(T_ONLEAVE, *this);
+}
+
+bool InputManager::wheel(double dx, double dy, int type) {
 	//std::printf("[InputManager] WHEEL: dx=%f dy=%f dz=%f type=%d\n", dx, dy, dz, type);
 	InputInfo::setWheel(dx, dy);
-	mButtons = (EPointerEvents)(mButtons | P_MWHEEL);
 
-	matchDown(*this, nullptr, lastTrigger, *this);
-
-	mButtons = (EPointerEvents)(mButtons & ~P_MWHEEL);
-
-	matchUp(*this, nullptr, lastTrigger, *this);
+	matchEvent(T_ONWHEEL, *this);
 
 	return false;
+}
+
+void InputManager::setModifiers(bool ctrl, bool alt, bool shift, bool meta) {
+	int m = M_NONE;
+	m |= static_cast<int>(ctrl);
+	m |= static_cast<int>(alt) << 1;
+	m |= static_cast<int>(shift) << 2;
+	m |= static_cast<int>(meta) << 3;
+
+	InputInfo::setModifiers(static_cast<EKeyModifiers>(m));
 }
 
 void InputManager::lostFocus() {
 	std::printf("[InputManager] BLUR\n");
-	// release all keys in order to cancel release triggers
-	while (kbKeys.size()) {
-		keyUp(kbKeys[0].c_str());
-	}
+	InputAdapter::releaseAll(*this);
 }
 
 int InputManager::handleKeyEvent(int type, const EmscriptenKeyboardEvent * ev, void * data) {
@@ -549,6 +746,8 @@ int InputManager::handleKeyEvent(int type, const EmscriptenKeyboardEvent * ev, v
 		key[i] = std::toupper((unsigned char)key[i]);
 	}
 
+	im->setModifiers(ev->ctrlKey, ev->altKey, ev->shiftKey, ev->metaKey);
+
 	switch (type) {
 		case EMSCRIPTEN_EVENT_KEYDOWN:
 			return im->keyDown(ev->key);
@@ -563,15 +762,87 @@ int InputManager::handleKeyEvent(int type, const EmscriptenKeyboardEvent * ev, v
 int InputManager::handleMouseEvent(int type, const EmscriptenMouseEvent * ev, void * data) {
 	InputManager * im = static_cast<InputManager *>(data);
 
+	using Ptr = InputInfo::Pointer;
+
+	im->setModifiers(ev->ctrlKey, ev->altKey, ev->shiftKey, ev->metaKey);
+
+	int changed = ev->button;
+	switch (changed) {
+		case 1:
+			changed = 2;
+			break;
+
+		case 2:
+			changed = 1;
+			break;
+
+		default:
+			break;
+	}
+
+	changed = 1 << changed;
+
 	switch (type) {
 		case EMSCRIPTEN_EVENT_MOUSEMOVE:
-			return im->mouseMove(ev->clientX, ev->clientY);
+			im->pointerMove(0, Ptr::MOUSE, ev->clientX, ev->clientY);
+			return false;
 
 		case EMSCRIPTEN_EVENT_MOUSEDOWN:
-			return im->mouseDown(ev->button, ev->buttons);
+			return im->pointerDown(0, Ptr::MOUSE,
+				static_cast<EPointerButtons>(changed),
+				static_cast<EPointerButtons>(ev->buttons));
 
 		case EMSCRIPTEN_EVENT_MOUSEUP:
-			return im->mouseUp(ev->button, ev->buttons);
+			return im->pointerUp(0, Ptr::MOUSE,
+				static_cast<EPointerButtons>(changed),
+				static_cast<EPointerButtons>(ev->buttons));
+
+		case EMSCRIPTEN_EVENT_MOUSELEAVE:
+			im->pointerLeave(0, Ptr::MOUSE);
+			return false;
+
+		case EMSCRIPTEN_EVENT_MOUSEENTER:
+			im->pointerEnter(0, Ptr::MOUSE);
+			return false;
+	}
+
+	return false;
+}
+
+int InputManager::handleTouchEvent(int type, const EmscriptenTouchEvent * ev, void * data) {
+	InputManager * im = static_cast<InputManager *>(data);
+
+	using Ptr = InputInfo::Pointer;
+
+	im->setModifiers(ev->ctrlKey, ev->altKey, ev->shiftKey, ev->metaKey);
+
+	for (int i = 0; i < ev->numTouches; i++) {
+		const EmscriptenTouchPoint& tp = ev->touches[i];
+
+		if (!tp.isChanged) {
+			continue;
+		}
+
+		switch (type) {
+			case EMSCRIPTEN_EVENT_TOUCHSTART:
+				im->pointerMove(tp.identifier, Ptr::TOUCH, tp.clientX, tp.clientY);
+				im->pointerEnter(tp.identifier, Ptr::TOUCH);
+				im->pointerDown(tp.identifier, Ptr::TOUCH, P_MPRIMARY, P_MPRIMARY);
+				break;
+
+			case EMSCRIPTEN_EVENT_TOUCHEND:
+				im->pointerUp(tp.identifier, Ptr::TOUCH, P_MPRIMARY, P_NONE);
+				im->pointerLeave(tp.identifier, Ptr::TOUCH);
+				break;
+
+			case EMSCRIPTEN_EVENT_TOUCHMOVE:
+				im->pointerMove(tp.identifier, Ptr::TOUCH, tp.clientX, tp.clientY);
+				break;
+
+			case EMSCRIPTEN_EVENT_TOUCHCANCEL:
+				im->pointerCancel(tp.identifier, Ptr::TOUCH);
+				break;
+		}
 	}
 
 	return false;
@@ -591,6 +862,8 @@ int InputManager::handleFocusEvent(int type, const EmscriptenFocusEvent *, void 
 
 int InputManager::handleWheelEvent(int type, const EmscriptenWheelEvent * ev, void * data) {
 	InputManager * im = static_cast<InputManager *>(data);
+
+	im->setModifiers(ev->mouse.ctrlKey, ev->mouse.altKey, ev->mouse.shiftKey, ev->mouse.metaKey);
 
 	switch (type) {
 		case EMSCRIPTEN_EVENT_WHEEL:

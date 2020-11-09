@@ -36,10 +36,7 @@ EM_JS(void, actually_abort_async_wget2, (int hdl), {
 });
 
 static void destroyWget(void * e) {
-	if (e) {
-		actually_abort_async_wget2(reinterpret_cast<int>(e));
-		//std::printf("Cancelled chunk request\n");
-	}
+	actually_abort_async_wget2(reinterpret_cast<int>(e) - 1);
 }
 
 Chunk::Chunk(Pos x, Pos y, World& w)
@@ -56,7 +53,8 @@ Chunk::Chunk(Pos x, Pos y, World& w)
 		return true;
 	});
 
-	loaderRequest.reset(reinterpret_cast<void *>(emscripten_async_wget2_data(
+	// terrible use of unique_ptr. 1 + needed because request id can be 0
+	loaderRequest.reset(reinterpret_cast<void *>(1 + emscripten_async_wget2_data(
 			w.getChunkUrl(x, y), "GET", nullptr, this, true,
 			Chunk::loadCompleted, Chunk::loadFailed, nullptr)));
 
@@ -66,7 +64,6 @@ Chunk::Chunk(Pos x, Pos y, World& w)
 }
 
 Chunk::~Chunk() {
-	//std::puts("[Chunk] Destroyed");
 	deleteTexture();
 	w.signalChunkUnloaded(*this);
 }

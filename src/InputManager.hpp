@@ -4,6 +4,7 @@
 #include <functional>
 #include <map>
 #include <set>
+#include <list>
 #include <string>
 #include <memory>
 #include <vector>
@@ -60,9 +61,10 @@ class InputInfo;
 class EmscriptenKeyboardEvent;
 class EmscriptenFocusEvent;
 class EmscriptenMouseEvent;
+class EmscriptenTouchEvent;
 class EmscriptenWheelEvent;
 
-enum EPointerEvents {
+enum EPointerButtons {
 	P_NONE       = 0,
 
 	P_MPRIMARY   = 1,
@@ -71,35 +73,54 @@ enum EPointerEvents {
 	P_MFOURTH    = 8,
 	P_MFIFTH     = 16,
 
-	P_MWHEEL = 128,
+	/*P_MWHEELUP    = 32,
+	P_MWHEELDOWN  = 64,
+	P_MWHEELLEFT  = 128,
+	P_MWHEELRIGHT = 256*/
+};
 
-	P_TOUCH = 256
+enum EKeyModifiers {
+	M_NONE  = 0,
+	M_CTRL  = 1,
+	M_ALT   = 2,
+	M_SHIFT = 4,
+	M_META  = 8,
+
+	M_ALL   = 255
 };
 
 enum EActionTriggers : u8 {
 	T_ONPRESS   = 1,
 	T_ONHOLD    = 2,
 	T_ONRELEASE = 4,
-	T_ONMOVE    = 8 // mouse move or touch move
+	T_ONCANCEL  = 8,  // action should be cancelled/reset
+
+	T_ONWHEEL   = 16,
+	T_ONMOVE    = 32, // pointer move
+	T_ONLEAVE   = 64  // pointer left screen
 };
 
 class Keybind {
 protected:
+	//13/4/20!!! let keybind have a single button, can be mouse (not specific), keyboard btn (including modifier buttons)
 	// TODO: deduplicate across multiple keybinds?
-	std::vector<std::string> kbKeys;
-	EPointerEvents mButtons;
+	std::string button;
+	EKeyModifiers mods;
 
 public:
-	Keybind(std::vector<std::string> = {}, EPointerEvents = P_NONE);
+	Keybind(EKeyModifiers, std::string);
+	Keybind(EKeyModifiers, const char *);
+	Keybind(EKeyModifiers, EPointerButtons button);
+	Keybind(std::string);
+	Keybind(const char *);
+	Keybind(EPointerButtons button);
 
-	const std::vector<std::string>& getKeyboardKeys() const;
-	EPointerEvents getPointerEvents() const;
-	bool hasKbKeys() const;
-	bool isMixed() const;
+	const std::string& getButton() const;
+	EKeyModifiers getModifiers() const;
 
-	// loose or strict match depending on parameter's .isMixed()
-	bool canActivate(const Keybind&) const;
-	bool contains(const char * key) const;
+	bool looseMatch(EKeyModifiers, EPointerButtons btn) const;
+	bool looseMatch(EKeyModifiers, const char * key) const;
+	bool looseMatch(EKeyModifiers, const std::string& key) const;
 
 	// always strict checking
 	bool operator ==(const Keybind&) const;
@@ -107,50 +128,129 @@ public:
 };
 
 class ImAction {
+public:
+	class Event {
+		EActionTriggers activationType;
+		bool rejected;
+
+	public:
+		Event(EActionTriggers);
+		Event(const Event&) = delete;
+		Event(Event&&) = delete;
+
+		EActionTriggers getActivationType() const;
+		void reject();
+
+		friend ImAction;
+	};
+
+private:
 	const std::string name;
-	std::function<void(const Keybind&, EActionTriggers activationType, const InputInfo& ii)> cb;
+	std::vector<Keybind> bindings;
+	std::function<void(Event& e, const InputInfo& ii)> cb;
 	InputAdapter& adapter;
 	bool enabled;
-	bool bindable; // do i need this?
+	bool bindingsChanged;
 	EActionTriggers trg;
 
 public:
-	ImAction(std::string, u8 triggers, InputAdapter&,
-		std::function<void(const Keybind&, EActionTriggers activationType, const InputInfo& ii)>);
+	ImAction(InputAdapter&, std::string name, u8 triggers,
+		std::function<void(Event& e, const InputInfo&)> = nullptr);
+
+	ImAction(InputAdapter&, std::string name, // T_ONPRESS by default
+		std::function<void(Event&, const InputInfo&)> = nullptr);
+
 	~ImAction();
 
 	const std::string& getName() const;
 	EActionTriggers getTriggers() const;
 	bool isEnabled() const;
+	bool haveBindingsChanged() const;
 
+	template<typename T>
+	const Keybind * getMatch(EKeyModifiers, const T key) const;
+	const Keybind * getMatch(EKeyModifiers, const InputInfo& key) const;
+
+	std::vector<Keybind>& getBindings();
+	const std::vector<Keybind>& getBindings() const;
+
+	void addKeybind(Keybind);
+	void setDefaultKeybind(Keybind);
+	void setDefaultKeybinds(std::vector<Keybind>);
 	void setEnabled(bool);
-	void setCb(std::function<void(const Keybind&, EActionTriggers activationType, const InputInfo& ii)>);
+	void setCb(std::function<void(Event& e, const InputInfo& ii)>);
+	void clearBindingsChanged();
 
-	bool operator ()(const Keybind&, EActionTriggers activationType, const InputInfo& ii);
+	bool operator ()(EActionTriggers activationType, const InputInfo& ii);
 	bool operator ==(const ImAction&) const;
 };
 
 class InputInfo { // passed to action callbacks
+public:
+	class Pointer {
+	public:
+		enum EType {
+			MOUSE,
+			TOUCH
+		};
+
+	private:
+		int lastX;
+		int lastY;
+		int x;
+		int y;
+		EPointerButtons btns;
+		EType type;
+		bool active;
+
+	public:
+		Pointer();
+
+		int getX() const;
+		int getY() const;
+		int getDx() const;
+		int getDy() const;
+		int getLastX() const;
+		int getLastY() const;
+		EPointerButtons getButtons() const;
+		bool isActive() const;
+		void set(int x, int y, EPointerButtons, EType);
+		void set(int x, int y, EType);
+		void set(EPointerButtons, EType);
+		void setActive(bool);
+	};
+
+private:
 	double wheelDx;
 	double wheelDy;
-	int lastMouseX;
-	int lastMouseY;
-	int mouseX;
-	int mouseY;
+	std::array<Pointer, 8> pointers;
+	mutable std::vector<const Pointer *> activePointers;
+	Pointer * updatedPointer;
+	EKeyModifiers currentModifiers;
+	mutable bool ptrListOutdated;
 
 public:
 	InputInfo();
 
+	EKeyModifiers getModifiers() const;
+
 	double getWheelDx() const;
 	double getWheelDy() const;
-	int getLastMouseX() const;
-	int getLastMouseY() const;
-	int getMouseX() const;
-	int getMouseY() const;
+	int getX() const;
+	int getY() const;
+	int getDx() const;
+	int getDy() const;
+	int getLastX() const;
+	int getLastY() const;
+	EPointerButtons getButtons() const;
 
+	const std::vector<const Pointer *>& getActivePointers() const;
+	const Pointer& getPointer(int) const;
+
+protected:
+	Pointer& getPointer(int);
+	void setModifiers(EKeyModifiers);
 	void setWheel(double, double);
-	void setMouse(int, int);
-	void updateLastMouse();
 };
 
 class InputStorage {
@@ -158,14 +258,14 @@ class InputStorage {
 	// can include restores for sub-actions, example:
 	// Base/Tool/Cursor/Draw => P_MPRIMARY
 	// Last section of the string is always the action name
-	std::map<std::string, Keybind> savedBindings;
+	std::multimap<std::string, Keybind> savedBindings;
 
 public:
 	InputStorage(); // load from localStorage
 	~InputStorage(); // save to localStorage
 
-	std::optional<Keybind> popStoredKeybind(const std::string&);
-	void storeKeybind(std::string, Keybind);
+	void popStoredKeybinds(const std::string&, std::function<void(Keybind)>);
+	void storeKeybinds(const std::string&, std::vector<Keybind>&);
 };
 
 class InputAdapter {
@@ -173,67 +273,80 @@ class InputAdapter {
 	InputStorage& storage;
 	const std::string context;
 	const int priority;
+
+	std::vector<ImAction *> actions;
+	// Holds actions which were sent a T_ONPRESS event (and may receive others, if specified)
+	std::vector<ImAction *> activeActions;
+
+	std::list<InputAdapter> linkedAdapters;
+
 	bool enabled;
-
-	std::map<Keybind, std::weak_ptr<ImAction>> bindings;
-	// Holds bindings which were sent a T_ONPRESS event (and may receive T_ONHOLD & T_ONRELEASE, if specified)
-	std::vector<decltype(bindings)::const_reverse_iterator> activeBindings;
-
-	std::set<InputAdapter> linkedAdapters;
 
 public:
 	InputAdapter(InputAdapter * parent, InputStorage& is, std::string context, int priority = 0);
 	InputAdapter(const InputAdapter&) = delete;
 	~InputAdapter();
 
+	const std::string& getContext() const;
 	std::string getFullContext() const; // very slow
 	InputAdapter& mkAdapter(std::string context, int priority = 0);
 
 	// calls HOLD for T_ONHOLD-registered and active (held) keybinds
 	void tick(const InputInfo&) const;
-	bool matchDown(const Keybind& currentKeys, const char * pressedKey, EActionTriggers lastTrigger, const InputInfo&);
-	bool matchUpdate(EPointerEvents EActionTriggers lastTrigger, const InputInfo&);
-	bool matchUp(const Keybind& currentKeys, const char * releasedKey, EActionTriggers lastTrigger, const InputInfo&);
 
-	std::shared_ptr<ImAction> add(std::string name, Keybind defaultKb, u8 triggers,
-			std::function<void(const Keybind&, EActionTriggers, const InputInfo&)>);
+	template<typename T>
+	bool matchDown(const T key, const InputInfo&);
 
-	void del(const std::string&);
+	void matchEvent(EActionTriggers, const InputInfo&) const;
 
-	bool setKeybinding(const std::shared_ptr<ImAction>&, Keybind);
+	template<typename T>
+	bool matchUp(const T key, EActionTriggers lastTrigger, const InputInfo&);
+
+	void releaseAll(const InputInfo& ii);
+
+	void add(ImAction *);
+	void del(ImAction *);
 
 	bool operator <(const InputAdapter&) const;
 };
 
 // Order of destruction of derived classes will guarantee InputStorage is still
 // valid when InputAdapter gets destroyed, allowing saving
-class InputManager : Keybind, InputInfo, InputStorage, public InputAdapter {
-	const char * targetElement;
-	long tickIntervalId;
+class InputManager : InputInfo, InputStorage, public InputAdapter {
+	using Ptr = InputInfo::Pointer;
+
+	const char * kbTargetElement;
+	const char * ptrTargetElement;
 
 	// only holds either T_ONPRESS or T_ONRELEASE
 	EActionTriggers lastTrigger;
 
 public:
-	InputManager(const char * targetElem);
+	InputManager(const char * kbTargetElement, const char * ptrTargetElement);
 	~InputManager();
-
-	void printHeldKeys() const;
 
 	void tick();
 
 	bool keyDown(const char * key);
 	bool keyUp(const char * key);
-	bool mouseDown(int changed, int buttons);
-	bool mouseUp(int changed, int buttons);
-	bool mouseMove(int x, int y);
+
+	bool pointerDown(int id, Ptr::EType, EPointerButtons changed, EPointerButtons buttons);
+	bool pointerUp(int id, Ptr::EType, EPointerButtons changed, EPointerButtons buttons);
+	void pointerMove(int id, Ptr::EType, int x, int y);
+	void pointerCancel(int id, Ptr::EType);
+	void pointerEnter(int id, Ptr::EType);
+	void pointerLeave(int id, Ptr::EType);
+
 	bool wheel(double dx, double dy, int type);
+
+	void setModifiers(bool ctrl, bool alt, bool shift, bool meta);
 
 	void lostFocus();
 
 private:
 	static int handleKeyEvent(int type, const EmscriptenKeyboardEvent * ev, void * data);
 	static int handleMouseEvent(int type, const EmscriptenMouseEvent * ev, void * data);
+	static int handleTouchEvent(int type, const EmscriptenTouchEvent * ev, void * data);
 	static int handleFocusEvent(int type, const EmscriptenFocusEvent * ev, void * data);
 	static int handleWheelEvent(int type, const EmscriptenWheelEvent * ev, void * data);
 };

@@ -15,43 +15,68 @@ World::World(InputAdapter& base, std::string name, std::unique_ptr<SelfCursor> m
   owner(std::move(owner)),
   cursorCount(1),
   aWorld(base.mkAdapter("World")),
+  iPrintCoords(aWorld, "Print Coordinates"),
+  iRoundCoords(aWorld, "Round Coordinates"),
+  iCamUp(aWorld, "Camera ↑", T_ONHOLD),
+  iCamDown(aWorld, "Camera ↓", T_ONHOLD),
+  iCamLeft(aWorld, "Camera ←", T_ONHOLD),
+  iCamRight(aWorld, "Camera →", T_ONHOLD),
+  iCamZoomIn(aWorld, "Zoom +"),
+  iCamZoomOut(aWorld, "Zoom -"),
+  iCamZoomWh(aWorld, "Zoom Wheel", T_ONWHEEL),
+  iCamPanWh(aWorld, "Pan Camera Wheel", T_ONWHEEL),
+  iCamPanMo(aWorld, "Pan Camera Mouse", T_ONPRESS | T_ONMOVE),
+  iCamTouch(aWorld, "Camera Touch Control", T_ONPRESS | T_ONMOVE),
   drawingRestricted(restricted) {
 
-	iPrintCoords = aWorld.add("Print Coordinates", {{"P"}}, T_ONPRESS, [this] (const auto&, auto, const auto&) {
+	iPrintCoords.setDefaultKeybind("P");
+	iPrintCoords.setCb([this] (auto&, const auto&) {
 		std::printf("[World] Coords: %f, %f\n", r.getX(), r.getY());
 	});
 
-	iRoundCoords = aWorld.add("Round Coordinates", {{"O"}}, T_ONPRESS, [this] (const auto&, auto, const auto&) {
+	iRoundCoords.setDefaultKeybind("O");
+	iRoundCoords.setCb([this] (auto&, const auto&) {
 		r.setPos(std::round(r.getX()), std::round(r.getY()));
 	});
 
-	iCamUp = aWorld.add("Camera ↑", {{"ARROWUP"}}, T_ONHOLD, [this] (const auto&, auto, const auto&) {
+	iCamUp.setDefaultKeybind("ARROWUP");
+	iCamUp.setCb([this] (auto&, const auto&) {
 		r.translate(0.f, -3.f / (r.getZoom() / 16.f));
 	});
 
-	iCamDown = aWorld.add("Camera ↓", {{"ARROWDOWN"}}, T_ONHOLD, [this] (const auto&, auto, const auto&) {
+	iCamDown.setDefaultKeybind("ARROWDOWN");
+	iCamDown.setCb([this] (auto&, const auto&) {
 		r.translate(0.f, 3.f / (r.getZoom() / 16.f));
 	});
 
-	iCamLeft = aWorld.add("Camera ←", {{"ARROWLEFT"}}, T_ONHOLD, [this] (const auto&, auto, const auto&) {
+	iCamLeft.setDefaultKeybind("ARROWLEFT");
+	iCamLeft.setCb([this] (auto&, const auto&) {
 		r.translate(-3.f / (r.getZoom() / 16.f), 0.f);
 	});
 
-	iCamRight = aWorld.add("Camera →", {{"ARROWRIGHT"}}, T_ONHOLD, [this] (const auto&, auto, const auto&) {
+	iCamRight.setDefaultKeybind("ARROWRIGHT");
+	iCamRight.setCb([this] (auto&, const auto&) {
 		r.translate(3.f / (r.getZoom() / 16.f), 0.f);
 	});
 
-	iCamZoomIn = aWorld.add("Zoom +", {{"CONTROL", "+"}}, T_ONPRESS, [this] (const auto&, auto, const auto&) {
+	iCamZoomIn.setDefaultKeybind({M_CTRL, "+"});
+	iCamZoomIn.setCb([this] (auto&, const auto&) {
 		float nz = r.getZoom() * 2.f;
 		r.setZoom(nz >= 32.f ? 32.f : nz);
 	});
 
-	iCamZoomOut = aWorld.add("Zoom -", {{"CONTROL", "-"}}, T_ONPRESS, [this] (const auto&, auto, const auto&) {
+	iCamZoomOut.setDefaultKeybind({M_CTRL, "-"});
+	iCamZoomOut.setCb([this] (auto&, const auto&) {
 		float nz = r.getZoom() / 2.f;
 		r.setZoom(nz);
 	});
 
-	iCamZoomWh = aWorld.add("Zoom Wheel", {{"CONTROL"}, M_WHEEL}, T_ONPRESS, [this] (const auto&, auto, const auto& ii) {
+	iCamZoomWh.setCb([this] (auto& ev, const auto& ii) {
+		if (!(ii.getModifiers() & M_CTRL)) {
+			ev.reject();
+			return;
+		}
+
 		double d = ii.getWheelDy();
 		if (d == 0.0) {
 			return;
@@ -61,16 +86,56 @@ World::World(InputAdapter& base, std::string name, std::unique_ptr<SelfCursor> m
 		r.setZoom(nz);
 	});
 
-	iCamPanWh = aWorld.add("Pan Camera Wheel", {{}, M_WHEEL}, T_ONPRESS, [this] (const auto&, auto, const auto& ii) {
+	iCamPanWh.setCb([this] (auto& ev, const auto& ii) {
+		if (ii.getModifiers() & M_CTRL) {
+			ev.reject();
+			return;
+		}
+
 		float z = r.getZoom();
 		r.translate(ii.getWheelDx() / z, ii.getWheelDy() / z);
 	});
 
-	iCamPanMo = aWorld.add("Pan Camera Mouse", {{}, M_PRIMARY}, T_ONMOVE, [this] (const auto&, auto ev, const auto& ii) {
+	iCamPanMo.setDefaultKeybind(P_MMIDDLE);
+	iCamPanMo.setCb([this] (auto& ev, const auto& ii) {
 		r.translate(
-			-(ii.getMouseX() - ii.getLastMouseX()) / r.getZoom(),
-			-(ii.getMouseY() - ii.getLastMouseY()) / r.getZoom()
+			-ii.getDx() / r.getZoom(),
+			-ii.getDy() / r.getZoom()
 		);
+	});
+
+	iCamTouch.setDefaultKeybind(P_MPRIMARY);
+	iCamTouch.setCb([
+		this,
+		lastDist{0.0}
+	] (auto& ev, const auto& ii) mutable {
+		const auto& p = ii.getActivePointers();
+		if (p.size() != 2) {
+			ev.reject();
+			return;
+		}
+
+		double dist = std::sqrt(std::pow(p[1]->getX() - p[0]->getX(), 2) + std::pow(p[1]->getY() - p[0]->getY(), 2));
+		if (ev.getActivationType() == T_ONPRESS) {
+			lastDist = dist;
+			return;
+		}
+
+		int lastMidX = (p[1]->getLastX() + p[0]->getLastX()) / 2;
+		int lastMidY = (p[1]->getLastY() + p[0]->getLastY()) / 2;
+		int midX = (p[1]->getX() + p[0]->getX()) / 2;
+		int midY = (p[1]->getY() + p[0]->getY()) / 2;
+
+		int midDx = midX - lastMidX;
+		int midDy = midY - lastMidY;
+
+		r.setZoom(std::max(1.f, r.getZoom() * (float)(dist / lastDist)));
+		r.translate(
+			-midDx / r.getZoom(),
+			-midDy / r.getZoom()
+		);
+		
+		lastDist = dist;
 	});
 
 	std::puts("[World] Created");
@@ -87,6 +152,8 @@ void World::tick() {
 }
 
 bool World::unloadChunks(sz_t amount) {
+	// investigate: this function can access freed, null chunks? (crashed)
+
 	// TODO: unload furthest ones first
 	// https://stackoverflow.com/questions/14902876/indices-of-the-k-largest-elements-in-an-unsorted-length-n-array
 	for (auto it = chunks.begin(); it != chunks.end(); ++it) {
@@ -118,7 +185,7 @@ bool World::freeMemory(bool tryHarder) {
 
 sz_t World::getMaxLoadedChunks() const {
 	sz_t mv = r.getMaxVisibleChunks();
-	return std::max(std::min(mv * 4, 128ul), mv);
+	return std::max(std::min(mv * 8, 128ul), mv);
 }
 
 const Camera& World::getCamera() const {

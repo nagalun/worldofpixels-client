@@ -27,7 +27,7 @@ void Renderer::pauseRendering() {
 
 void Renderer::getViewportSize() {
 	emscripten_get_canvas_element_size(targetCanvas, &vpWidth, &vpHeight);
-	std::printf("[Renderer] Viewport size: %ix%i\n", vpWidth, vpHeight);
+	std::printf("[Renderer] Viewport size: %ix%i (Chunks: %zu)\n", vpWidth, vpHeight, getMaxVisibleChunks());
 }
 
 bool Renderer::resizeCanvas(int w, int h) {
@@ -45,10 +45,12 @@ bool Renderer::activateRenderingContext(bool webgl1) {
 	}
 
 	ctxInfo = emscripten_webgl_create_context(targetCanvas, &attr);
-	if (ctxInfo < 0) {
-		std::fprintf(stderr, "[Renderer] Context creation failed: %i\n", ctxInfo);
+	if (ctxInfo <= 0) {
+		std::fprintf(stderr, "[Renderer] WebGL%c Context creation failed: %i\n", webgl1 ? '1' : '2', ctxInfo);
 		return false;
 	}
+
+	std::printf("[Renderer] CtxInfo: %d\n", ctxInfo);
 
 	if (EMSCRIPTEN_RESULT err = emscripten_webgl_make_context_current(ctxInfo)) {
 		std::fprintf(stderr, "[Renderer] Context activation failed: %i\n", err);
