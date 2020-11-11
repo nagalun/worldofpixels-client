@@ -18,7 +18,7 @@
 					<folderInfo id="cdt.managedbuild.toolchain.gnu.base.586104828.2062442104" name="/" resourcePath="">
 						<toolChain id="cdt.managedbuild.toolchain.gnu.base.616689575" name="Linux GCC" superClass="cdt.managedbuild.toolchain.gnu.base">
 							<targetPlatform archList="all" binaryParser="org.eclipse.cdt.core.GNU_ELF" id="cdt.managedbuild.target.gnu.platform.base.822914603" name="Debug Platform" osList="linux,hpux,aix,qnx" superClass="cdt.managedbuild.target.gnu.platform.base"/>
-							<builder arguments="-c &quot;source ~/.emsdk/emsdk_env.sh &amp;&amp; make $@&quot;" autoBuildTarget="all" buildPath="${workspace_loc:/owop-client}/" cleanBuildTarget="clean" command="bash" enableAutoBuild="false" enableCleanBuild="true" enabledIncrementalBuild="true" id="cdt.managedbuild.target.gnu.builder.base.80751781" incrementalBuildTarget="all" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" parallelBuildOn="true" parallelizationNumber="optimal" superClass="cdt.managedbuild.target.gnu.builder.base">
+							<builder arguments="-c &quot;source ~/.emsdk/emsdk_env.sh &amp;&amp; make $@&quot; sh" autoBuildTarget="all" buildPath="${workspace_loc:/owop-client}/" cleanBuildTarget="clean" command="bash" enableAutoBuild="false" enableCleanBuild="true" enabledIncrementalBuild="true" id="cdt.managedbuild.target.gnu.builder.base.80751781" incrementalBuildTarget="all" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" parallelBuildOn="true" parallelizationNumber="optimal" superClass="cdt.managedbuild.target.gnu.builder.base">
 								<outputEntries>
 									<entry flags="VALUE_WORKSPACE_PATH" kind="outputPath" name="out"/>
 								</outputEntries>
@@ -77,7 +77,6 @@
 			<resource resourceType="PROJECT" workspacePath="/owop-client"/>
 		</configuration>
 	</storageModule>
-	<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets"/>
 	<storageModule moduleId="scannerConfiguration">
 		<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
 		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.exe.debug.1814576489;cdt.managedbuild.config.gnu.exe.debug.1814576489.;cdt.managedbuild.tool.gnu.c.compiler.exe.debug.539376315;cdt.managedbuild.tool.gnu.c.compiler.input.1728952288">
@@ -106,4 +105,24 @@
 		</scannerConfigBuildInfo>
 	</storageModule>
 	<storageModule moduleId="org.eclipse.cdt.internal.ui.text.commentOwnerProjectMappings"/>
+	<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets">
+		<buildTargets>
+			<target name="dbg" path="" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
+				<buildCommand>bash</buildCommand>
+				<buildArguments>-c "source ~/.emsdk/emsdk_env.sh &amp;&amp; make $@" sh -j8</buildArguments>
+				<buildTarget>dbg</buildTarget>
+				<stopOnError>true</stopOnError>
+				<useDefaultCommand>true</useDefaultCommand>
+				<runAllBuilders>true</runAllBuilders>
+			</target>
+			<target name="rel" path="" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
+				<buildCommand>bash</buildCommand>
+				<buildArguments>-c "source ~/.emsdk/emsdk_env.sh &amp;&amp; make $@" sh -j8</buildArguments>
+				<buildTarget>rel</buildTarget>
+				<stopOnError>true</stopOnError>
+				<useDefaultCommand>true</useDefaultCommand>
+				<runAllBuilders>true</runAllBuilders>
+			</target>
+		</buildTargets>
+	</storageModule>
 </cproject>

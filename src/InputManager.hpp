@@ -1,5 +1,6 @@
 #pragma once
 
+#include <util/explints.hpp>
 #include <utility>
 #include <functional>
 #include <map>
@@ -10,7 +11,6 @@
 #include <vector>
 #include <array>
 
-#include "explints.hpp"
 
 // order of the binding matters: pressing C + CTRL should not trigger CTRL + C bindings.
 // EXCEPT: keyboard + mouse bindings. mouse input is appended after keyboard.

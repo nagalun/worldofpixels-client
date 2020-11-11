@@ -8,13 +8,14 @@
 #include <GLES2/gl2ext.h>
 
 #include <glm/ext/vector_float3.hpp>
+#include <util/explints.hpp>
+#include <world/World.hpp>
+
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/string_cast.hpp>
 //#include <glm/ext/matrix_transform.hpp>
 
-#include "World.hpp"
-#include "explints.hpp"
 
 // TODO: use resume/pauseRendering()
 

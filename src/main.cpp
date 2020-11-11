@@ -8,6 +8,10 @@
 #include <exception>
 #include <new>
 
+#ifndef VERSION
+#	define VERSION "unknown"
+#endif
+
 static std::unique_ptr<Client> cl;
 
 int main(int argc, char * argv[]) {
@@ -21,6 +25,7 @@ int main(int argc, char * argv[]) {
 #endif
 
 	std::printf("[main] Compiled on " __DATE__ " @ " __TIME__ "\n");
+	std::printf("[main] Version: " VERSION "\n");
 
 	emscripten_set_beforeunload_callback(nullptr, [] (int, const void *, void *) -> const char * {
 		cl = nullptr;

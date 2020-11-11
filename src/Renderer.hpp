@@ -1,15 +1,14 @@
 #pragma once
 
+#include <util/explints.hpp>
+#include <world/Chunk.hpp>
 #include <utility>
 #include <vector>
 #include <string_view>
 
 #include <glm/ext/matrix_float4x4.hpp>
 
-#include "explints.hpp"
-
-#include "Camera.hpp"
-#include "Chunk.hpp"
+#include <Camera.hpp>
 
 class World;
 

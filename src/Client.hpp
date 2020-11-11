@@ -1,17 +1,16 @@
 #pragma once
 
+#include <util/explints.hpp>
+#include <util/net/PacketReader.hpp>
+#include <uvias/User.hpp>
+#include <world/SelfCursor.hpp>
+#include <world/World.hpp>
 #include <memory>
 #include <unordered_map>
 #include <string>
 #include <string_view>
 
-#include "PacketReader.hpp"
-#include "explints.hpp"
-
-#include "InputManager.hpp"
-#include "World.hpp"
-#include "SelfCursor.hpp"
-#include "User.hpp"
+#include <InputManager.hpp>
 
 enum EConnectError {
 	CE_NONE,

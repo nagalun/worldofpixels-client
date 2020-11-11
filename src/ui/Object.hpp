@@ -1,10 +1,10 @@
 #pragma once
 
+#include <util/NonCopyable.hpp>
 #include <string>
 #include <string_view>
 #include <cstdint>
 
-#include "utils/NonCopyable.hpp"
 
 namespace eui {
 

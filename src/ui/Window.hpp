@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Object.hpp"
+#include <ui/Object.hpp>
 
 #include <string_view>
 

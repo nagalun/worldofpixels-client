@@ -16,7 +16,12 @@ CXX = em++
 CC  = emcc
 
 # also builds owop.wasm
-TARGET    = owop.js
+TARGET = owop.js
+
+TREE_STATE = $(shell git rev-parse --short HEAD)
+ifeq ($(shell git diff --quiet HEAD; echo $$?), 1)
+	TREE_STATE := $(TREE_STATE)-$(shell ./git-hash.sh | cut -c -7)
+endif
 
 OPT_REL   = -O2 -s FILESYSTEM=0
 # for post-compile emscripten stuff
@@ -37,6 +42,8 @@ CPPFLAGS += -MMD -MP
 CPPFLAGS += -D GLM_FORCE_ARCH_UNKNOWN -D GLM_FORCE_CXX17 -D GLM_FORCE_PRECISION_MEDIUMP_FLOAT
 CPPFLAGS += -I ./lib/glm/
 
+CPPFLAGS += -I ./src/
+
 # Libs to use
 LDFLAGS  += -lGL
 
@@ -49,11 +56,13 @@ LDFLAGS  += -s EXPORT_NAME=AppOWOP -s MODULARIZE=1 -s STRICT=1
 
 all: dbg
 
-dbg: CPPFLAGS += $(OPT_DBG)
+dbg: TREE_STATE := $(TREE_STATE)-dbg
+dbg: CPPFLAGS += $(OPT_DBG) -D VERSION='"$(TREE_STATE)"'
 dbg: LDFLAGS += $(LD_DBG)
 dbg: static $(TARGET)
 
-rel: CPPFLAGS += $(OPT_REL)
+rel: TREE_STATE := $(TREE_STATE)-rel
+rel: CPPFLAGS += $(OPT_REL) -D VERSION='"$(TREE_STATE)"'
 rel: LDFLAGS  += $(LD_REL)
 rel: static $(TARGET)
 
@@ -71,6 +80,6 @@ $(OUT_DIR) $(patsubst %/,%,$(sort $(dir $(OBJ_FILES)))):
 	@mkdir -p $@
 
 clean:
-	- $(RM) -r $(OBJ_DIR)
+	- $(RM) -r $(OBJ_DIR) $(OUT_DIR)
 
 -include $(DEP_FILES)

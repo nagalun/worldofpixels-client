@@ -5,12 +5,11 @@
 
 #include <emscripten.h>
 #include <emscripten/html5.h>
+#include <util/Bucket.hpp>
+#include <util/emsc/audio.hpp>
+#include <util/emsc/jswebsockets.hpp>
 
-#include "jswebsockets.hpp"
-#include "audio.hpp"
-#include "Bucket.hpp"
-
-#include "PacketDefinitions.hpp"
+#include <PacketDefinitions.hpp>
 
 // TODO: Translate strings
 
