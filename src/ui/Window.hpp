@@ -6,24 +6,28 @@
 
 namespace eui {
 
+struct WindowOptions {
+	std::string_view title = "";
+	int x = 0;
+	int y = 0;
+	unsigned int width = 200;
+	unsigned int height = 200;
+	unsigned int minWidth = 50;
+	unsigned int minHeight = 25;
+	bool closeable = true;
+	bool resizable = true;
+	Object content = {};
+};
+
 class Window : public Object {
 	Object titleBar;
 	Object content;
-	unsigned int minHeight;
+	unsigned int width;
+	unsigned int height;
 	unsigned int minWidth;
+	unsigned int minHeight;
 
 public:
-	struct WindowOptions {
-		std::string_view title = "",
-		int x = 0,
-		int y = 0,
-		unsigned int width = 200,
-		unsigned int height = 200,
-		bool closeable = true,
-		bool resizable = true,
-		Object content = {}
-	};
-
 	Window(WindowOptions = {});
 
 	void move(int x, int y);
@@ -31,13 +35,13 @@ public:
 
 	void setTitle(std::string_view);
 
+	Object& getContent();
+	unsigned int getHeight() const;
 	unsigned int getMinHeight() const;
 	unsigned int getMinWidth() const;
-	unsigned int setMinHeight() const;
-	unsigned int setMinWidth() const;
-
-	Object& getContent();
-
+	Object& getTitleBar();
+	void setTitleBar(Object titleBar);
+	unsigned int getWidth() const;
 };
 
 } // namespace eui

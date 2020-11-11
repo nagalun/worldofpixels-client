@@ -16,8 +16,6 @@
 #include "BufferHelper.hpp"
 //#include <utils.hpp>
 
-#include "jswebsockets.hpp"
-
 #define STR_HELPER(x) #x
 #define STR(x) STR_HELPER(x)
 
@@ -28,7 +26,7 @@
 #	ifdef DEBUG
 #		define BUFFER_ERROR std::length_error(std::string(__PRETTY_FUNCTION__) + ":" + std::to_string(__LINE__))
 #	else
-#		define BUFFER_ERROR std::length_error()
+#		define BUFFER_ERROR std::length_error("Buffer error")
 #	endif
 #else
 #	define __try      if (true)
@@ -163,7 +161,7 @@ sz_t getTupleBufferSize(const Tuple& t, std::index_sequence<Is...>) {
 
 template<typename... Ts>
 sz_t getSize(const std::tuple<Ts...>& t) {
-	if /*constexpr*/ (are_all_arithmetic<Ts...>::value) {
+	if constexpr (are_all_arithmetic<Ts...>::value) {
 		return add(sizeof(Ts)...);
 	} else {
 		return getTupleBufferSize(t, std::index_sequence_for<Ts...>{});
@@ -191,7 +189,7 @@ getSize(const Container& c) {
 	using T = typename Container::value_type;
 	using Result = is_tuple_arithmetic<T>;
 
-	if /*constexpr*/ (Result::value) {
+	if constexpr (Result::value) {
 		return unsignedVarintSize(c.size()) + Result::size * c.size();
 	}
 
@@ -226,7 +224,7 @@ getSize(const Container& c) {
 
 template<typename T, std::size_t N>
 sz_t getSize(const std::array<T, N>& arr) {
-	if /*constexpr*/ (std::is_arithmetic<T>::value) {
+	if constexpr (std::is_arithmetic<T>::value) {
 		return sizeof(T) * N;
 	} else {
 		sz_t size = 0;
@@ -405,7 +403,7 @@ Array staticArrayFromBuf(const u8 *& b, std::index_sequence<Is...>) {
 	const u8 * start = b;
 	b += sizeof(T) * sizeof... (Is);
 
-	if /*constexpr*/ (sizeof(T) == 1) {
+	if constexpr (sizeof(T) == 1) {
 		return Array{start[Is]...};
 	} else {
 		return Array{buf::readBE<T>(start + Is * sizeof(T))...};
@@ -419,7 +417,7 @@ readFromBuf(const u8 *& b, sz_t remaining) {
 	using T = typename Array::value_type;
 	constexpr sz_t size = std::tuple_size<Array>::value;
 
-	if /*constexpr*/ (std::is_arithmetic<T>::value) {
+	if constexpr (std::is_arithmetic<T>::value) {
 		if (remaining < sizeof(T) * size) {
 			__throw BUFFER_ERROR;
 		}
@@ -464,7 +462,7 @@ std::tuple<Args...> Packet<opCode, Args...>::fromBuffer(const u8 * buffer, sz_t 
 }
 
 template<u8 opCode, typename... Args>
-void Packet<opCode, Args...>::send(Args... args) {
+std::tuple<std::unique_ptr<u8[]>, sz_t> Packet<opCode, Args...>::toBuffer(Args... args) {
 	using namespace pktdetail;
 	constexpr bool isFixedSize = are_all_arithmetic<Args...>::value;
 
@@ -472,8 +470,8 @@ void Packet<opCode, Args...>::send(Args... args) {
 		? add(sizeof(Args)...)
 		: add(getSize(args)...));
 
-	u8 buffer[size];
-	u8 * start = &buffer[0];
+	auto buf(std::make_unique<u8[]>(size));
+	u8 * start = buf.get();
 	u8 * to = start;
 
 	*to++ = opCode;
@@ -481,7 +479,8 @@ void Packet<opCode, Args...>::send(Args... args) {
 	(writeToBuf(to, args, size - (to - start)), ...);
 	assert(sz_t(to - start) == size);
 
-	js_ws_send(reinterpret_cast<char *>(start), size);
+	return {std::move(buf), size};
+	//cl.send(reinterpret_cast<char *>(start), size);
 }
 
 #undef BUFFER_ERROR

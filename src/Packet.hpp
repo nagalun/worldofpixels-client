@@ -1,6 +1,7 @@
 #pragma once
 
 #include <tuple>
+#include <memory>
 
 #include "explints.hpp"
 
@@ -15,8 +16,7 @@ struct Packet {
 	// NOTE: doesn't read opcode!
 	static std::tuple<Args...> fromBuffer(const u8 * buffer, sz_t size);
 
-	// send to current socket
-	static void send(Args... args);
+	static std::tuple<std::unique_ptr<u8[]>, sz_t> toBuffer(Args... args);
 };
 
 template<typename F>

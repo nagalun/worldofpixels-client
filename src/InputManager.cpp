@@ -307,7 +307,8 @@ InputInfo::InputInfo()
 : wheelDx(0.0),
   wheelDy(0.0),
   updatedPointer(&pointers[0]),
-  currentModifiers(M_NONE) { }
+  currentModifiers(M_NONE),
+  ptrListOutdated(true) { }
 
 EKeyModifiers InputInfo::getModifiers() const {
 	return currentModifiers;
@@ -467,7 +468,7 @@ bool InputAdapter::matchDown(const T key, const InputInfo& ii) {
 		// bug: if the action's keybind changes, onrelease may not be fired
 		if (const Keybind * k = (*it)->getMatch(ii.getModifiers(), key)) {
 			if (std::find(activeActions.begin(), activeActions.end(), *it) != activeActions.end()
-					|| ((*it)->getTriggers() & T_ONPRESS && !(**it)(T_ONPRESS, ii))) {
+					|| (((*it)->getTriggers() & T_ONPRESS) && !(**it)(T_ONPRESS, ii))) {
 				continue;
 			}
 

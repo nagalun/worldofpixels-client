@@ -1,8 +1,14 @@
 # https://stackoverflow.com/a/18258352
 rwildcard=$(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2) $(filter $(subst *,%,$2),$d))
 
-SRC_FILES = $(call rwildcard, src/, *.cpp)
-OBJ_FILES = $(SRC_FILES:src/%.cpp=build/%.o)
+SRC_DIR = src
+STATIC_DIR = static
+
+OUT_DIR = out
+OBJ_DIR = build
+
+SRC_FILES = $(call rwildcard, $(SRC_DIR)/, *.cpp)
+OBJ_FILES = $(SRC_FILES:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 DEP_FILES = $(OBJ_FILES:.o=.d)
 
 # Use the emscripten compilers
@@ -10,14 +16,15 @@ CXX = em++
 CC  = emcc
 
 # also builds owop.wasm
-TARGET    = out/owop.js
+TARGET    = owop.js
 
 OPT_REL   = -O2 -s FILESYSTEM=0
-LD_REL    = --closure 1 $(OPT_REL) # for post-compile emscripten stuff
+# for post-compile emscripten stuff
+LD_REL    = --closure 1 $(OPT_REL)
 
 LD_DBG   = -fsanitize=undefined -g4 -s ASSERTIONS=2 -s STACK_OVERFLOW_CHECK=2 -s DEMANGLE_SUPPORT=1 -s FILESYSTEM=1
 OPT_DBG := -D DEBUG=1 $(LD_DBG)
-LD_DBG  += --source-map-base "http://localhost:21002/vfs/1/9clH1bkfZxeEum8u/workspace/owop-client/"
+#LD_DBG  += --source-map-base "http://localhost:21002/vfs/1/9clH1bkfZxeEum8u/workspace/owop-client/"
 
 EM_FEATURES = -s USE_LIBPNG=1 -s USE_SDL=0 -s MAX_WEBGL_VERSION=2
 CPPFLAGS += $(EM_FEATURES)
@@ -33,33 +40,37 @@ CPPFLAGS += -I ./lib/glm/
 # Libs to use
 LDFLAGS  += -lGL
 
-LDFLAGS  += -s ENVIRONMENT=web -s TOTAL_MEMORY=8MB -s TOTAL_STACK=32KB -s WEBGL2_BACKWARDS_COMPATIBILITY_EMULATION=1
-LDFLAGS  += -s DISABLE_DEPRECATED_FIND_EVENT_TARGET_BEHAVIOR=1 -s ABORTING_MALLOC=0 #-s MALLOC=emmalloc
+LDFLAGS  += -s ENVIRONMENT=web -s INITIAL_MEMORY=8MB -s TOTAL_STACK=32KB -s WEBGL2_BACKWARDS_COMPATIBILITY_EMULATION=1
+LDFLAGS  += -s ALLOW_MEMORY_GROWTH=0 -s ABORTING_MALLOC=0 #-s MALLOC=emmalloc
+LDFLAGS  += -s ABORT_ON_WASM_EXCEPTIONS=1 -s HTML5_SUPPORT_DEFERRING_USER_SENSITIVE_REQUESTS=0
 LDFLAGS  += -s EXPORT_NAME=AppOWOP -s MODULARIZE=1 -s STRICT=1
 
-.PHONY: all rel dirs static clean
+.PHONY: all dbg rel static clean
 
-all: CPPFLAGS += $(OPT_DBG)
-all: LDFLAGS += $(LD_DBG)
-all: dirs static $(TARGET)
+all: dbg
+
+dbg: CPPFLAGS += $(OPT_DBG)
+dbg: LDFLAGS += $(LD_DBG)
+dbg: static $(TARGET)
 
 rel: CPPFLAGS += $(OPT_REL)
 rel: LDFLAGS  += $(LD_REL)
-rel: dirs static $(TARGET)
+rel: static $(TARGET)
 
 $(TARGET): $(OBJ_FILES)
-	$(CXX) $(LDFLAGS) -o $@ $^ $(LDLIBS)
+	$(CXX) $(LDFLAGS) -o $(OUT_DIR)/$@ $^ $(LDLIBS)
 
-dirs:
-	mkdir -p build out
+static: $(OUT_DIR)
+	cp -RT $(STATIC_DIR)/ $(OUT_DIR)/
 
-static:
-	cp -RT static/ out/
-
-build/%.o: src/%.cpp
+.SECONDEXPANSION:
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp | $$(@D)
 	$(CXX) $(CPPFLAGS) -c -o $@ $<
 
+$(OUT_DIR) $(patsubst %/,%,$(sort $(dir $(OBJ_FILES)))):
+	@mkdir -p $@
+
 clean:
-	- $(RM) -r build
+	- $(RM) -r $(OBJ_DIR)
 
 -include $(DEP_FILES)

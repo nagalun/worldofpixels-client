@@ -15,6 +15,11 @@ Object::Object(std::string_view tag)
 Object::Object(Object&& m)
 : id(std::exchange(m.id, 0)) { }
 
+Object& Object::operator =(Object&& m) {
+	id = std::exchange(m.id, 0);
+	return *this;
+}
+
 Object::~Object() {
 	destroy();
 }

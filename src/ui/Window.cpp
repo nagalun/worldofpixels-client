@@ -1,39 +1,35 @@
 #include "Window.hpp"
 
+#include <cstdio>
+
 namespace eui {
 
-/*class Window : public Object {
-	Object titleBar;
-	Object content;
-	unsigned int minHeight;
-	unsigned int minWidth;
-
-public:
-	struct WindowOptions {
-		std::string_view title = "",
-		int x = 0,
-		int y = 0,
-		unsigned int width = 200,
-		unsigned int height = 200,
-		bool closeable = true,
-		bool resizable = true,
-		Object content = {}
-	};*/
-
-Window::Window(WindowOptions wo) {
-
+Window::Window(WindowOptions wo)
+: content(std::move(wo.content)),
+  width(wo.width),
+  height(wo.height),
+  minWidth(wo.minWidth),
+  minHeight(wo.minHeight) {
+	setTitle(wo.title);
 }
 
 void Window::move(int x, int y) {
+	static char prop[11 * 2 + 16 + 1] = {0};
+	int written = std::sprintf(prop, "translate(%ipx,%ipx)", x, y);
 
+	setProperty("style.transform", std::string_view(prop, written));
 }
 
 void Window::resize(unsigned int width, unsigned int height) {
 
 }
 
-void Window::setTitle(std::string_view) {
+void Window::setTitle(std::string_view title) {
+	titleBar.setProperty("textContent", title);
+}
 
+unsigned int Window::getHeight() const {
+	return height;
 }
 
 unsigned int Window::getMinHeight() const {
@@ -44,18 +40,20 @@ unsigned int Window::getMinWidth() const {
 	return minWidth;
 }
 
-unsigned int Window::setMinHeight(unsigned int mh) const {
-	minHeight = mh;
+Object& Window::getTitleBar() {
+	return titleBar;
 }
 
-unsigned int Window::setMinWidth(unsigned int mw) const {
-	minWidth = mw;
+void Window::setTitleBar(Object titleBar) {
+	this->titleBar = std::move(titleBar);
+}
+
+unsigned int Window::getWidth() const {
+	return width;
 }
 
 Object& Window::getContent() {
 	return content;
 }
-
-//};
 
 } // namespace eui

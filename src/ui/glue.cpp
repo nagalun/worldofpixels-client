@@ -55,7 +55,7 @@ EM_JS(void, eui_destroy_elem, (std::uint32_t id), {
 const char * eui_elem_selector(std::uint32_t id) {
 	// "#eui-" + "4294967295" + '\0'
 	static char buf[5 + 10 + 1] = "#eui-";
-	std::sprintf(buf + 5, "%ul\0", id);
+	std::sprintf(buf + 5, "%ul", id);
 	return buf;
 }
 
@@ -67,7 +67,7 @@ EM_JS(std::size_t, eui_elem_property_len, (std::uint32_t id, const char * prop, 
 	return prop[0] in obj ? obj[prop[0]].toString().length : 0;
 });
 
-EM_JS(std::size_t, eui_elem_property_get, (std::uint32_t id, char * buf, std::size_t maxlen, const char * prop, std::size_t len), {
+EM_JS(std::size_t, eui_elem_property_get, (std::uint32_t id, const char * buf, std::size_t maxlen, const char * prop, std::size_t len), {
 	var e = Module.EUI.elems[id];
 	var prop = UTF8ToString(prop, len).split(".");
 	var obj = e;
@@ -78,7 +78,7 @@ EM_JS(std::size_t, eui_elem_property_get, (std::uint32_t id, char * buf, std::si
 	return written >= maxlen ? maxlen : written;
 });
 
-EM_JS(std::size_t, eui_elem_property_set, (std::uint32_t id, char * prop, std::size_t proplen, char * val, std::size_t vallen), {
+EM_JS(std::size_t, eui_elem_property_set, (std::uint32_t id, const char * prop, std::size_t proplen, const char * val, std::size_t vallen), {
 	var e = Module.EUI.elems[id];
 	var prop = UTF8ToString(prop, proplen).split(".");
 	var obj = e;

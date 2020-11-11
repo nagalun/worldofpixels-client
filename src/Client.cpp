@@ -8,6 +8,7 @@
 
 #include "jswebsockets.hpp"
 #include "audio.hpp"
+#include "Bucket.hpp"
 
 #include "PacketDefinitions.hpp"
 
@@ -136,7 +137,11 @@ void Client::registerPacketTypes() {
 		std::printf("CursorData: ID=%u X=%i Y=%i Step=%u ToolID=%u PBucketRate=%u PBucketPer=%u PBucketAllowance=%f CBucketRate=%u CBucketPer=%u CBucketAllowance=%f CanChat=%u CanPaint=%u\n",
 				cid, x, y, step, tid, prate, pper, pallowance, crate, cper, callowance, canChat, canPaint);
 
-		preJoinSelfCursorData = std::make_unique<SelfCursor>(users.at(selfUid), cid, x, y, step, tid, Bucket(prate, pper, pallowance), Bucket(crate, cper, callowance), canChat, canPaint);
+		// cid, prate and crate has type due to eclipse cdt bug
+		preJoinSelfCursorData = std::make_unique<SelfCursor>(
+				users.at(selfUid), Cursor::Id{cid}, x, y, step, tid,
+				Bucket(Bucket::Rate{prate}, pper, pallowance), Bucket(Bucket::Rate{crate}, cper, callowance),
+				canChat, canPaint);
 	});
 
 	pr.on<WorldData>([this] (std::string worldName, std::string motd, u32 bgClr, bool restricted, std::optional<User::Id> owner) {

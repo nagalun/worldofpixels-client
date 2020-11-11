@@ -16,6 +16,8 @@ public:
 	Object(std::string_view tag);
 
 	Object(Object&&);
+	Object& operator=(Object&&);
+
 	~Object();
 
 	std::uint32_t getId() const;
