@@ -16,7 +16,7 @@ CXX = em++
 CC  = emcc
 
 # also builds owop.wasm
-TARGET = owop.js
+TARGET = $(OUT_DIR)/owop.js
 
 TREE_STATE = $(shell git rev-parse --short HEAD)
 ifeq ($(shell git diff --quiet HEAD; echo $$?), 1)
@@ -27,9 +27,9 @@ OPT_REL   = -O2 -s FILESYSTEM=0
 # for post-compile emscripten stuff
 LD_REL    = --closure 1 $(OPT_REL)
 
-LD_DBG   = -fsanitize=undefined -g4 -s ASSERTIONS=2 -s STACK_OVERFLOW_CHECK=2 -s DEMANGLE_SUPPORT=1 -s FILESYSTEM=1
-OPT_DBG := -D DEBUG=1 $(LD_DBG)
-#LD_DBG  += --source-map-base "http://localhost:21002/vfs/1/9clH1bkfZxeEum8u/workspace/owop-client/"
+LD_DBG   = -g4 -s ASSERTIONS=2 -s STACK_OVERFLOW_CHECK=2 -s DEMANGLE_SUPPORT=1 -s FILESYSTEM=1
+OPT_DBG := -D DEBUG=1 $(LD_DBG) -D DEBUG_BASE_URL='"https://dev.ourworldofpixels.com"'
+LD_DBG  += --source-map-base "/"
 
 EM_FEATURES = -s USE_LIBPNG=1 -s USE_SDL=0 -s MAX_WEBGL_VERSION=2
 CPPFLAGS += $(EM_FEATURES)
@@ -49,7 +49,7 @@ LDFLAGS  += -lGL
 
 LDFLAGS  += -s ENVIRONMENT=web -s INITIAL_MEMORY=8MB -s TOTAL_STACK=32KB -s WEBGL2_BACKWARDS_COMPATIBILITY_EMULATION=1
 LDFLAGS  += -s ALLOW_MEMORY_GROWTH=0 -s ABORTING_MALLOC=0 #-s MALLOC=emmalloc
-LDFLAGS  += -s ABORT_ON_WASM_EXCEPTIONS=1 -s HTML5_SUPPORT_DEFERRING_USER_SENSITIVE_REQUESTS=0
+LDFLAGS  += -s HTML5_SUPPORT_DEFERRING_USER_SENSITIVE_REQUESTS=0
 LDFLAGS  += -s EXPORT_NAME=AppOWOP -s MODULARIZE=1 -s STRICT=1
 
 .PHONY: all dbg rel static clean
@@ -57,17 +57,17 @@ LDFLAGS  += -s EXPORT_NAME=AppOWOP -s MODULARIZE=1 -s STRICT=1
 all: dbg
 
 dbg: TREE_STATE := $(TREE_STATE)-dbg
-dbg: CPPFLAGS += $(OPT_DBG) -D VERSION='"$(TREE_STATE)"'
+dbg: CPPFLAGS += $(OPT_DBG) -D OWOP_VERSION='"$(TREE_STATE)"'
 dbg: LDFLAGS += $(LD_DBG)
 dbg: static $(TARGET)
 
 rel: TREE_STATE := $(TREE_STATE)-rel
-rel: CPPFLAGS += $(OPT_REL) -D VERSION='"$(TREE_STATE)"'
+rel: CPPFLAGS += $(OPT_REL) -D OWOP_VERSION='"$(TREE_STATE)"'
 rel: LDFLAGS  += $(LD_REL)
 rel: static $(TARGET)
 
 $(TARGET): $(OBJ_FILES)
-	$(CXX) $(LDFLAGS) -o $(OUT_DIR)/$@ $^ $(LDLIBS)
+	$(CXX) $(LDFLAGS) -o $@ $^ $(LDLIBS)
 
 static: $(OUT_DIR)
 	cp -RT $(STATIC_DIR)/ $(OUT_DIR)/

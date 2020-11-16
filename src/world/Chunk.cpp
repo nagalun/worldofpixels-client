@@ -9,7 +9,7 @@
 #include <world/World.hpp>
 #include <Camera.hpp>
 
-
+#include <util/emsc/request.hpp>
 
 static_assert((Chunk::size & (Chunk::size - 1)) == 0,
 	"Chunk::size must be a power of 2");
@@ -23,20 +23,8 @@ static_assert((Chunk::size % Chunk::protectionAreaSize) == 0,
 static_assert((Chunk::pc & (Chunk::pc - 1)) == 0,
 	"size / protectionAreaSize must result in a power of 2");
 
-EM_JS(void, actually_abort_async_wget2, (int hdl), {
-	var http = Browser.wgetRequests[hdl];
-	if (http) {
-		http.onload = null;
-		http.onerror = null;
-		http.onprogress = null;
-		http.onabort = null;
-		http.abort();
-		delete Browser.wgetRequests[hdl];
-	}
-});
-
 static void destroyWget(void * e) {
-	actually_abort_async_wget2(reinterpret_cast<int>(e) - 1);
+	cancel_async_request(reinterpret_cast<int>(e) - 1);
 }
 
 Chunk::Chunk(Pos x, Pos y, World& w)
@@ -55,7 +43,7 @@ Chunk::Chunk(Pos x, Pos y, World& w)
 	});
 
 	// terrible use of unique_ptr. 1 + needed because request id can be 0
-	loaderRequest.reset(reinterpret_cast<void *>(1 + emscripten_async_wget2_data(
+	loaderRequest.reset(reinterpret_cast<void *>(1 + async_request(
 			w.getChunkUrl(x, y), "GET", nullptr, this, true,
 			Chunk::loadCompleted, Chunk::loadFailed, nullptr)));
 

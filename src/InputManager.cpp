@@ -731,6 +731,7 @@ void InputManager::setModifiers(bool ctrl, bool alt, bool shift, bool meta) {
 void InputManager::lostFocus() {
 	std::printf("[InputManager] BLUR\n");
 	InputAdapter::releaseAll(*this);
+	setModifiers(false, false, false, false);
 }
 
 int InputManager::handleKeyEvent(int type, const EmscriptenKeyboardEvent * ev, void * data) {

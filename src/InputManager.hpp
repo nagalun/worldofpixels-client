@@ -58,11 +58,11 @@
 class InputManager;
 class InputAdapter;
 class InputInfo;
-class EmscriptenKeyboardEvent;
-class EmscriptenFocusEvent;
-class EmscriptenMouseEvent;
-class EmscriptenTouchEvent;
-class EmscriptenWheelEvent;
+struct EmscriptenKeyboardEvent;
+struct EmscriptenFocusEvent;
+struct EmscriptenMouseEvent;
+struct EmscriptenTouchEvent;
+struct EmscriptenWheelEvent;
 
 enum EPointerButtons {
 	P_NONE       = 0,

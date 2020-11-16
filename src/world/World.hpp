@@ -14,6 +14,7 @@
 
 #include <InputManager.hpp>
 #include <Renderer.hpp>
+#include <ui/ToolWindow.hpp>
 
 
 class alignas(32) World {
@@ -27,12 +28,16 @@ private:
 	const std::string name;
 	RGB_u bgClr;
 	Renderer r;
+
 	std::queue<std::pair<Chunk::Pos, Chunk::Pos>> chunkLoaderQueue;
 	std::unordered_map<Chunk::Key, Chunk> chunks;
 	std::unordered_map<Cursor::Id, Cursor> cursors; // visible cursors only
-	std::unique_ptr<SelfCursor> me; // can't really be null
+
 	std::optional<User::Id> owner;
+	SelfCursor me;
 	u32 cursorCount;
+
+	ToolWindow toolWin;
 	InputAdapter& aWorld;
 
 	ImAction iPrintCoords;

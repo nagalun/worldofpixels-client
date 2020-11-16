@@ -1,4 +1,4 @@
-#include <util/demangler.hpp>
+#include "demangler.hpp"
 #include <map>
 
 #ifdef __GNUG__
@@ -7,10 +7,10 @@
 	#include <cxxabi.h>
 #endif
 
-std::map<std::type_index, std::string> typeCache;
-std::map<std::string, std::type_index> typeMap;
+std::map<std::type_index, std::string, std::less<>> typeCache;
+std::map<std::string, std::type_index, std::less<>> typeMap;
 
-const std::string& demangle(std::type_index type) { // XXX: also not thread safe
+std::string_view demangle(std::type_index type) { // XXX: also not thread safe
 	auto search = typeCache.find(type);
 
 	if (search == typeCache.end()) {
@@ -32,6 +32,11 @@ const std::string& demangle(std::type_index type) { // XXX: also not thread safe
 	return search->second;
 }
 
-std::type_index strToType(const std::string& s) {
-	return typeMap.at(s); // throws if not found
+std::type_index strToType(std::string_view s) {
+	auto search = typeMap.find(s);
+	if (search == typeMap.end()) {
+		return typeid(void);
+	}
+
+	return search->second;
 }

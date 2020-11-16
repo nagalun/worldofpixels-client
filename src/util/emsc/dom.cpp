@@ -54,7 +54,7 @@ EM_JS(void, eui_destroy_elem, (std::uint32_t id), {
 const char * eui_elem_selector(std::uint32_t id) {
 	// "#eui-" + "4294967295" + '\0'
 	static char buf[5 + 10 + 1] = "#eui-";
-	std::sprintf(buf + 5, "%ul", id);
+	std::sprintf(buf + 5, "%u", id);
 	return buf;
 }
 

@@ -1,8 +1,9 @@
 #pragma once
 
-#include <ui/Object.hpp>
-
+#include <util/emsc/ui/AutoStacking.hpp>
 #include <string_view>
+
+struct EmscriptenMouseEvent;
 
 namespace eui {
 
@@ -19,29 +20,40 @@ struct WindowOptions {
 	Object content = {};
 };
 
-class Window : public Object {
+class Window : public AutoStacking {
 	Object titleBar;
 	Object content;
 	unsigned int width;
 	unsigned int height;
 	unsigned int minWidth;
 	unsigned int minHeight;
+	int moveLastX;
+	int moveLastY;
+	bool moving;
 
 public:
-	Window(WindowOptions = {});
+	Window(WindowOptions = {}, std::string_view containerSelector = "#eui-container");
 
 	void move(int x, int y);
 	void resize(unsigned int width, unsigned int height);
 
+	Object& getTitle();
+	void setTitle(Object titleBar);
 	void setTitle(std::string_view);
 
 	Object& getContent();
-	unsigned int getHeight() const;
-	unsigned int getMinHeight() const;
+	void setContent(Object content);
+
 	unsigned int getMinWidth() const;
-	Object& getTitleBar();
-	void setTitleBar(Object titleBar);
+	unsigned int getMinHeight() const;
 	unsigned int getWidth() const;
+	unsigned int getHeight() const;
+
+private:
+	bool pointerDown(int buttons);
+	bool pointerUp(int buttons);
+	void pointerMove(int x, int y);
+	static int handleMouseEvent(int type, const EmscriptenMouseEvent * ev, void * data);
 };
 
 } // namespace eui

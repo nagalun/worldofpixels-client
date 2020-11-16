@@ -43,6 +43,7 @@ Client::Client()
   globalCursorCount(0),
   tickTimer(emscripten_set_interval(Client::doTick, 1000.0 / Client::ticksPerSec, this)),
   lastError(CE_NONE) {
+	std::printf("[Client] Created\n");
 	js_ws_on_open(Client::doWsOpen);
 	js_ws_on_close(Client::doWsClose);
 	js_ws_on_message(Client::doWsMessage);
