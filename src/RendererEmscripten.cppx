@@ -7,11 +7,6 @@
 
 static const char * targetCanvas = "#world";
 
-EM_JS(void, get_window_size, (int * width, int * height), {
-	Module['HEAP32'][width / Int32Array.BYTES_PER_ELEMENT] = window.innerWidth;
-	Module['HEAP32'][height / Int32Array.BYTES_PER_ELEMENT] = window.innerHeight;
-});
-
 static int emEvent(int eventType, const void *, void * r) {
 	std::printf("[Renderer] Context event fired: %i\n", eventType);
 	return false;
@@ -38,6 +33,7 @@ bool Renderer::activateRenderingContext(bool webgl1) {
 	EmscriptenWebGLContextAttributes attr;
 	emscripten_webgl_init_context_attributes(&attr);
 
+	attr.enableExtensionsByDefault = false;
 	attr.alpha = false;
 	attr.antialias = false;
 	if (!webgl1) {
@@ -50,7 +46,12 @@ bool Renderer::activateRenderingContext(bool webgl1) {
 		return false;
 	}
 
-	std::printf("[Renderer] CtxInfo: %d\n", ctxInfo);
+	int ok = 0;
+	ok |= emscripten_webgl_enable_ANGLE_instanced_arrays(ctxInfo) == EM_TRUE;
+	ok |= emscripten_webgl_enable_WEBGL_multi_draw(ctxInfo) == EM_TRUE << 1;
+	ok |= emscripten_webgl_enable_OES_vertex_array_object(ctxInfo) == EM_TRUE << 2;
+
+	std::printf("[Renderer] CtxInfo: %d, extensions: %d\n", ctxInfo, ok);
 
 	if (EMSCRIPTEN_RESULT err = emscripten_webgl_make_context_current(ctxInfo)) {
 		std::fprintf(stderr, "[Renderer] Context activation failed: %i\n", err);
@@ -69,7 +70,7 @@ bool Renderer::activateRenderingContext(bool webgl1) {
 	int scrWidth;
 	int scrHeight;
 
-	get_window_size(&scrWidth, &scrHeight);
+	emscripten_get_screen_size(&scrWidth, &scrHeight);
 	resizeCanvas(scrWidth, scrHeight);
 
 	std::printf("[Renderer] Created rendering context with WebGL %c\n", webgl1 ? '1' : '2');

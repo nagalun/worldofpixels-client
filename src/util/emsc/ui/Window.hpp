@@ -1,14 +1,16 @@
 #pragma once
 
+#include <util/emsc/ui/Object.hpp>
 #include <util/emsc/ui/AutoStacking.hpp>
 #include <string_view>
+#include <variant>
 
 struct EmscriptenMouseEvent;
 
 namespace eui {
 
 struct WindowOptions {
-	std::string_view title = "";
+	std::variant<std::string_view, Object> title;
 	int x = 0;
 	int y = 0;
 	unsigned int width = 200;

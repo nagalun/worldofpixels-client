@@ -12,10 +12,13 @@
 			font-family: sans-serif;
 		}
 
-		#world, #eui-container {
+		#world, #eui-container, #loader {
 			position: fixed;
 			top: 0;
 			left: 0;
+		}
+		
+		#world, #loader {
 			width: 100vw;
 			height: 100vh;
 		}
@@ -33,11 +36,6 @@
 		}
 
 		#loader {
-			position: fixed;
-			top: 0;
-			left: 0;
-			width: 100vw;
-			height: 100vh;
 			background: url("/img/bg.png");
 			background-color: #111114;
 			color: #FFF;
@@ -109,26 +107,30 @@
 	</script>
 
 	<link rel="manifest" href="/manifest.webmanifest">
+	<link rel="stylesheet" href="/css/eui.css" media="print" onload="this.onload=null;this.media='all'">
 </head>
 <body>
 	<canvas id="world"></canvas>
 	<div id="eui-container"></div>
+
 	<div id="loader">
 		<div id="logo">
 			<img draggable="false" src="/img/planet.gif" width="200">
 			<img draggable="false" src="/img/banner.gif" width="180">
+
 			<noscript>
 				<p>World Of Pixels is an (almost) infinite canvas where you can draw online with other people, or explore many user created worlds.</p>
 				<p>But to use the website, you first need to <a href="http://www.enable-javascript.com/" target="_blank">enable javascript</a>!</p>
 			</noscript>
+
 			<span id="status">Loading data...</span>
 			<div id="login">
 				<p>To play OWOP, you must...</p>
 				<a href="https://uvias.com/api/loginto/owop">...login with Uvias</a>
-				<!--<a href="https://uvias.com/logoff?service=owop">Logoff</a><br>-->
 			</div>
 		</div>
 	</div>
+
 	<div id="game-data">
 		<audio id="a-join"><source src="/sfx/join.mp3"></audio>
 		<audio id="a-btn"><source src="/sfx/button.mp3"></audio>

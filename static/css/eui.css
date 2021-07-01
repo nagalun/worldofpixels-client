@@ -1,0 +1,12 @@
+.eui-win {
+	position: absolute;
+	border: 8px #423F4EB3 solid;
+	border-image: url(/img/ui/default/border.png) 8 repeat;
+	background-color: #423F4EB3;
+	background-clip: padding-box;
+	color: #FFF;
+}
+
+.owop-tools > .eui-win-content {
+	height: 100px;
+}

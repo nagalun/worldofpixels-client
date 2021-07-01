@@ -25,7 +25,6 @@ std::string_view svprintf(const char * fmt, Args... args) {
 
 static Object mktitle(std::string_view title) {
 	Object t("span");
-	t.addClass("eui-win-title");
 	t.setProperty("textContent", title);
 
 	return t;
@@ -33,7 +32,7 @@ static Object mktitle(std::string_view title) {
 
 Window::Window(WindowOptions wo, std::string_view containerSelector)
 : AutoStacking(containerSelector),
-  titleBar(mktitle(wo.title)),
+  titleBar(wo.title.index() == 0 ? mktitle(std::get<0>(wo.title)) : std::move(std::get<1>(wo.title))),
   content(std::move(wo.content)),
   width(wo.width),
   height(wo.height),
@@ -43,7 +42,10 @@ Window::Window(WindowOptions wo, std::string_view containerSelector)
   moveLastY(0),
   moving(false) {
 	addClass("eui-win");
+
+	titleBar.addClass("eui-win-title");
 	titleBar.appendTo(*this);
+
 	content.addClass("eui-win-content");
 	content.appendTo(*this);
 
@@ -73,8 +75,10 @@ Object& Window::getTitle() {
 	return titleBar;
 }
 
-void Window::setTitle(Object titleBar) {
-	this->titleBar = std::move(titleBar);
+void Window::setTitle(Object nTitleBar) {
+	titleBar = std::move(nTitleBar);
+	titleBar.appendTo(*this);
+	titleBar.addClass("eui-win-title");
 }
 
 void Window::setTitle(std::string_view title) {
@@ -85,8 +89,10 @@ Object& Window::getContent() {
 	return content;
 }
 
-void Window::setContent(Object content) {
-	this->content = std::move(content);
+void Window::setContent(Object nContent) {
+	content = std::move(nContent);
+	content.appendTo(*this);
+	content.addClass("eui-win-content");
 }
 
 unsigned int Window::getWidth() const {

@@ -6,7 +6,9 @@
 
 template<typename Packet, typename Func>
 void PacketReader::on(Func f) {
+#ifdef DEBUG
 	std::printf("Registered packet %s (%d)\n", demangle(typeid(Packet)).data(), Packet::code);
+#endif
 
 	handlers.emplace(Packet::code, [f{std::move(f)}] (const u8 * data, sz_t size) {
 		//std::fputs("Parsing opc ", stdout);

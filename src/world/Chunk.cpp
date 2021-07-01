@@ -1,27 +1,15 @@
+#include "Chunk.hpp"
+
 #include <cstdio>
 #include <cmath>
 
-#include <emscripten.h>
-#include <GLES2/gl2.h>
 #include <util/BufferHelper.hpp>
 #include <util/rle.hpp>
-#include <world/Chunk.hpp>
 #include <world/World.hpp>
 #include <Camera.hpp>
 
 #include <util/emsc/request.hpp>
-
-static_assert((Chunk::size & (Chunk::size - 1)) == 0,
-	"Chunk::size must be a power of 2");
-
-static_assert((Chunk::protectionAreaSize & (Chunk::protectionAreaSize - 1)) == 0,
-	"Chunk::protectionAreaSize must be a power of 2");
-
-static_assert((Chunk::size % Chunk::protectionAreaSize) == 0,
-	"Chunk::size must be divisible by Chunk::protectionAreaSize");
-
-static_assert((Chunk::pc & (Chunk::pc - 1)) == 0,
-	"size / protectionAreaSize must result in a power of 2");
+#include <util/explints.hpp>
 
 static void destroyWget(void * e) {
 	cancel_async_request(reinterpret_cast<int>(e) - 1);
@@ -32,15 +20,8 @@ Chunk::Chunk(Pos x, Pos y, World& w)
   x(x),
   y(y),
   loaderRequest(nullptr, destroyWget),
-  texHdl(0),
   canUnload(false),
-  protectionsLoaded(false), // to check if I need to 0-fill the protection array
   downscaling(std::min(std::max(1.f, std::floor(1.f / w.getCamera().getZoom())), 16.f)) {
-
-	data.setChunkReader("woPp", [this] (u8 * d, sz_t size) {
-		protectionsLoaded = rle::decompress(d, size, protectionData.data(), protectionData.size());
-		return true;
-	});
 
 	// terrible use of unique_ptr. 1 + needed because request id can be 0
 	loaderRequest.reset(reinterpret_cast<void *>(1 + async_request(
@@ -53,8 +34,7 @@ Chunk::Chunk(Pos x, Pos y, World& w)
 }
 
 Chunk::~Chunk() {
-	deleteTexture();
-	w.signalChunkUnloaded(*this);
+	w.signalChunkUnloaded(this);
 }
 
 Chunk::Pos Chunk::getX() const {
@@ -66,24 +46,35 @@ Chunk::Pos Chunk::getY() const {
 }
 
 bool Chunk::setPixel(u16 x, u16 y, RGB_u clr) {
+	// pushing to the vectors could allocate...
+	preventUnloading(true);
 	x &= Chunk::size - 1;
 	y &= Chunk::size - 1;
 
-	if (data.getPixel(x, y).rgb != clr.rgb) {
-		data.setPixel(x, y, clr);
-		// TODO: send setPixel packet and update texture
-		return true;
-	}
+	//std::printf("ch setpixel %i, %i\n", this->x, this->y);
 
-	return false;
+	glst.queueSetPixel(x, y, clr);
+	w.signalChunkUpdated(this);
+	preventUnloading(false);
+	return true;
+}
+
+RGB_u Chunk::getPixel(u16 x, u16 y) const {
+	x &= Chunk::size - 1;
+	y &= Chunk::size - 1;
+
+	return glst.getPixel(w.getRenderer(), x, y);
 }
 
 void Chunk::setProtectionGid(ProtPos x, ProtPos y, u32 gid) {
+	preventUnloading(true);
 	x &= Chunk::pc - 1;
 	y &= Chunk::pc - 1;
 
 	protectionData[y * Chunk::pc + x] = gid;
-	// TODO: send setProtection packet
+	glst.queueSetProtectionGid(x, y, gid);
+	w.signalChunkUpdated(this);
+	preventUnloading(false);
 }
 
 u32 Chunk::getProtectionGid(ProtPos x, ProtPos y) const {
@@ -93,8 +84,12 @@ u32 Chunk::getProtectionGid(ProtPos x, ProtPos y) const {
 	return protectionData[y * Chunk::pc + x];
 }
 
-const u8 * Chunk::getData() const {
-	return data.getData();
+ChunkGlState& Chunk::getGlState() {
+	return glst;
+}
+
+const ChunkGlState& Chunk::getGlState() const {
+	return glst;
 }
 
 bool Chunk::isReady() const {
@@ -111,86 +106,72 @@ void Chunk::preventUnloading(bool state) {
 	canUnload = !state;
 }
 
-u32 Chunk::getGlTexture() const {
-	if (!texHdl) {
-		if (const u8 * d = data.getData()) {
-			glActiveTexture(GL_TEXTURE0);
-			glGenTextures(1, &texHdl);
-			glBindTexture(GL_TEXTURE_2D, texHdl);
 
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB,
-					data.getWidth(), data.getHeight(),
-					0, GL_RGB, GL_UNSIGNED_BYTE, d);
-
-			glBindTexture(GL_TEXTURE_2D, 0);
-		}
-	}
-
-	return texHdl;
-}
-
-void Chunk::deleteTexture() {
-	if (texHdl) {
-		glDeleteTextures(1, &texHdl);
-	}
-}
-
-Chunk::Key Chunk::key(Chunk::Pos x, Chunk::Pos y) {
-	union {
-		struct {
-			Chunk::Pos x;
-			Chunk::Pos y;
-		} p;
-		Chunk::Key xy;
-	} k = {{x, y}};
-	return k.xy;
-}
 
 void Chunk::loadCompleted(unsigned, void * e, void * buf, unsigned len) {
 	Chunk& c = *static_cast<Chunk *>(e);
-	c.preventUnloading(true);
+	int loadStatus = 0;
+	c.preventUnloading(true); // this is necessary because the OOM handler could be called
+
 	// so since i can't easily check http.status, I quickly check if the file
 	// received looks like a real png file.
-	if (len > 4 && buf::readLE<u32>(static_cast<u8 *>(buf)) == 0x474E5089) {
-		c.data.readFileOnMem(static_cast<u8 *>(buf), len);
-		if (c.downscaling > 1) {
-			c.data.nearestDownscale(c.downscaling);
-		}
-	} else { // 204, or other error
-		c.data.allocate(1/*Chunk::size*/, 1/*Chunk::size*/, c.w.getBackgroundColor());
-	}
+	const u8 * filebuf = static_cast<const u8 *>(buf);
+	if (len > 4 && buf::readLE<u32>(filebuf) == 0x474E5089) {
+		PngImage data;
+		// to check if I need to 0-fill the protection array
+		bool protectionsLoaded = false;
+		data.setChunkReader("woPp", [&protectionsLoaded, &c] (u8 * d, sz_t size) {
+			protectionsLoaded = rle::decompress(d, size, c.protectionData.data(), c.protectionData.size());
+			return true;
+		});
 
-	if (!c.protectionsLoaded) {
-		c.protectionData.fill(0);
+		data.readFileOnMem(static_cast<u8 *>(buf), len);
+		if (c.downscaling > 1) {
+			data.nearestDownscale(c.downscaling);
+		}
+
+		if (!protectionsLoaded) {
+			c.protectionData.fill(0);
+		}
+
+		if (!c.glst.loadTextures(std::move(data), c.protectionData)) {
+			c.glst.loadError();
+			loadStatus = 1;
+		}
+
+	} else { // 204, or other 2xx code
+		c.glst.loadEmpty();
+		loadStatus = 2;
 	}
 
 	c.loaderRequest = nullptr;
+	c.w.signalChunkUpdated(&c);
 
-	c.getGlTexture();
-	c.data.freeMem();
+	const char * status = "ed";
+	switch (loadStatus) {
+		case 1:
+			status = "ing failed";
+			break;
+		case 2:
+			status = "ed empty";
+			break;
+	}
+
+	std::printf("[Chunk] Load%s (%i, %i) [%u]\n", status, c.x, c.y, c.downscaling);
 
 	c.preventUnloading(false);
-
-	c.w.signalChunkLoaded(c);
-
-	std::printf("[Chunk] Loaded (%i, %i) [%u]\n", c.x, c.y, c.downscaling);
 }
 
 void Chunk::loadFailed(unsigned, void * e, int code, const char * err) {
 	Chunk& c = *static_cast<Chunk *>(e);
 	c.preventUnloading(true);
-	// what do?
-	//c.data.allocate(Chunk::size, Chunk::size, c.w.getBackgroundColor());
 	c.protectionData.fill(0);
+	c.glst.loadError();
 
-	std::printf("[Chunk] Load failed (%i, %i): %s\n", c.x, c.y, err);
+	c.w.signalChunkUpdated(&c);
 
 	c.loaderRequest = nullptr;
+	std::printf("[Chunk] Load request failed (%i, %i), (%i): %s\n", c.x, c.y, code, err);
 
 	c.preventUnloading(false);
 }

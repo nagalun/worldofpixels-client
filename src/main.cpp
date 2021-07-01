@@ -3,10 +3,13 @@
 #include <emscripten.h>
 #include <emscripten/html5.h>
 
+#include <cstdlib>
 #include <cstdio>
 #include <memory>
 #include <exception>
 #include <new>
+
+#include <JsApiProxy.hpp>
 
 #ifndef OWOP_VERSION
 #	define OWOP_VERSION "unknown"
@@ -15,28 +18,26 @@
 #ifdef DEBUG
 EM_JS(void, enable_auto_refresh_client, (void), {
 	var ws = null;
+	var to = null;
 	function conn() {
 		ws = new WebSocket("ws://" + location.hostname + ":9005");
 		ws.onmessage = function(m) {
 			console.log(m.data);
-			location.reload(true);
+			clearTimeout(to);
+			to = setTimeout(function() { location.reload(true); }, 1500);
 		};
 	}
 
-	conn();
+	try { conn(); } catch (e) { }
 });
 #endif
 
 static std::unique_ptr<Client> cl;
 
 int main(int argc, char * argv[]) {
-	// argless EM_ASM causes warnings/errors with -Wall
-	EM_ASM({window['OWOP'] = Module.api = {}}, 0);
+	JsApiProxy& api = JsApiProxy::getInstance();
 
 #ifdef DEBUG
-	EM_ASM({Module.api['module'] = Module}, 0);
-	std::printf("[main] DEBUG build, defining OWOP.module\n");
-
 	enable_auto_refresh_client();
 #endif
 
@@ -48,6 +49,11 @@ int main(int argc, char * argv[]) {
 		return nullptr;
 	});
 
+	std::atexit([] {
+		std::printf("[main] std::atexit\n");
+		cl = nullptr;
+	});
+
 	std::set_new_handler([] {
 		std::puts("OOM detected");
 		if (!cl->freeMemory()) {
@@ -55,7 +61,7 @@ int main(int argc, char * argv[]) {
 		}
 	});
 
-	cl = std::make_unique<Client>();
+	cl = std::make_unique<Client>(api);
 
 	cl->open(argc >= 2 ? argv[1] : "main");
 }

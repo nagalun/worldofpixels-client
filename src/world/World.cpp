@@ -2,9 +2,10 @@
 #include <InputManager.hpp>
 #include <Camera.hpp>
 
+#include <array>
+#include <algorithm>
 #include <cstdio>
 #include <cmath>
-
 
 World::World(InputAdapter& base, std::string name, std::unique_ptr<SelfCursor> me,
 		RGB_u bgClr, bool restricted, std::optional<User::Id> owner)
@@ -28,6 +29,7 @@ World::World(InputAdapter& base, std::string name, std::unique_ptr<SelfCursor> m
   iCamPanWh(aWorld, "Pan Camera Wheel", T_ONWHEEL),
   iCamPanMo(aWorld, "Pan Camera Mouse", T_ONPRESS | T_ONMOVE),
   iCamTouch(aWorld, "Camera Touch Control", T_ONPRESS | T_ONMOVE),
+  tickNum(0),
   drawingRestricted(restricted) {
 
 	iPrintCoords.setDefaultKeybind("P");
@@ -149,28 +151,86 @@ void World::setCursorCount(u32 c) {
 }
 
 void World::tick() {
-	//loadMissingChunksTick();
+	++tickNum;
+
+	if (!(tickNum % (20 * 10))) {
+		sz_t n = unloadFarChunks();
+		if (n > 0) {
+			std::printf("[World] Unloaded %lu chunks.\n", n);
+		}
+	}
 }
 
-bool World::unloadChunks(sz_t amount) {
-	// investigate: this function can access freed, null chunks? (crashed)
+sz_t World::unloadChunks(sz_t targetAmount) { /* pretty bad worst case perf, optimize! */
+	sz_t origAmount = targetAmount;
+	bool doingWork = false;
+	// allocating memory may not be safe right now
+	std::array<decltype(chunks)::const_iterator, 8> toUnload;
 
-	// TODO: unload furthest ones first
-	// https://stackoverflow.com/questions/14902876/indices-of-the-k-largest-elements-in-an-unsorted-length-n-array
-	for (auto it = chunks.begin(); it != chunks.end(); ++it) {
-		if (it->second.shouldUnload() && !r.isChunkVisible(it->second)) {
-			it = chunks.erase(it);
+	do {
+		toUnload.fill(chunks.cend());
 
-			if (--amount == 0) {
-				return true;
+		for (auto it = chunks.cbegin(); it != chunks.cend(); ++it) {
+			if (it->second.shouldUnload() && !r.isChunkVisible(it->second)) {
+				if (toUnload[0] != chunks.cend()) {
+					float distTop = getDistanceToChunk(toUnload[0]->second);
+					float distCur = getDistanceToChunk(it->second);
+					if (distCur < distTop) {
+						continue;
+					}
+				}
+
+				std::move_backward(toUnload.begin(), toUnload.end() - 1, toUnload.end());
+				toUnload[0] = it;
 			}
+		}
+
+		doingWork = false;
+		for (auto it : toUnload) {
+			if (targetAmount == 0) {
+				break;
+			}
+
+			if (it != chunks.cend()) {
+				doingWork = true;
+				chunks.erase(it);
+				--targetAmount;
+			}
+		}
+	} while (targetAmount != 0 && doingWork);
+
+	return origAmount - targetAmount;
+}
+
+sz_t World::unloadFarChunks() {
+	sz_t unloaded = 0;
+
+	for (auto it = chunks.cbegin(); it != chunks.cend(); ) {
+		const Chunk& c = it->second;
+
+		if (c.shouldUnload() && !r.isChunkVisible(c) && getDistanceToChunk(c) > 20.f) {
+			it = chunks.erase(it);
+			unloaded++;
+		} else {
+			++it;
 		}
 	}
 
-	return false;
+	return unloaded;
 }
 
 bool World::freeMemory(bool tryHarder) {
+	if (unloadFarChunks()) {
+		return true;
+	}
+
+	for (auto it = chunks.begin(); it != chunks.end(); ++it) {
+		if (it->second.shouldUnload() // we could be trying to set a pixel on that chunk
+				&& it->second.getGlState().freeMemory()) {
+			return true;
+		}
+	}
+
 	if (unloadChunks()) {
 		return true;
 	}
@@ -201,9 +261,9 @@ Chunk& World::getOrLoadChunk(Chunk::Pos x, Chunk::Pos y) {
 	auto it = chunks.try_emplace(Chunk::key(x, y), x, y, *this);
 	if (it.second) {
 		sz_t ml = getMaxLoadedChunks();
-		if (chunks.size() > ml) {
+		if (chunks.size() >= Renderer::maxLoadedChunks) {
 			it.first->second.preventUnloading(true);
-			if (!unloadChunks(chunks.size() - ml)) {
+			if (!unloadChunks(chunks.size() - Renderer::maxLoadedChunks + 1)) {
 				std::printf("[World] Can't keep loaded chunks (%ld) under limit (%ld)\n", chunks.size(), ml);
 			}
 
@@ -218,20 +278,24 @@ RGB_u World::getBackgroundColor() const {
 	return bgClr;
 }
 
+Renderer& World::getRenderer() {
+	return r;
+}
+
 const char * World::getChunkUrl(Chunk::Pos x, Chunk::Pos y) {
 	// /api/worlds/<name>/view/<x>/<y>
 	// i32 = -2147483648 (11 chars)
 	static char urlBuf[12 + World::maxNameLength + 6 + 11 + 1 + 11 + 1] = {0};
-	std::sprintf(urlBuf, "/api/worlds/%s/view/%i/%i", name.c_str(), x, y);
+	std::sprintf(urlBuf, /*/api*/"/worlds/%s/view/%i/%i", name.c_str(), x, y);
 	return urlBuf;
 }
 
-void World::signalChunkLoaded(Chunk& c) {
-	r.useChunk(c);
+void World::signalChunkUpdated(Chunk * c) {
+	r.chunkToUpdate(c);
 }
 
-void World::signalChunkUnloaded(Chunk& c) {
-	r.unuseChunk(c);
+void World::signalChunkUnloaded(Chunk * c) {
+	r.chunkUnloaded(c);
 }
 
 void World::loadMissingChunksTick() {
@@ -264,4 +328,49 @@ void World::loadMissingChunksTick() {
 		queueIfUnloaded(x, y - 1);
 		queueIfUnloaded(x, y + 1);
 	}
+}
+
+float World::getDistanceToChunk(const Chunk& c) const {
+	float dx = std::abs(r.getX() / Chunk::size - c.getX());
+	float dy = std::abs(r.getY() / Chunk::size - c.getY());
+
+	return dx + dy;
+}
+
+Chunk * World::getChunkAt(World::Pos x, World::Pos y) {
+	auto it = chunks.find(Chunk::key(x >> Chunk::posShift, y >> Chunk::posShift));
+	if (it != chunks.end()) {
+		return &it->second;
+	}
+
+	return nullptr;
+}
+
+const Chunk * World::getChunkAt(World::Pos x, World::Pos y) const {
+	auto it = chunks.find(Chunk::key(x >> Chunk::posShift, y >> Chunk::posShift));
+	if (it != chunks.end()) {
+		return &it->second;
+	}
+
+	return nullptr;
+}
+
+RGB_u World::getPixel(World::Pos x, World::Pos y) const {
+	const Chunk * c = getChunkAt(x, y);
+
+	if (c) {
+		return c->getPixel(x, y);
+	}
+
+	return {{0, 0, 0, 0}};
+}
+
+bool World::setPixel(World::Pos x, World::Pos y, RGB_u clr) {
+	Chunk * c = getChunkAt(x, y);
+
+	if (c) {
+		return c->setPixel(x, y, clr);
+	}
+
+	return false;
 }

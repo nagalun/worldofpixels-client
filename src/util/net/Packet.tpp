@@ -1,5 +1,4 @@
 #include <type_traits>
-#include <typeindex>
 #include <array>
 #include <string>
 #include <algorithm>
@@ -13,6 +12,10 @@
 #include <util/varints.hpp>
 #include <cstdio>
 //#include <iostream>
+
+#ifdef DEBUG
+#include <typeindex>
+#endif
 
 //#include <utils.hpp>
 
@@ -56,8 +59,10 @@ namespace pktdetail {
 // Forward declarations
 //////////////////////////////
 
+#ifdef DEBUG
 sz_t getSize(const std::type_index& ti);
 sz_t writeToBuf(u8 *& b, const std::type_index& ti, sz_t remaining);
+#endif
 
 template<typename... Ts>
 sz_t getSize(const std::tuple<Ts...>& t);

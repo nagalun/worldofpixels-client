@@ -1,4 +1,5 @@
 #include "demangler.hpp"
+#ifdef DEBUG
 #include <map>
 
 #ifdef __GNUG__
@@ -40,3 +41,4 @@ std::type_index strToType(std::string_view s) {
 
 	return search->second;
 }
+#endif

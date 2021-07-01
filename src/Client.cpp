@@ -9,6 +9,7 @@
 #include <util/emsc/audio.hpp>
 #include <util/emsc/jswebsockets.hpp>
 
+#include <JsApiProxy.hpp>
 #include <PacketDefinitions.hpp>
 
 // TODO: Translate strings
@@ -36,8 +37,9 @@ EM_JS(void, set_login_prompt_visible, (bool s), {
 	}
 });
 
-Client::Client()
-: im(EMSCRIPTEN_EVENT_TARGET_WINDOW, "#world"),
+Client::Client(JsApiProxy& api)
+: api(api),
+  im(EMSCRIPTEN_EVENT_TARGET_WINDOW, "#world"),
   aClient(im.mkAdapter("Client", -1)),
   selfUid(0),
   globalCursorCount(0),
@@ -49,6 +51,7 @@ Client::Client()
 	js_ws_on_message(Client::doWsMessage);
 	js_ws_set_user_data(this);
 
+	api.setClientInstance(this);
 	registerPacketTypes();
 }
 
@@ -60,6 +63,7 @@ Client::~Client() {
 	}
 
 	js_ws_set_user_data(nullptr); // prev ptr won't be valid when i return
+	api.setClientInstance(nullptr);
 	emscripten_clear_interval(tickTimer);
 	std::puts("[Client] Destroyed");
 }
@@ -67,7 +71,7 @@ Client::~Client() {
 bool Client::open(std::string_view worldToJoin) {
 	setStatus("Connecting...");
 
-	std::string url("wss://dev.ourworldofpixels.com/");
+	std::string url("ws://localhost:13375/");
 	url += worldToJoin;
 
 	return js_ws_open(url.data(), url.size(), "OWOP", 4);
@@ -247,6 +251,10 @@ void Client::doWsClose(void * d, u16 code) {
 
 void Client::doWsMessage(void * d, char * buf, sz_t s, bool txt) {
 	static_cast<Client *>(d)->wsMessage(buf, s, txt);
+}
+
+World * Client::getWorld() {
+	return world.get();
 }
 
 void Client::doTick(void * d) {

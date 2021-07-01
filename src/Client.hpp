@@ -22,6 +22,8 @@ enum EConnectError {
 	CE_HEADER
 };
 
+class JsApiProxy;
+
 // UBSan complains that the class is not aligned to 16-bytes
 // when constructing it with make_unique...
 class alignas(32) Client {
@@ -29,6 +31,7 @@ public:
 	static constexpr double ticksPerSec = 20.0;
 
 private:
+	JsApiProxy& api;
 	InputManager im;
 	InputAdapter& aClient;
 	PacketReader pr;
@@ -41,11 +44,13 @@ private:
 	EConnectError lastError;
 
 public:
-	Client();
+	Client(JsApiProxy&);
 	~Client();
 
 	bool open(std::string_view worldToJoin);
 	void close();
+
+	World * getWorld();
 
 	bool freeMemory();
 

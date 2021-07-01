@@ -1,3 +1,4 @@
+#ifdef DEBUG
 #include <util/demangler.hpp>
 #include <util/net/Packet.hpp>
 #include <typeindex>
@@ -14,3 +15,4 @@ sz_t writeToBuf(u8 *& b, const std::type_index& ti, sz_t remaining) {
 }
 
 }
+#endif

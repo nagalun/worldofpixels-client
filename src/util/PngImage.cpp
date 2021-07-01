@@ -6,7 +6,7 @@
 #include <cstdlib>
 
 #include <png.h>
-#include <util/PngImage.hpp>
+#include "PngImage.hpp"
 
 // inspiration from: https://gist.github.com/DanielGibson/e0828acfc90f619198cb
 
@@ -14,6 +14,7 @@ struct img_t {
 	std::unique_ptr<u8[]> data;
 	u32 w;
 	u32 h;
+	u8 chans;
 };
 
 static void pngError(png_structp pngPtr, png_const_charp msg) {
@@ -51,7 +52,7 @@ static int pngReadChunkCb(png_structp pngPtr, png_unknown_chunkp chunk) {
 	return 0;
 }
 
-static struct img_t loadPng(u8* fbuffer, int len, u8 chans,
+static struct img_t loadPng(const u8* fbuffer, int len,
 		std::map<std::string, std::function<bool(u8*, sz_t)>>& chunkReaders) {
 	// create png_struct with the custom error handlers
 	png_structp pngPtr = png_create_read_struct_2(PNG_LIBPNG_VER_STRING, nullptr, pngError, pngWarning,
@@ -69,7 +70,7 @@ static struct img_t loadPng(u8* fbuffer, int len, u8 chans,
 		std::terminate();
 	}
 
-	png_set_read_fn(pngPtr, fbuffer, pngReadData);
+	png_set_read_fn(pngPtr, const_cast<u8 *>(fbuffer), pngReadData);
 	png_set_read_user_chunk_fn(pngPtr, &chunkReaders, pngReadChunkCb);
 	png_set_sig_bytes(pngPtr, 0);
 	png_read_info(pngPtr, infoPtr);
@@ -94,9 +95,15 @@ static struct img_t loadPng(u8* fbuffer, int len, u8 chans,
 		png_set_gray_to_rgb(pngPtr);
 	}
 
-	if (chans == 3 && (colorType & PNG_COLOR_MASK_ALPHA)) { // remove alpha
-		png_set_strip_alpha(pngPtr);
+	u8 chans = 3;
+	if (colorType & PNG_COLOR_MASK_ALPHA) {
+		chans++;
 	}
+
+	/*if (chans == 4) {
+		png_set_strip_alpha(pngPtr);// remove alpha
+		chans--;
+	}*/
 
 	png_read_update_info(pngPtr, infoPtr);
 
@@ -114,7 +121,7 @@ static struct img_t loadPng(u8* fbuffer, int len, u8 chans,
 	png_read_end(pngPtr, infoPtr);
 	png_destroy_read_struct(&pngPtr, &infoPtr, nullptr);
 
-	return {std::move(out), pngWidth, pngHeight};
+	return {std::move(out), pngWidth, pngHeight, chans};
 }
 
 static void pngWriteDataToMem(png_structp png_ptr, png_bytep data, png_size_t length) {
@@ -191,18 +198,19 @@ static void encodePng(size_t pngWidth, size_t pngHeight, u8 chans, const u8* dat
 PngImage::PngImage()
 : data(nullptr),
   w(0),
-  h(0) { }
+  h(0),
+  chans(4) { }
 
 PngImage::PngImage(u8* filebuf, sz_t len) {
 	readFileOnMem(filebuf, len);
 }
 
-PngImage::PngImage(u32 w, u32 h, RGB_u bg) {
-	allocate(w, h, bg);
+PngImage::PngImage(u32 w, u32 h, RGB_u bg, u8 chans) {
+	allocate(w, h, bg, chans);
 }
 
 u8 PngImage::getChannels() const {
-	return 3; // can only be 3 or 4 (no alpha/alpha)
+	return chans; // can only be 3 or 4 (RGB/RGBA)
 }
 
 u32 PngImage::getWidth() const {
@@ -268,18 +276,20 @@ void PngImage::setChunkWriter(const std::string& s, std::function<std::pair<std:
 	chunkWriters[s] = std::move(f);
 }
 
-void PngImage::allocate(u32 w, u32 h, RGB_u bg) {
-	data = std::make_unique<u8[]>(w * h * getChannels());
+void PngImage::allocate(u32 w, u32 h, RGB_u bg, u8 chans) {
+	data = std::make_unique<u8[]>(w * h * chans);
 	this->w = w;
 	this->h = h;
+	this->chans = chans;
 	fill(bg);
 }
 
-void PngImage::readFileOnMem(u8 * filebuf, sz_t len) {
-	auto img(loadPng(filebuf, len, getChannels(), chunkReaders));
+void PngImage::readFileOnMem(const u8 * filebuf, sz_t len) {
+	auto img(loadPng(filebuf, len, chunkReaders));
 	data = std::move(img.data);
 	w = img.w;
 	h = img.h;
+	chans = img.chans;
 }
 
 void PngImage::writeFileOnMem(std::vector<u8>& out) {
