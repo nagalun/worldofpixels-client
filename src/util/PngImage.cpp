@@ -276,11 +276,11 @@ void PngImage::setChunkWriter(const std::string& s, std::function<std::pair<std:
 	chunkWriters[s] = std::move(f);
 }
 
-void PngImage::allocate(u32 w, u32 h, RGB_u bg, u8 chans) {
-	data = std::make_unique<u8[]>(w * h * chans);
-	this->w = w;
-	this->h = h;
-	this->chans = chans;
+void PngImage::allocate(u32 newWidth, u32 newHeight, RGB_u bg, u8 newChans) {
+	data = std::make_unique<u8[]>(newWidth * newHeight * newChans);
+	w = newWidth;
+	h = newHeight;
+	chans = newChans;
 	fill(bg);
 }
 

@@ -306,9 +306,6 @@ void World::loadMissingChunksTick() {
 		chunkLoaderQueue.emplace(cx, cy);
 	}
 
-	auto [x, y] = chunkLoaderQueue.front();
-	chunkLoaderQueue.pop();
-
 	const auto queueIfUnloaded = [this] (Chunk::Pos x, Chunk::Pos y) {
 		/*if (!r.isChunkVisible(x, y)) {
 			return;
@@ -319,6 +316,9 @@ void World::loadMissingChunksTick() {
 			chunkLoaderQueue.emplace(x, y);
 		}
 	};
+
+	auto [x, y] = chunkLoaderQueue.front();
+	chunkLoaderQueue.pop();
 
 	auto search = chunks.find(Chunk::key(x, y));
 	if (search == chunks.end()) {

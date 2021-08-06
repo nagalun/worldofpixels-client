@@ -79,9 +79,7 @@ bool WebGlContext::activateRenderingContext(bool webgl1) {
 	attr.enableExtensionsByDefault = false;
 	attr.alpha = false;
 	attr.antialias = false;
-	if (!webgl1) {
-		attr.majorVersion = 2;
-	}
+	attr.majorVersion = webgl1 ? 1 : 2;
 
 	ctxInfo = emscripten_webgl_create_context(targetCanvas, &attr);
 	if (ctxInfo <= 0) {

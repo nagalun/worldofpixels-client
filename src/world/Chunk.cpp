@@ -45,43 +45,43 @@ Chunk::Pos Chunk::getY() const {
 	return y;
 }
 
-bool Chunk::setPixel(u16 x, u16 y, RGB_u clr) {
+bool Chunk::setPixel(u16 pxX, u16 pxY, RGB_u clr) {
 	// pushing to the vectors could allocate...
 	preventUnloading(true);
-	x &= Chunk::size - 1;
-	y &= Chunk::size - 1;
+	pxX &= Chunk::size - 1;
+	pxY &= Chunk::size - 1;
 
 	//std::printf("ch setpixel %i, %i\n", this->x, this->y);
 
-	glst.queueSetPixel(x, y, clr);
+	glst.queueSetPixel(pxX, pxY, clr);
 	w.signalChunkUpdated(this);
 	preventUnloading(false);
 	return true;
 }
 
-RGB_u Chunk::getPixel(u16 x, u16 y) const {
-	x &= Chunk::size - 1;
-	y &= Chunk::size - 1;
+RGB_u Chunk::getPixel(u16 pxX, u16 pxY) const {
+	pxX &= Chunk::size - 1;
+	pxY &= Chunk::size - 1;
 
-	return glst.getPixel(w.getRenderer(), x, y);
+	return glst.getPixel(w.getRenderer(), pxX, pxY);
 }
 
-void Chunk::setProtectionGid(ProtPos x, ProtPos y, u32 gid) {
+void Chunk::setProtectionGid(ProtPos protX, ProtPos protY, u32 gid) {
 	preventUnloading(true);
-	x &= Chunk::pc - 1;
-	y &= Chunk::pc - 1;
+	protX &= Chunk::pc - 1;
+	protY &= Chunk::pc - 1;
 
-	protectionData[y * Chunk::pc + x] = gid;
-	glst.queueSetProtectionGid(x, y, gid);
+	protectionData[protY * Chunk::pc + protX] = gid;
+	glst.queueSetProtectionGid(protX, protY, gid);
 	w.signalChunkUpdated(this);
 	preventUnloading(false);
 }
 
-u32 Chunk::getProtectionGid(ProtPos x, ProtPos y) const {
-	x &= Chunk::pc - 1;
-	y &= Chunk::pc - 1;
+u32 Chunk::getProtectionGid(ProtPos protX, ProtPos protY) const {
+	protX &= Chunk::pc - 1;
+	protY &= Chunk::pc - 1;
 
-	return protectionData[y * Chunk::pc + x];
+	return protectionData[protY * Chunk::pc + protX];
 }
 
 ChunkGlState& Chunk::getGlState() {

@@ -50,7 +50,7 @@ CPPFLAGS += $(EM_CONF_CC_LD)
 LDFLAGS  += $(EM_CONF_CC_LD) $(EM_CONF_LD)
 
 
-CPPFLAGS += -std=c++17 -fno-exceptions -W -Wall -Wextra -pedantic-errors -Wno-unused-parameter -MMD -MP
+CPPFLAGS += -std=c++17 -fno-exceptions -Wall -Wshadow -Weffc++ -Wextra -pedantic-errors -Wno-unused-parameter -MMD -MP
 LDFLAGS  += -fno-exceptions
 
 # GLM config

@@ -66,9 +66,16 @@ void Window::move(int x, int y) {
 	setProperty("style.transform", svprintf("translate(%ipx,%ipx)", x, y));
 }
 
-void Window::resize(unsigned int width, unsigned int height) {
-	setProperty("style.width", svprintf("%ipx", width));
-	setProperty("style.height", svprintf("%ipx", height));
+void Window::resize(unsigned int newWidth, unsigned int newHeight) {
+	if (newWidth != width) {
+		setProperty("style.width", svprintf("%ipx", newWidth));
+		width = newWidth;
+	}
+
+	if (newHeight != height) {
+		setProperty("style.height", svprintf("%ipx", newHeight));
+		height = newHeight;
+	}
 }
 
 Object& Window::getTitle() {

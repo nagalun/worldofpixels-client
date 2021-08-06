@@ -228,8 +228,8 @@ void ImAction::setEnabled(bool s) {
 	enabled = s;
 }
 
-void ImAction::setCb(std::function<void(ImAction::Event& e, const InputInfo&)> cb) {
-	this->cb = std::move(cb);
+void ImAction::setCb(std::function<void(ImAction::Event& e, const InputInfo&)> newCb) {
+	cb = std::move(newCb);
 }
 
 void ImAction::clearBindingsChanged() {
@@ -420,23 +420,23 @@ std::string InputAdapter::getFullContext() const {
 	return parentAdapter ? parentAdapter->getFullContext() + '/' + context : context;
 }
 
-InputAdapter& InputAdapter::mkAdapter(std::string context, int priority) {
-	auto it = std::find_if(linkedAdapters.begin(), linkedAdapters.end(), [&context] (const InputAdapter& a) {
-		return a.getContext() == context;
+InputAdapter& InputAdapter::mkAdapter(std::string childContext, int childPriority) {
+	auto it = std::find_if(linkedAdapters.begin(), linkedAdapters.end(), [&childContext] (const InputAdapter& a) {
+		return a.getContext() == childContext;
 	});
 
 	if (it != linkedAdapters.end()) {
 		return *it;
 	}
 
-	it = std::upper_bound(linkedAdapters.begin(), linkedAdapters.end(), priority, [] (const int a, const InputAdapter& b) {
+	it = std::upper_bound(linkedAdapters.begin(), linkedAdapters.end(), childPriority, [] (const int a, const InputAdapter& b) {
 		return b.priority > a;
 	});
 
 	if (it != linkedAdapters.end()) {
-		it = linkedAdapters.emplace(it, this, storage, std::move(context), priority);
+		it = linkedAdapters.emplace(it, this, storage, std::move(childContext), childPriority);
 	} else {
-		it = linkedAdapters.emplace(linkedAdapters.end(), this, storage, std::move(context), priority);
+		it = linkedAdapters.emplace(linkedAdapters.end(), this, storage, std::move(childContext), childPriority);
 	}
 
 	return *it;
@@ -666,7 +666,6 @@ bool InputManager::keyUp(const char * key) {
 }
 
 bool InputManager::pointerDown(int id, Ptr::EType t, EPointerButtons changed, EPointerButtons buttons) {
-	using Ptr = InputInfo::Pointer;
 	std::printf("[InputManager] MDOWN: id=%d type=%c mods=%d changes=%d buttons=%d\n",
 			id, t == Ptr::MOUSE ? 'M' : 'T', InputInfo::getModifiers(), changed, buttons);
 
@@ -679,7 +678,6 @@ bool InputManager::pointerDown(int id, Ptr::EType t, EPointerButtons changed, EP
 }
 
 bool InputManager::pointerUp(int id, Ptr::EType t, EPointerButtons changed, EPointerButtons buttons) {
-	using Ptr = InputInfo::Pointer;
 	std::printf("[InputManager] MUP: id=%d type=%c mods=%d changes=%d buttons=%d\n",
 			id, t == Ptr::MOUSE ? 'M' : 'T', InputInfo::getModifiers(), changed, buttons);
 
@@ -764,8 +762,6 @@ int InputManager::handleKeyEvent(int type, const EmscriptenKeyboardEvent * ev, v
 int InputManager::handleMouseEvent(int type, const EmscriptenMouseEvent * ev, void * data) {
 	InputManager * im = static_cast<InputManager *>(data);
 
-	using Ptr = InputInfo::Pointer;
-
 	im->setModifiers(ev->ctrlKey, ev->altKey, ev->shiftKey, ev->metaKey);
 
 	int changed = ev->button;
@@ -813,8 +809,6 @@ int InputManager::handleMouseEvent(int type, const EmscriptenMouseEvent * ev, vo
 
 int InputManager::handleTouchEvent(int type, const EmscriptenTouchEvent * ev, void * data) {
 	InputManager * im = static_cast<InputManager *>(data);
-
-	using Ptr = InputInfo::Pointer;
 
 	im->setModifiers(ev->ctrlKey, ev->altKey, ev->shiftKey, ev->metaKey);
 
