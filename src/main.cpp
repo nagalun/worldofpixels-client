@@ -63,5 +63,5 @@ int main(int argc, char * argv[]) {
 
 	cl = std::make_unique<Client>(api);
 
-	cl->open(argc >= 2 ? argv[1] : "main");
+	cl->open(argc >= 2 ? argv[1] : "ws://localhost:13375", argc >= 3 ? argv[2] : "main");
 }

@@ -126,9 +126,9 @@ void Chunk::loadCompleted(unsigned, void * e, void * buf, unsigned len) {
 		});
 
 		data.readFileOnMem(static_cast<u8 *>(buf), len);
-		if (c.downscaling > 1) {
-			data.nearestDownscale(c.downscaling);
-		}
+//		if (c.downscaling > 1) {
+//			data.nearestDownscale(c.downscaling);
+//		}
 
 		if (!protectionsLoaded) {
 			c.protectionData.fill(0);

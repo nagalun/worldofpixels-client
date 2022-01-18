@@ -39,7 +39,7 @@ EM_JS(void, set_login_prompt_visible, (bool s), {
 
 Client::Client(JsApiProxy& api)
 : api(api),
-  im(EMSCRIPTEN_EVENT_TARGET_WINDOW, "#world"),
+  im(EMSCRIPTEN_EVENT_TARGET_WINDOW, EMSCRIPTEN_EVENT_TARGET_WINDOW/*"#world"*/),
   aClient(im.mkAdapter("Client", -1)),
   selfUid(0),
   globalCursorCount(0),
@@ -68,10 +68,10 @@ Client::~Client() {
 	std::puts("[Client] Destroyed");
 }
 
-bool Client::open(std::string_view worldToJoin) {
+bool Client::open(std::string url, std::string_view worldToJoin) {
 	setStatus("Connecting...");
 
-	std::string url("ws://localhost:13375/");
+	url += '/';
 	url += worldToJoin;
 
 	return js_ws_open(url.data(), url.size(), "OWOP", 4);

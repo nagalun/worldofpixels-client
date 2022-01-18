@@ -286,7 +286,7 @@ const char * World::getChunkUrl(Chunk::Pos x, Chunk::Pos y) {
 	// /api/worlds/<name>/view/<x>/<y>
 	// i32 = -2147483648 (11 chars)
 	static char urlBuf[12 + World::maxNameLength + 6 + 11 + 1 + 11 + 1] = {0};
-	std::sprintf(urlBuf, /*/api*/"/worlds/%s/view/%i/%i", name.c_str(), x, y);
+	std::sprintf(urlBuf, "/api/worlds/%s/view/%i/%i", name.c_str(), x, y);
 	return urlBuf;
 }
 

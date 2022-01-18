@@ -3,14 +3,14 @@
 #include <string>
 
 EM_JS(void, cancel_async_request, (int hdl), {
-	var http = Browser.wgetRequests[hdl];
+	var http = wget.wgetRequests[hdl];
 	if (http) {
 		http.onload = null;
 		http.onerror = null;
 		http.onprogress = null;
 		http.onabort = null;
 		http.abort();
-		delete Browser.wgetRequests[hdl];
+		delete wget.wgetRequests[hdl];
 	}
 });
 

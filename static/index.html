@@ -86,11 +86,12 @@
 			st.innerHTML = 'Loading OWOP...';
 
 			var lastSlash = location.href.lastIndexOf("/") + 1;
-			var worldName = location.href.slice(lastSlash).toLowerCase();
-
-			AppOWOP(worldName.length ? {arguments: [worldName]} : undefined)
-			.then(function() {
+			var worldName = location.href.slice(lastSlash).toLowerCase() || "main";
+			var wsUrl = location.origin.replace('http', 'ws');
+			AppOWOP()
+			.then(function(module) {
 				st.innerHTML = "Initializing...";
+				module.callMain([wsUrl, worldName]);
 			});
 		});
 
@@ -102,7 +103,7 @@
 		}, {passive: false});
 
 		if (navigator.serviceWorker) {
-			navigator.serviceWorker.register('/sw.js');
+			//navigator.serviceWorker.register('/sw.js');
 		}
 	</script>
 

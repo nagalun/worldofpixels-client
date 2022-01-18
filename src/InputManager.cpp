@@ -618,7 +618,7 @@ InputManager::InputManager(const char * kbTargetElement, const char * ptrTargetE
 
 	emscripten_set_wheel_callback(ptrTargetElement, this, true, InputManager::handleWheelEvent);
 
-	std::printf("[InputManager] Initialized. Target elements: keyboard=%s mouse=%s\n",
+	std::printf("[InputManager] Initialized. Target elements: keyboard=%s pointer=%s\n",
 			kbTargetElement == EMSCRIPTEN_EVENT_TARGET_WINDOW ? "window" : kbTargetElement,
 			ptrTargetElement == EMSCRIPTEN_EVENT_TARGET_WINDOW ? "window" : ptrTargetElement);
 }

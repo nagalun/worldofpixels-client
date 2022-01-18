@@ -11,6 +11,7 @@
 #include <utility>
 #include <queue>
 #include <unordered_map>
+#include <optional>
 
 #include <InputManager.hpp>
 #include <Renderer.hpp>

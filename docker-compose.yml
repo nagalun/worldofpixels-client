@@ -1,0 +1,44 @@
+version: "3"
+services:
+  owop_srv:
+    build: ${SVC_OWOP_SRV:-.}/docker/builder
+    user: ${UID:-1000}:${GID:-1000}
+    container_name: "owop_srv"
+    networks:
+      - dev_uvias
+    working_dir: /project
+    command: /project/src ./owopd
+    volumes:
+      - ${SVC_OWOP_SRV:-.}/:/project:rw
+    environment:
+      - DB_HOST=uvias_db
+      - DB_USER=owop
+      - DB_PASSWORD=owop
+      - API_HOST=localhost:8092
+  owop_cli:
+    build: ${SVC_OWOP_CLI:-.}/docker/builder
+    user: ${UID:-1000}:${GID:-1000}
+    container_name: "owop_cli"
+    command: "/project/src /project/static /project/Makefile"
+    ports:
+      - "9005:9005"
+    volumes:
+      - ${SVC_OWOP_CLI:-.}/:/project:rw
+    networks:
+      - dev_uvias
+  owop_www:
+    image: nginx:stable-alpine
+    container_name: "owop_www"
+    ports:
+      - "8092:80"
+    networks:
+      - dev_uvias
+    volumes:
+      - ${SVC_OWOP_CLI:-.}/src:/var/www/projectsrc:ro
+      - ${SVC_OWOP_CLI:-.}/out:/var/www/ourworldofpixels.com:ro
+      - ${SVC_OWOP_CLI:-.}/config/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - owop_srv
+networks:
+  dev_uvias:
+    name: dev_uvias

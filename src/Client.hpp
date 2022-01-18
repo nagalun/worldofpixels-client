@@ -47,7 +47,7 @@ public:
 	Client(JsApiProxy&);
 	~Client();
 
-	bool open(std::string_view worldToJoin);
+	bool open(std::string wsUrl, std::string_view worldToJoin);
 	void close();
 
 	World * getWorld();
