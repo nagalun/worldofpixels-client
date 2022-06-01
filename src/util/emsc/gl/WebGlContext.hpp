@@ -15,7 +15,7 @@ class WebGlContext : public GlContext {
 	bool renderPaused;
 
 public:
-	WebGlContext(const char * targetCanvas = "#canvas");
+	WebGlContext(const char * targetCanvas = "#canvas", bool forceWebgl1 = false);
 	~WebGlContext();
 
 	WebGlContext(WebGlContext&& other);
@@ -33,10 +33,14 @@ public:
 	void startRenderLoop(void (*)(void *), void * user);
 	void stopRenderLoop();
 
-	bool activateRenderingContext(bool webgl1);
+	bool activateRenderingContext(bool forceWebgl1 = false);
 	void destroyRenderingContext();
+	void giveUp();
 
 	static int emEvent(int eventType, const void *, void * r);
+
+private:
+	bool activateRenderingContextAs(bool webgl1);
 };
 
 } /* namespace gl */

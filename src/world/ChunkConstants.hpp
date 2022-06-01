@@ -3,6 +3,9 @@
 #include <array>
 #include <util/explints.hpp>
 
+// to be able to embed this value on string literals
+#define CHUNK_CONSTANTS_SIZE 512
+
 constexpr u8 popc(u32 n) {
 	n = (n & 0x55555555) + ((n >> 1) & 0x55555555);
 	n = (n & 0x33333333) + ((n >> 2) & 0x33333333);
@@ -20,7 +23,7 @@ struct ChunkConstants {
 
 	using ProtGid = u32;
 
-	static constexpr sz_t size = 512;
+	static constexpr sz_t size = CHUNK_CONSTANTS_SIZE;
 	static constexpr sz_t protectionAreaSize = 16;
 	static constexpr u8 pxTexNumChannels = 4; // RGBA
 

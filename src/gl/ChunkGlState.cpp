@@ -137,21 +137,22 @@ bool ChunkGlState::renderUpdates(ChunkUpdaterGlState& glst, bool glstActive) {
 
 	if (!pendingPxUpdates.empty()) {
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, pixelTex.get(), 0);
-		if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-			std::printf("Framebuffer not complete\n");
-		}
+//		if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+//			std::printf("Framebuffer not complete\n");
+//		}
 
 		glViewport(0, 0, ChunkConstants::size, ChunkConstants::size);
 		glst.uploadPxData(pendingPxUpdates);
-		glDrawArraysInstancedANGLE(GL_TRIANGLES, 0, 3, pendingPxUpdates.size());
+		glDrawArraysInstancedANGLE(GL_TRIANGLES, 0, 6, pendingPxUpdates.size());
 
 		if (textureCache.getData()) {
 			for (const auto& px : pendingPxUpdates) {
+				//std::printf("(%i, %i), %i, %i, %i, %i\n", px.x, px.y, px.rgba.c.r, px.rgba.c.g, px.rgba.c.b, px.rgba.c.a);
 				textureCache.setPixel(px.x, px.y, px.rgba);
 			}
 		}
 
-		std::printf("Updated chunk with %i px\n", (int)pendingPxUpdates.size());
+		//std::printf("Updated chunk with %i px\n", (int)pendingPxUpdates.size());
 		pendingPxUpdates.clear();
 	}
 

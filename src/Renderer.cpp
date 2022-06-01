@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <exception>
 #include <cstdio>
+#include <cstdlib>
 #include <cmath>
 
 #include <util/explints.hpp>
@@ -15,6 +16,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/string_cast.hpp>
 
+#include <Client.hpp>
 #include <world/World.hpp>
 #include <gl/data/ChunkShader.hpp>
 
@@ -25,13 +27,21 @@ Renderer::Renderer(World& w)
   ctx("#world"),
   view(1.0f),
   projection(1.0f),
-  fixViewportOnNextFrame(false) {
+  lastRenderTime(ctx.getTime() / 1000.f),
+  fixViewportOnNextFrame(false),
+  contextFailureCount(0),
+  frameNum(0) {
 	if (!ctx.ok()) {
 		std::printf("[Renderer] ctx.ok() == false\n");
-		std::abort();
+		set_client_status(R"(
+			<p>Failed to init WebGL.</p>
+			<p>No GPU acceleration seems to be available.</p>
+			<p>Try reloading the page or updating video drivers.</p>
+		)", 148);
+		std::exit(1);
 	}
 
-	setupRenderingContext();
+	resetGlState();
 	setupRenderingCallbacks();
 	ctx.startRenderLoop(Renderer::doRender, this);
 
@@ -122,6 +132,7 @@ void Renderer::render() {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	float now = ctx.getTime() / 1000.f;
+	++frameNum;
 
 	float czoom = getZoom();
 	float hVpWidth = s.w / 2.f / czoom;
@@ -131,10 +142,22 @@ void Renderer::render() {
 	float brx = std::floor((getX() + hVpWidth) / Chunk::size);
 	float bry = std::floor((getY() + hVpHeight) / Chunk::size);
 
+//	for (int i = -32; i < 32; i++) {
+//		for (int j = -32; j < 32; j++) {
+//			RGB_u clr = {{0, 0, 0, 0}};
+//			clr.rgb = u32(std::sqrt(std::pow(j, 2) + std::pow(i, 2)) * frameNum);
+//			clr.c.b = clr.c.r;
+//			clr.c.r = 0;
+//			clr.c.g *= 0.4;
+//			clr.c.a = 255;
+//			w.setPixel(j, i, clr);
+//		}
+//	}
+
 	bool glstActive = false;
 	for (auto ch : chunksToUpdate) {
 		ChunkGlState& cgl = ch->getGlState();
-		glstActive |= cgl.renderUpdates(cUpdaterGl, glstActive);
+		glstActive |= cgl.renderUpdates(*cUpdaterGl, glstActive);
 	}
 
 	chunksToUpdate.clear();
@@ -147,11 +170,13 @@ void Renderer::render() {
 		fixViewportOnNextFrame = false;
 	}
 	
-	cRendererGl.use();
+	w.getOrLoadChunk(0, 0);
 
-	TexturedChunkProgram& tcp = cRendererGl.getTexChunkProg();
-	EmptyChunkProgram& ecp = cRendererGl.getEmptyChunkProg();
-	LoadingChunkProgram& lcp = cRendererGl.getLoadChunkProg();
+	cRendererGl->use();
+
+	TexturedChunkProgram& tcp = cRendererGl->getTexChunkProg();
+	EmptyChunkProgram& ecp = cRendererGl->getEmptyChunkProg();
+	LoadingChunkProgram& lcp = cRendererGl->getLoadChunkProg();
 	LoadState progInUse = LoadState::ERROR;
 
 	const auto& chunks = w.getChunkMap();
@@ -186,7 +211,7 @@ void Renderer::render() {
 					glst.getPixelGlTex().use(GL_TEXTURE_2D);
 
 					tcp.setUOffset({tlx2 * Chunk::size, tly * Chunk::size});
-					glDrawArrays(GL_TRIANGLES, 0, cRendererGl.vertexCount());
+					glDrawArrays(GL_TRIANGLES, 0, cRendererGl->vertexCount());
 					break;
 
 				case LoadState::EMPTY:
@@ -198,7 +223,7 @@ void Renderer::render() {
 					}
 
 					ecp.setUOffset({tlx2 * Chunk::size, tly * Chunk::size});
-					glDrawArrays(GL_TRIANGLES, 0, cRendererGl.vertexCount());
+					glDrawArrays(GL_TRIANGLES, 0, cRendererGl->vertexCount());
 					break;
 
 				case LoadState::ERROR:
@@ -212,7 +237,7 @@ void Renderer::render() {
 					}
 
 					lcp.setUOffset({tlx2 * Chunk::size, tly * Chunk::size});
-					glDrawArrays(GL_TRIANGLES, 0, cRendererGl.vertexCount());
+					glDrawArrays(GL_TRIANGLES, 0, cRendererGl->vertexCount());
 					break;
 
 				default:
@@ -222,6 +247,8 @@ void Renderer::render() {
 	}
 
 	//pauseRendering();
+
+	lastRenderTime = now;
 }
 
 bool Renderer::setupView() {
@@ -279,13 +306,14 @@ bool Renderer::setupRenderingContext() {
 
 bool Renderer::setupRenderingCallbacks() {
 	ctx.onLost([this] {
-		ctx.stopRenderLoop();
+		destroyGlState();
+		ctx.startRenderLoop(Renderer::doDelayedGlReset, this);
 	});
 
-	ctx.onRestored([this] {
-		resetGlState();
-		ctx.startRenderLoop(Renderer::doRender, this);
-	});
+//	ctx.onRestored([this] {
+//		resetGlState();
+//		ctx.startRenderLoop(Renderer::doRender, this);
+//	});
 
 	ctx.onResize([this] {
 		resizeRenderingContext();
@@ -294,7 +322,14 @@ bool Renderer::setupRenderingCallbacks() {
 	return true;
 }
 
+void Renderer::destroyGlState() {
+	cRendererGl = std::nullopt;
+	cUpdaterGl = std::nullopt;
+	w.unloadAllChunks();
+}
+
 bool Renderer::resetGlState() {
+	w.unloadAllChunks();
 	cRendererGl = ChunkRendererGlState{};
 	cUpdaterGl = ChunkUpdaterGlState{};
 
@@ -303,6 +338,34 @@ bool Renderer::resetGlState() {
 	return true;
 }
 
+void Renderer::delayedGlReset() {
+	if (!ctx.ok()) {
+		if (ctx.getTime() / 1000.f - lastRenderTime > 1.f && !ctx.activateRenderingContext(contextFailureCount > 4)) {
+			std::printf("[Renderer] Couldn't recreate the context. (%d)\n", contextFailureCount);
+			lastRenderTime = ctx.getTime() / 1000.f;
+			if (++contextFailureCount >= 8) {
+				std::printf("[Renderer] Giving up after 8 tries.");
+				ctx.stopRenderLoop();
+				ctx.giveUp();
+			}
+		}
+
+		return;
+	}
+
+	if (!resetGlState()) {
+		std::printf("[Renderer] Couldn't reset the WebGL state.\n");
+		return;
+	}
+
+	ctx.startRenderLoop(Renderer::doRender, this);
+}
+
 void Renderer::doRender(void * r) {
 	static_cast<Renderer *>(r)->render();
 }
+
+void Renderer::doDelayedGlReset(void * r) {
+	static_cast<Renderer *>(r)->delayedGlReset();
+}
+

@@ -22,6 +22,10 @@ enum EConnectError {
 	CE_HEADER
 };
 
+extern "C" {
+void set_client_status(const char * buf, std::size_t len);
+}
+
 class JsApiProxy;
 
 // UBSan complains that the class is not aligned to 16-bytes

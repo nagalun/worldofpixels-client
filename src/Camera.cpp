@@ -5,7 +5,7 @@
 Camera::Camera()
 : x(0.f),
   y(0.f),
-  zoom(16.f) { }
+  zoom(8.f) { }
 
 float Camera::getX() const {
 	float integ;

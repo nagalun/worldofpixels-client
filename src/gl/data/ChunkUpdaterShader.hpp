@@ -3,6 +3,9 @@
 #include <string_view>
 #include <initializer_list>
 
+#include <util/preproc.hpp>
+#include <world/ChunkConstants.hpp>
+
 struct ChunkUpdaterShader {
 	// vertex
 	static constexpr std::initializer_list<float> buffer{
@@ -22,10 +25,13 @@ attribute vec4 vPixelColorA;
 
 varying vec4 vPixelColorV;
 
+const mediump float chunkSize = )" TOSTRING(CHUNK_CONSTANTS_SIZE) R"(.0/2.0;
+
 void main() {
 	vPixelColorV = vPixelColorA;
+	vec2 origin = (vPosA + vPixelOffsetA + vec2(-chunkSize)) / chunkSize;
 
-	gl_Position = vec4(vPosA + vPixelOffsetA, 0.5, 1.0);
+	gl_Position = vec4((origin), 0.5, 1.0);
 })"};
 
 	static constexpr std::string_view fragment{

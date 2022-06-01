@@ -67,6 +67,7 @@ public:
 
 	sz_t unloadChunks(sz_t amount = 8);
 	sz_t unloadFarChunks();
+	sz_t unloadAllChunks();
 	bool freeMemory(bool tryHarder = false);
 
 	sz_t getMaxLoadedChunks() const;

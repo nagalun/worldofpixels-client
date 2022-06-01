@@ -3,6 +3,7 @@
 #include <utility>
 #include <vector>
 #include <string_view>
+#include <optional>
 
 #include <glm/ext/matrix_float4x4.hpp>
 
@@ -27,11 +28,14 @@ public:
 private:
 	World& w;
 	gl::WebGlContext ctx;
-	ChunkRendererGlState cRendererGl;
-	ChunkUpdaterGlState cUpdaterGl;
+	std::optional<ChunkRendererGlState> cRendererGl;
+	std::optional<ChunkUpdaterGlState> cUpdaterGl;
 	glm::mat4 view; // view matrix
 	glm::mat4 projection;
+	float lastRenderTime;
 	bool fixViewportOnNextFrame;
+	u8 contextFailureCount;
+	u16 frameNum;
 
 	std::vector<Chunk *> chunksToUpdate;
 
@@ -65,7 +69,11 @@ private:
 	bool setupRenderingCallbacks();
 
 	bool resizeRenderingContext();
+	void destroyGlState();
 	bool resetGlState();
 
+	void delayedGlReset();
+
 	static void doRender(void *);
+	static void doDelayedGlReset(void *);
 };

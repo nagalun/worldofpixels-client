@@ -1,23 +1,35 @@
-#include <util/emsc/gl/WebGlContext.hpp>
+#include "WebGlContext.hpp"
 
 #include <cstdio>
+#include <cstdint>
+#include <cstdlib>
+#include <cstring>
 #include <cmath>
 
 #include <emscripten.h>
 #include <emscripten/html5.h>
 
+/* used to reinitialize the canvas element on context losses */
+EM_JS(void, reset_element, (const char * target, std::size_t len), {
+	var targetSelector = UTF8ToString(target, len);
+	var el = document.querySelector(targetSelector);
+	if (el) {
+		el.replaceWith(el.cloneNode());
+	}
+});
+
+EM_JS(void, ctx_give_up, (void), {
+	alert("Sorry, OWOP can't recover from a WebGL failure. Try reloading the page.");
+});
+
 namespace gl {
 
-WebGlContext::WebGlContext(const char * targetCanvas)
+WebGlContext::WebGlContext(const char * targetCanvas, bool forceWebgl1)
 : targetCanvas(targetCanvas),
   sizeCache{-1, -1},
   renderLoopSet(false),
   renderPaused(false) {
-	if (!activateRenderingContext(false)
-			&& !activateRenderingContext(true)) {
-		// WebGL not supported...?
-		std::fprintf(stderr, "[WebGlContext] Couldn't create context. Bad GPU drivers?\n");
-	}
+	activateRenderingContext(forceWebgl1);
 }
 
 WebGlContext::~WebGlContext() {
@@ -72,7 +84,21 @@ void WebGlContext::setTitle(const char* name) {
 	emscripten_set_window_title(name);
 }
 
-bool WebGlContext::activateRenderingContext(bool webgl1) {
+bool WebGlContext::activateRenderingContext(bool forceWebgl1) {
+	if ((forceWebgl1 || !activateRenderingContextAs(false))
+			&& !activateRenderingContextAs(true)) {
+		// WebGL not supported...?
+		std::fprintf(stderr,
+				"[WebGlContext] Couldn't create context. Bad GPU drivers?\n");
+		return false;
+	}
+
+	return true;
+}
+
+bool WebGlContext::activateRenderingContextAs(bool webgl1) {
+	destroyRenderingContext();
+
 	EmscriptenWebGLContextAttributes attr;
 	emscripten_webgl_init_context_attributes(&attr);
 
@@ -126,6 +152,11 @@ bool WebGlContext::activateRenderingContext(bool webgl1) {
 
 void WebGlContext::destroyRenderingContext() {
 	if (ctxInfo > 0) {
+		auto currCtx = emscripten_webgl_get_current_context();
+		if (currCtx == ctxInfo) {
+			emscripten_webgl_make_context_current(0);
+		}
+
 		emscripten_set_webglcontextlost_callback(targetCanvas, nullptr, true, nullptr);
 		emscripten_set_webglcontextrestored_callback(targetCanvas, nullptr, true, nullptr);
 		emscripten_set_resize_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, nullptr, true, nullptr);
@@ -136,6 +167,11 @@ void WebGlContext::destroyRenderingContext() {
 
 		ctxInfo = 0;
 	}
+}
+
+void WebGlContext::giveUp() {
+	ctx_give_up();
+	std::exit(1);
 }
 
 void WebGlContext::startRenderLoop(em_arg_callback_func f, void * user) {
@@ -160,11 +196,13 @@ int WebGlContext::emEvent(int eventType, const void *, void * r) {
 	case EMSCRIPTEN_EVENT_WEBGLCONTEXTLOST:
 		std::printf("[WebGlContext] Context lost!\n");
 		if (ctx.lostCb) { ctx.lostCb(); }
+		ctx.destroyRenderingContext();
+		reset_element(ctx.targetCanvas, std::strlen(ctx.targetCanvas));
 		return true;
 		break;
 
 	case EMSCRIPTEN_EVENT_WEBGLCONTEXTRESTORED:
-		std::printf("[WebGlContext] Context restored!\n");
+		std::printf("[WebGlContext] Context restored?\n");
 		if (ctx.restoredCb) { ctx.restoredCb(); }
 		break;
 	}
@@ -173,7 +211,7 @@ int WebGlContext::emEvent(int eventType, const void *, void * r) {
 }
 
 bool WebGlContext::ok() const {
-	return ctxInfo != 0;
+	return ctxInfo > 0;
 }
 
 bool WebGlContext::pauseRendering() {
@@ -197,5 +235,7 @@ bool WebGlContext::resumeRendering() {
 double WebGlContext::getTime() const {
 	return emscripten_get_now();
 }
+
+
 
 } /* namespace gl */

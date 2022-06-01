@@ -219,6 +219,12 @@ sz_t World::unloadFarChunks() {
 	return unloaded;
 }
 
+sz_t World::unloadAllChunks() {
+	auto s = chunks.size();
+	chunks.clear();
+	return s;
+}
+
 bool World::freeMemory(bool tryHarder) {
 	if (unloadFarChunks()) {
 		return true;
