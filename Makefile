@@ -18,9 +18,13 @@ CC  = emcc
 # also builds owop.wasm
 TARGET = $(OUT_DIR)/owop.js
 
+ifndef VERSION
 TREE_STATE = $(shell git rev-parse --short HEAD)
 ifeq ($(shell git diff --quiet HEAD; echo $$?), 1)
 	TREE_STATE := $(TREE_STATE)-$(shell ./git-hash.sh | cut -c -7)
+endif
+else
+TREE_STATE = $(VERSION)
 endif
 
 OPT_REL += -O3 -ffast-math
@@ -30,7 +34,9 @@ LD_REL  += -s GL_TRACK_ERRORS=0 --closure 1 $(OPT_REL)
 OPT_DBG += -g
 LD_DBG  += $(OPT_DBG) -s ASSERTIONS=2 -s STACK_OVERFLOW_CHECK=2 -s DEMANGLE_SUPPORT=1 -gsource-map --source-map-base "/"
 OPT_DBG += -D DEBUG=1
-
+ifdef DISABLE_AUTO_REFRESH
+OPT_DBG += -D DISABLE_AUTO_REFRESH=1
+endif
 
 EM_CONF_CC_LD += -s STRICT=1 -s USE_LIBPNG=1 -s USE_SDL=0
 EM_CONF_LD += -s USE_SDL_MIXER=0 -s USE_GLFW=0 -s USE_SDL_IMAGE=0 -s USE_SDL_TTF=0 -s USE_SDL_NET=0 -s FILESYSTEM=0

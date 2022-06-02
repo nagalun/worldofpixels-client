@@ -16,6 +16,7 @@
 #endif
 
 #ifdef DEBUG
+#ifndef DISABLE_AUTO_REFRESH
 EM_JS(void, enable_auto_refresh_client, (void), {
 	var ws = null;
 	var to = null;
@@ -31,6 +32,7 @@ EM_JS(void, enable_auto_refresh_client, (void), {
 	try { conn(); } catch (e) { }
 });
 #endif
+#endif
 
 static std::unique_ptr<Client> cl;
 
@@ -38,7 +40,9 @@ int main(int argc, char * argv[]) {
 	JsApiProxy& api = JsApiProxy::getInstance();
 
 #ifdef DEBUG
+#ifndef DISABLE_AUTO_REFRESH
 	enable_auto_refresh_client();
+#endif
 #endif
 
 	std::printf("[main] Compiled on " __DATE__ " @ " __TIME__ "\n");
