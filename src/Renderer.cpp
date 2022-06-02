@@ -142,17 +142,17 @@ void Renderer::render() {
 	float brx = std::floor((getX() + hVpWidth) / Chunk::size);
 	float bry = std::floor((getY() + hVpHeight) / Chunk::size);
 
-//	for (int i = -32; i < 32; i++) {
-//		for (int j = -32; j < 32; j++) {
-//			RGB_u clr = {{0, 0, 0, 0}};
-//			clr.rgb = u32(std::sqrt(std::pow(j, 2) + std::pow(i, 2)) * frameNum);
-//			clr.c.b = clr.c.r;
-//			clr.c.r = 0;
-//			clr.c.g *= 0.4;
-//			clr.c.a = 255;
-//			w.setPixel(j, i, clr);
-//		}
-//	}
+	for (int i = -32; i < 32; i++) {
+		for (int j = -32; j < 32; j++) {
+			RGB_u clr = {{0, 0, 0, 0}};
+			clr.rgb = u32(std::sqrt(std::pow(j, 2) + std::pow(i, 2)) * frameNum);
+			clr.c.b = clr.c.r;
+			clr.c.r = 0;
+			clr.c.g *= 0.4;
+			clr.c.a = 255;
+			w.setPixel(j, i, clr);
+		}
+	}
 
 	bool glstActive = false;
 	for (auto ch : chunksToUpdate) {
