@@ -11,6 +11,10 @@
 			touch-action: none;
 			font-family: sans-serif;
 		}
+		
+		#world {
+			user-select: none;
+		}
 
 		#world, #eui-container, #loader {
 			position: fixed;
@@ -95,12 +99,20 @@
 			});
 		});
 
+		// prevent scrolling zoom
 		window.addEventListener('wheel', function(e) {
 			if (e.ctrlKey) {
 				e.preventDefault();
 				return false;
 			}
 		}, {passive: false});
+		
+		window.addEventListener('mousedown', function(e) {
+			if (e.target && e.target.id !== 'world') {
+				e.stopImmediatePropagation();
+				return false;
+			}
+		}, true);
 
 		if (navigator.serviceWorker) {
 			//navigator.serviceWorker.register('/sw.js');

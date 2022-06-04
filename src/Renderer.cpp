@@ -20,8 +20,6 @@
 #include <world/World.hpp>
 #include <gl/data/ChunkShader.hpp>
 
-// TODO: use resume/pauseRendering()
-
 Renderer::Renderer(World& w)
 : w(w),
   ctx("#world"),
@@ -33,11 +31,11 @@ Renderer::Renderer(World& w)
   frameNum(0) {
 	if (!ctx.ok()) {
 		std::printf("[Renderer] ctx.ok() == false\n");
-		set_client_status(R"(
+		Client::setStatus(R"(
 			<p>Failed to init WebGL.</p>
 			<p>No GPU acceleration seems to be available.</p>
 			<p>Try reloading the page or updating video drivers.</p>
-		)", 148);
+		)");
 		std::exit(1);
 	}
 
@@ -96,6 +94,8 @@ void Renderer::chunkToUpdate(Chunk * c) {
 	if (std::find(chunksToUpdate.begin(), chunksToUpdate.end(), c) == chunksToUpdate.end()) {
 		chunksToUpdate.emplace_back(c);
 	}
+
+	ctx.resumeRendering();
 }
 
 void Renderer::chunkUnloaded(Chunk * c) {
@@ -103,6 +103,8 @@ void Renderer::chunkUnloaded(Chunk * c) {
 	if (it != chunksToUpdate.end()) {
 		chunksToUpdate.erase(it);
 	}
+
+	ctx.resumeRendering();
 }
 
 void Renderer::setFixViewportOnNextFrame() {
@@ -142,17 +144,22 @@ void Renderer::render() {
 	float brx = std::floor((getX() + hVpWidth) / Chunk::size);
 	float bry = std::floor((getY() + hVpHeight) / Chunk::size);
 
-	for (int i = -32; i < 32; i++) {
-		for (int j = -32; j < 32; j++) {
-			RGB_u clr = {{0, 0, 0, 0}};
-			clr.rgb = u32(std::sqrt(std::pow(j, 2) + std::pow(i, 2)) * frameNum);
-			clr.c.b = clr.c.r;
-			clr.c.r = 0;
-			clr.c.g *= 0.4;
-			clr.c.a = 255;
-			w.setPixel(j, i, clr);
-		}
-	}
+	bool shouldKeepRendering = false;
+
+//	for (int i = -32; i < 32; i++) {
+//		for (int j = -32; j < 32; j++) {
+//			RGB_u clr = {{0, 0, 0, 0}};
+//			clr.rgb = u32(std::sqrt(std::pow(j, 2) + std::pow(i, 2)) * frameNum);
+//			clr.c.b = clr.c.r;
+//			clr.c.r = 0;
+//			clr.c.g *= 0.4;
+//			clr.c.a = 255;
+//			w.setPixel(j, i, clr);
+//		}
+//	}
+
+	RGB_u clr = {{255, 0, 0, 255}};
+	w.setPixel(getX(), getY(), clr);
 
 	bool glstActive = false;
 	for (auto ch : chunksToUpdate) {
@@ -170,8 +177,6 @@ void Renderer::render() {
 		fixViewportOnNextFrame = false;
 	}
 	
-	w.getOrLoadChunk(0, 0);
-
 	cRendererGl->use();
 
 	TexturedChunkProgram& tcp = cRendererGl->getTexChunkProg();
@@ -238,6 +243,7 @@ void Renderer::render() {
 
 					lcp.setUOffset({tlx2 * Chunk::size, tly * Chunk::size});
 					glDrawArrays(GL_TRIANGLES, 0, cRendererGl->vertexCount());
+					shouldKeepRendering = true; // keep rendering animation
 					break;
 
 				default:
@@ -246,7 +252,9 @@ void Renderer::render() {
 		}
 	}
 
-	//pauseRendering();
+	if (!shouldKeepRendering) {
+		ctx.pauseRendering();
+	}
 
 	lastRenderTime = now;
 }
@@ -255,6 +263,7 @@ bool Renderer::setupView() {
 	view = glm::translate(glm::mat4(1.0f), glm::vec3(-getX(), -getY(), 0.f));
 
 	//view = glm::lookAt(eye, center, up);
+	ctx.resumeRendering();
 	return true;
 }
 
@@ -276,6 +285,8 @@ bool Renderer::setupProjection() {
 	projection = glm::scale(projection, glm::vec3(1.f, 1.f, -1.f));
 
 	//std::puts(glm::to_string(projection).c_str());
+	ctx.resumeRendering();
+
 	return true;
 }
 
@@ -284,8 +295,6 @@ bool Renderer::resizeRenderingContext() {
 
 	glViewport(0, 0, s.w, s.h);
 	setupProjection();
-
-	//ctx.resumeRendering();
 
 	std::printf("[Renderer] Viewport size: %ix%i (Chunks: %zu)\n", s.w, s.h, getMaxVisibleChunks());
 	return true;

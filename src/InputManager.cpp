@@ -764,6 +764,8 @@ int InputManager::handleMouseEvent(int type, const EmscriptenMouseEvent * ev, vo
 
 	im->setModifiers(ev->ctrlKey, ev->altKey, ev->shiftKey, ev->metaKey);
 
+	//std::printf("%d, %d\n", ev->targetX, ev->targetY);
+
 	int changed = ev->button;
 	switch (changed) {
 		case 1:

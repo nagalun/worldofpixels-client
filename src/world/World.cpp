@@ -99,7 +99,7 @@ World::World(InputAdapter& base, std::string name, std::unique_ptr<SelfCursor> m
 		r.translate(ii.getWheelDx() / z, ii.getWheelDy() / z);
 	});
 
-	iCamPanMo.setDefaultKeybind(P_MMIDDLE);
+	iCamPanMo.setDefaultKeybinds({P_MPRIMARY, P_MMIDDLE});
 	iCamPanMo.setCb([this] (auto& ev, const auto& ii) {
 		r.translate(
 			-ii.getDx() / r.getZoom(),

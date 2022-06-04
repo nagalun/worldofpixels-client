@@ -8,6 +8,7 @@
 #include <util/Bucket.hpp>
 #include <util/emsc/audio.hpp>
 #include <util/emsc/jswebsockets.hpp>
+#include <util/emsc/request.hpp>
 
 #include <JsApiProxy.hpp>
 #include <PacketDefinitions.hpp>
@@ -36,6 +37,21 @@ EM_JS(void, set_login_prompt_visible, (bool s), {
 		el.classList.remove("show");
 	}
 });
+
+static void checkHttpSession(void (*cb)(bool)) {
+	async_request("/api/identified", "GET", nullptr, reinterpret_cast<void*>(cb), true,
+	[] (unsigned, void * e, void * vbuf, unsigned len) { // ok
+		void (*cb)(bool) = reinterpret_cast<void (*)(bool)>(e);
+		const char * buf = static_cast<const char *>(vbuf);
+
+		cb(len == 1 && buf[0] == '1');
+	}, [] (unsigned, void * e, int code, const char * err) { // fail
+		void (*cb)(bool) = reinterpret_cast<void (*)(bool)>(e);
+
+		cb(false);
+	}, nullptr);
+}
+
 
 Client::Client(JsApiProxy& api)
 : api(api),
@@ -194,6 +210,21 @@ void Client::wsClose(u16 code) {
 			case CE_SESSION:
 				setStatus("Not logged in!");
 				set_login_prompt_visible(true);
+				checkHttpSession([] (bool hasSession) {
+					if (!hasSession) {
+						return;
+					}
+
+					set_login_prompt_visible(false);
+					setStatus(R"(
+						<p>You seem to be logged in, but the WebSocket server is not receiving the session cookie.</p>
+						<p>
+							<div>This can happen when blocking cookies globally.</div>
+							<div>Please add a cookie usage exception to the wss:// or all protocol(s) of this page.</div>
+						</p>
+						<p>See <a href="https://crbug.com/947413" target="_blank">this Chromium bug</a> for more information.</p>
+					)");
+				});
 				break;
 
 			case CE_PROXY:
