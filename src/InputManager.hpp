@@ -214,6 +214,7 @@ public:
 		int getLastY() const;
 		EPointerButtons getButtons() const;
 		bool isActive() const;
+		void finishMoving();
 		void set(int x, int y, EPointerButtons, EType);
 		void set(int x, int y, EType);
 		void set(EPointerButtons, EType);
@@ -223,8 +224,8 @@ public:
 private:
 	double wheelDx;
 	double wheelDy;
-	std::array<Pointer, 8> pointers;
-	mutable std::vector<const Pointer *> activePointers;
+	mutable std::array<Pointer, 8> pointers;
+	mutable std::vector<Pointer *> activePointers;
 	Pointer * updatedPointer;
 	EKeyModifiers currentModifiers;
 	mutable bool ptrListOutdated;
@@ -244,11 +245,12 @@ public:
 	int getLastY() const;
 	EPointerButtons getButtons() const;
 
-	const std::vector<const Pointer *>& getActivePointers() const;
+	const std::vector<Pointer *>& getActivePointers() const;
 	const Pointer& getPointer(int) const;
 
 protected:
 	Pointer& getPointer(int);
+	void finishMoving();
 	void setModifiers(EKeyModifiers);
 	void setWheel(double, double);
 };
@@ -287,6 +289,7 @@ public:
 	InputAdapter(const InputAdapter&) = delete;
 	~InputAdapter();
 
+	const InputManager& getInputManager() const;
 	const std::string& getContext() const;
 	std::string getFullContext() const; // very slow
 	InputAdapter& mkAdapter(std::string context, int priority = 0);
@@ -324,6 +327,8 @@ class InputManager : InputInfo, InputStorage, public InputAdapter {
 public:
 	InputManager(const char * kbTargetElement, const char * ptrTargetElement);
 	~InputManager();
+
+	const InputInfo& getLastInputInfo() const;
 
 	void tick();
 

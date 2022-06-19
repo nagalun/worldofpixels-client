@@ -23,6 +23,7 @@ public:
 
 	bool resize(int w, int h);
 	GlContext::Size getSize() const;
+	GlContext::Size getDipSize() const;
 	void setTitle(const char*);
 	double getTime() const;
 

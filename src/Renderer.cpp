@@ -55,6 +55,10 @@ sz_t Renderer::getMaxVisibleChunks() const {
 	return (s.w / Chunk::size + 2) * (s.h / Chunk::size + 2);
 }
 
+const gl::GlContext& Renderer::getGlContext() const {
+	return ctx;
+}
+
 void Renderer::loadMissingChunks() {
 	auto s = ctx.getSize();
 
@@ -157,9 +161,6 @@ void Renderer::render() {
 //			w.setPixel(j, i, clr);
 //		}
 //	}
-
-	RGB_u clr = {{255, 0, 0, 255}};
-	w.setPixel(getX(), getY(), clr);
 
 	bool glstActive = false;
 	for (auto ch : chunksToUpdate) {
@@ -377,4 +378,3 @@ void Renderer::doRender(void * r) {
 void Renderer::doDelayedGlReset(void * r) {
 	static_cast<Renderer *>(r)->delayedGlReset();
 }
-

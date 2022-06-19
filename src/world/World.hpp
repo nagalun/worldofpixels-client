@@ -16,6 +16,7 @@
 #include <InputManager.hpp>
 #include <Renderer.hpp>
 #include <ui/ToolWindow.hpp>
+#include <tools/ToolManager.hpp>
 
 
 class alignas(32) World {
@@ -39,21 +40,13 @@ private:
 	SelfCursor me;
 	u32 cursorCount;
 
-	ToolWindow toolWin;
 	InputAdapter& aWorld;
+	ToolManager toolMan;
+	ToolWindow toolWin;
 
+	ImAction iMoveCursor;
 	ImAction iPrintCoords;
 	ImAction iRoundCoords;
-	ImAction iCamUp;
-	ImAction iCamDown;
-	ImAction iCamLeft;
-	ImAction iCamRight;
-	ImAction iCamZoomIn;
-	ImAction iCamZoomOut;
-	ImAction iCamZoomWh;
-	ImAction iCamPanWh;
-	ImAction iCamPanMo;
-	ImAction iCamTouch;
 
 	u16 tickNum;
 	bool drawingRestricted;
@@ -71,8 +64,15 @@ public:
 	bool freeMemory(bool tryHarder = false);
 
 	sz_t getMaxLoadedChunks() const;
+
 	Renderer& getRenderer();
+	Camera& getCamera();
 	const Camera& getCamera() const;
+	SelfCursor& getCursor();
+	const SelfCursor& getCursor() const;
+	void recalculateCursorPosition();
+	void recalculateCursorPosition(const InputInfo&);
+
 	const std::unordered_map<Chunk::Key, Chunk>& getChunkMap() const;
 	Chunk& getOrLoadChunk(Chunk::Pos, Chunk::Pos);
 	Chunk * getChunkAt(World::Pos, World::Pos);

@@ -51,6 +51,10 @@ void Object::setProperty(std::string_view name, std::string_view value) {
 	eui_elem_property_set(id, name.data(), name.size(), value.data(), value.size());
 }
 
+void Object::setPropertyBool(std::string_view name, bool value) {
+	eui_elem_property_set_bool(id, name.data(), name.size(), value);
+}
+
 void Object::appendTo(std::string_view selector) {
 	eui_append_elem_selector(selector.data(), selector.size(), id);
 }

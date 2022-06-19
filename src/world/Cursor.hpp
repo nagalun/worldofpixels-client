@@ -39,4 +39,5 @@ public:
 	Tid getToolId() const;
 	
 	void setPos(WorldPos, WorldPos, Step);
+	void setPos(float, float);
 };

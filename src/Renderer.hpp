@@ -48,6 +48,7 @@ public:
 	~Renderer();
 
 	sz_t getMaxVisibleChunks() const;
+	const gl::GlContext& getGlContext() const;
 
 	void loadMissingChunks();
 	bool isChunkVisible(Chunk::Pos x, Chunk::Pos y) const;
@@ -56,9 +57,9 @@ public:
 	void chunkUnloaded(Chunk *);
 	void setFixViewportOnNextFrame();
 
-	void setPos(float, float);
-	void setZoom(float);
-	void translate(float, float);
+	void setPos(float, float) override;
+	void setZoom(float) override;
+	void translate(float, float) override;
 
 private:
 	void render();

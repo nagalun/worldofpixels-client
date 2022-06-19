@@ -27,6 +27,7 @@ public:
 	virtual void setTitle(const char *) = 0;
 	virtual bool resize(int w, int h) = 0;
 	virtual Size getSize() const = 0;
+	virtual Size getDipSize() const = 0;
 	virtual double getTime() const = 0;
 
 	virtual bool ok() const = 0;

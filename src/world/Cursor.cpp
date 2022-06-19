@@ -1,13 +1,15 @@
 #include <world/Cursor.hpp>
 
+#include <cmath>
+
 Cursor::Cursor(User& usr, Id pid, WorldPos x, WorldPos y, Step st, Tid toolId)
 : lastUpdate(std::chrono::steady_clock::now()),
   usr(usr),
   playerId(pid),
   x(x),
   y(y),
-  smoothX(x + (st & 0xF) / 16.0),
-  smoothY(y + (st >> 4 & 0xF) / 16.0),
+  smoothX((st & 0xF) / 16.0 + x),
+  smoothY((st >> 4 & 0xF) / 16.0 + y),
   pixelStep(st),
   toolId(toolId) { }
 
@@ -25,11 +27,11 @@ Cursor::Step Cursor::getStep() const {
 
 double Cursor::getSmoothX() const {
 	// TODO: actually smooth it
-	return smoothX;
+	return (pixelStep & 0xF) / 16.0 + x;
 }
 
 double Cursor::getSmoothY() const {
-	return smoothY;
+	return (pixelStep >> 4 & 0xF) / 16.0 + y;
 }
 
 User& Cursor::getUser() const {
@@ -38,4 +40,40 @@ User& Cursor::getUser() const {
 
 Cursor::Tid Cursor::getToolId() const {
 	return toolId;
+}
+
+void Cursor::setPos(WorldPos newX, WorldPos newY, Step newPxStep) {
+	smoothX = getSmoothX();
+	smoothY = getSmoothY();
+
+	lastUpdate = std::chrono::steady_clock::now();
+	x = newX;
+	y = newY;
+	pixelStep = newPxStep;
+}
+
+void Cursor::setPos(float worldX, float worldY) {
+	float integ;
+	float stepX = std::modf(worldX, &integ);
+	float stepY = std::modf(worldY, &integ);
+	worldX = std::floor(worldX);
+	worldY = std::floor(worldY);
+
+	if (stepX < 0.f) {
+		stepX += 1.f;
+	}
+
+	if (stepY < 0.f) {
+		stepY += 1.f;
+	}
+
+	// fixed precision
+	stepX = std::round(stepX * 16.f);
+	stepY = std::round(stepY * 16.f);
+
+	WorldPos x = worldX;
+	WorldPos y = worldY;
+	Cursor::Step step = ((u8) (stepX) & 0xF) | (((u8) (stepY) & 0xF) << 4);
+
+	setPos(x, y, step);
 }

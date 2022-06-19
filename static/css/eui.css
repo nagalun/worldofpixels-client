@@ -1,3 +1,7 @@
+#eui-container {
+	user-select: none;
+}
+
 .eui-win {
 	position: absolute;
 	border: 8px #423F4EB3 solid;
@@ -7,6 +11,28 @@
 	color: #FFF;
 }
 
-.owop-tools > .eui-win-content {
-	height: 100px;
+/* .owop-tools > .eui-win-content {
+	max-height: 50px;
+}*/
+
+.owop-tools .tool {
+	width: 32px;
+	height: 32px;
+	box-sizing: content-box;
+	padding: 0;
+	background-image: url(/img/ui/default/tools.png);
+	background-repeat: no-repeat;
+	background-position: 32px 0px;
+}
+
+.owop-tools .tool[data-tool="Pencil"] {
+	background-position: 0px 0px;
+}
+
+.owop-tools .tool[data-tool="Move"] {
+	background-position: -32px 0px;
+}
+
+.owop-tools .tool.active {
+	filter: brightness(0.8);
 }

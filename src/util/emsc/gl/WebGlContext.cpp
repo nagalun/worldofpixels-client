@@ -80,6 +80,19 @@ GlContext::Size WebGlContext::getSize() const {
 	return sizeCache;
 }
 
+// aka. css pixels
+GlContext::Size WebGlContext::getDipSize() const {
+	GlContext::Size dipSize;
+	double w;
+	double h;
+	emscripten_get_element_css_size(targetCanvas, &w, &h);
+
+	dipSize.w = std::round(w);
+	dipSize.h = std::round(h);
+
+	return dipSize;
+}
+
 void WebGlContext::setTitle(const char* name) {
 	emscripten_set_window_title(name);
 }

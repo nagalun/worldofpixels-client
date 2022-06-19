@@ -8,13 +8,14 @@ class Camera {
 
 public:
 	Camera();
+	virtual ~Camera();
 
 	float getX() const;
 	float getY() const;
 	float getZoom() const;
 
-	void setPos(float, float);
-	void setZoom(float);
+	virtual void setPos(float, float);
+	virtual void setZoom(float);
 	
-	void translate(float, float);
+	virtual void translate(float, float);
 };

@@ -77,10 +77,18 @@ EM_JS(std::size_t, eui_elem_property_get, (std::uint32_t id, const char * buf, s
 	return written >= maxlen ? maxlen : written;
 });
 
-EM_JS(std::size_t, eui_elem_property_set, (std::uint32_t id, const char * prop, std::size_t proplen, const char * val, std::size_t vallen), {
+EM_JS(void, eui_elem_property_set, (std::uint32_t id, const char * prop, std::size_t proplen, const char * val, std::size_t vallen), {
 	var e = Module.EUI.elems[id];
 	var prop = UTF8ToString(prop, proplen).split(".");
 	var obj = e;
 	while (prop.length > 1) obj = obj[prop.shift()];
 	obj[prop[0]] = UTF8ToString(val, vallen);
+});
+
+EM_JS(void, eui_elem_property_set_bool, (std::uint32_t id, const char * prop, std::size_t proplen, bool val), {
+	var e = Module.EUI.elems[id];
+	var prop = UTF8ToString(prop, proplen).split(".");
+	var obj = e;
+	while (prop.length > 1) obj = obj[prop.shift()];
+	obj[prop[0]] = !!val;
 });

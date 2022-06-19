@@ -7,6 +7,8 @@ Camera::Camera()
   y(0.f),
   zoom(8.f) { }
 
+Camera::~Camera() { }
+
 float Camera::getX() const {
 	float integ;
 	float fract = std::modf(x, &integ);

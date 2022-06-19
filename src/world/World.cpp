@@ -1,11 +1,13 @@
 #include <world/World.hpp>
-#include <InputManager.hpp>
-#include <Camera.hpp>
 
 #include <array>
 #include <algorithm>
 #include <cstdio>
 #include <cmath>
+
+#include <InputManager.hpp>
+#include <Camera.hpp>
+#include <util/gl/GlContext.hpp>
 
 World::World(InputAdapter& base, std::string name, std::unique_ptr<SelfCursor> me,
 		RGB_u bgClr, bool restricted, std::optional<User::Id> owner)
@@ -17,20 +19,17 @@ World::World(InputAdapter& base, std::string name, std::unique_ptr<SelfCursor> m
   me(std::move(*me)),
   cursorCount(1),
   aWorld(base.mkAdapter("World")),
+  toolMan(*this, aWorld),
+  toolWin(toolMan),
+  iMoveCursor(aWorld, "Move cursor", T_ONMOVE),
   iPrintCoords(aWorld, "Print Coordinates"),
   iRoundCoords(aWorld, "Round Coordinates"),
-  iCamUp(aWorld, "Camera ↑", T_ONHOLD),
-  iCamDown(aWorld, "Camera ↓", T_ONHOLD),
-  iCamLeft(aWorld, "Camera ←", T_ONHOLD),
-  iCamRight(aWorld, "Camera →", T_ONHOLD),
-  iCamZoomIn(aWorld, "Zoom +"),
-  iCamZoomOut(aWorld, "Zoom -"),
-  iCamZoomWh(aWorld, "Zoom Wheel", T_ONWHEEL),
-  iCamPanWh(aWorld, "Pan Camera Wheel", T_ONWHEEL),
-  iCamPanMo(aWorld, "Pan Camera Mouse", T_ONPRESS | T_ONMOVE),
-  iCamTouch(aWorld, "Camera Touch Control", T_ONPRESS | T_ONMOVE),
   tickNum(0),
   drawingRestricted(restricted) {
+
+	iMoveCursor.setCb([this] (ImAction::Event& ev, const InputInfo& ii) {
+		recalculateCursorPosition(ii);
+	});
 
 	iPrintCoords.setDefaultKeybind("P");
 	iPrintCoords.setCb([this] (auto&, const auto&) {
@@ -40,105 +39,6 @@ World::World(InputAdapter& base, std::string name, std::unique_ptr<SelfCursor> m
 	iRoundCoords.setDefaultKeybind("O");
 	iRoundCoords.setCb([this] (auto&, const auto&) {
 		r.setPos(std::round(r.getX()), std::round(r.getY()));
-	});
-
-	iCamUp.setDefaultKeybind("ARROWUP");
-	iCamUp.setCb([this] (auto&, const auto&) {
-		r.translate(0.f, -3.f / (r.getZoom() / 16.f));
-	});
-
-	iCamDown.setDefaultKeybind("ARROWDOWN");
-	iCamDown.setCb([this] (auto&, const auto&) {
-		r.translate(0.f, 3.f / (r.getZoom() / 16.f));
-	});
-
-	iCamLeft.setDefaultKeybind("ARROWLEFT");
-	iCamLeft.setCb([this] (auto&, const auto&) {
-		r.translate(-3.f / (r.getZoom() / 16.f), 0.f);
-	});
-
-	iCamRight.setDefaultKeybind("ARROWRIGHT");
-	iCamRight.setCb([this] (auto&, const auto&) {
-		r.translate(3.f / (r.getZoom() / 16.f), 0.f);
-	});
-
-	iCamZoomIn.setDefaultKeybind({M_CTRL, "+"});
-	iCamZoomIn.setCb([this] (auto&, const auto&) {
-		float nz = r.getZoom() * 2.f;
-		r.setZoom(nz >= 32.f ? 32.f : nz);
-	});
-
-	iCamZoomOut.setDefaultKeybind({M_CTRL, "-"});
-	iCamZoomOut.setCb([this] (auto&, const auto&) {
-		float nz = r.getZoom() / 2.f;
-		r.setZoom(nz);
-	});
-
-	iCamZoomWh.setCb([this] (auto& ev, const auto& ii) {
-		if (!(ii.getModifiers() & M_CTRL)) {
-			ev.reject();
-			return;
-		}
-
-		double d = ii.getWheelDy();
-		if (d == 0.0) {
-			return;
-		}
-
-		float nz = std::min(32.f, std::max(1.f, r.getZoom() - (d > 0.0 ? 1.f : -1.f)));
-		r.setZoom(nz);
-	});
-
-	iCamPanWh.setCb([this] (auto& ev, const auto& ii) {
-		if (ii.getModifiers() & M_CTRL) {
-			ev.reject();
-			return;
-		}
-
-		float z = r.getZoom();
-		r.translate(ii.getWheelDx() / z, ii.getWheelDy() / z);
-	});
-
-	iCamPanMo.setDefaultKeybinds({P_MPRIMARY, P_MMIDDLE});
-	iCamPanMo.setCb([this] (auto& ev, const auto& ii) {
-		r.translate(
-			-ii.getDx() / r.getZoom(),
-			-ii.getDy() / r.getZoom()
-		);
-	});
-
-	iCamTouch.setDefaultKeybind(P_MPRIMARY);
-	iCamTouch.setCb([
-		this,
-		lastDist{0.0}
-	] (auto& ev, const auto& ii) mutable {
-		const auto& p = ii.getActivePointers();
-		if (p.size() != 2) {
-			ev.reject();
-			return;
-		}
-
-		double dist = std::sqrt(std::pow(p[1]->getX() - p[0]->getX(), 2) + std::pow(p[1]->getY() - p[0]->getY(), 2));
-		if (ev.getActivationType() == T_ONPRESS) {
-			lastDist = dist;
-			return;
-		}
-
-		int lastMidX = (p[1]->getLastX() + p[0]->getLastX()) / 2;
-		int lastMidY = (p[1]->getLastY() + p[0]->getLastY()) / 2;
-		int midX = (p[1]->getX() + p[0]->getX()) / 2;
-		int midY = (p[1]->getY() + p[0]->getY()) / 2;
-
-		int midDx = midX - lastMidX;
-		int midDy = midY - lastMidY;
-
-		r.setZoom(std::max(1.f, r.getZoom() * (float)(dist / lastDist)));
-		r.translate(
-			-midDx / r.getZoom(),
-			-midDy / r.getZoom()
-		);
-		
-		lastDist = dist;
 	});
 
 	std::puts("[World] Created");
@@ -255,8 +155,20 @@ sz_t World::getMaxLoadedChunks() const {
 	return std::max(std::min(mv * 8, 128ul), mv);
 }
 
+Camera& World::getCamera() {
+	return r;
+}
+
 const Camera& World::getCamera() const {
 	return r;
+}
+
+SelfCursor& World::getCursor() {
+	return me;
+}
+
+const SelfCursor& World::getCursor() const {
+	return me;
 }
 
 const std::unordered_map<Chunk::Key, Chunk>& World::getChunkMap() const {
@@ -379,4 +291,26 @@ bool World::setPixel(World::Pos x, World::Pos y, RGB_u clr) {
 	}
 
 	return false;
+}
+
+void World::recalculateCursorPosition() {
+	recalculateCursorPosition(aWorld.getInputManager().getLastInputInfo());
+}
+
+void World::recalculateCursorPosition(const InputInfo& ii) {
+	auto dipSize = r.getGlContext().getDipSize();
+	float z = r.getZoom();
+	float worldX = r.getX();
+	float worldY = r.getY();
+	float screenX = ii.getX();
+	float screenY = ii.getY();
+	// coords origin to the center of the screen
+	screenX -= dipSize.w / 2.f;
+	screenY -= dipSize.h / 2.f;
+
+	// apply to the camera coords and zoom
+	worldX += screenX / z;
+	worldY += screenY / z;
+
+	getCursor().setPos(worldX, worldY);
 }

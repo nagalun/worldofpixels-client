@@ -4,6 +4,7 @@
 #include <memory>
 #include <cctype>
 #include <cstdio>
+#include <cstring>
 
 #include <emscripten/html5.h>
 
@@ -270,6 +271,11 @@ int InputInfo::Pointer::getLastY() const { return lastY; }
 EPointerButtons InputInfo::Pointer::getButtons() const { return btns; }
 bool InputInfo::Pointer::isActive() const { return active; }
 
+void InputInfo::Pointer::finishMoving() {
+	lastX = x;
+	lastY = y;
+}
+
 void InputInfo::Pointer::set(int nx, int ny, EPointerButtons nbtns, EType ntype) {
 	set(nx, ny, ntype);
 	btns = nbtns;
@@ -330,11 +336,11 @@ int InputInfo::getLastX() const { return updatedPointer->getLastX(); }
 int InputInfo::getLastY() const { return updatedPointer->getLastY(); }
 EPointerButtons InputInfo::getButtons() const { return updatedPointer->getButtons(); }
 
-const std::vector<const InputInfo::Pointer*>& InputInfo::getActivePointers() const {
+const std::vector<InputInfo::Pointer*>& InputInfo::getActivePointers() const {
 	if (ptrListOutdated) {
 		activePointers.clear();
 
-		for (const InputInfo::Pointer& p : pointers) {
+		for (InputInfo::Pointer& p : pointers) {
 			if (p.isActive()) {
 				activePointers.push_back(&p);
 			}
@@ -355,6 +361,12 @@ InputInfo::Pointer& InputInfo::getPointer(int id) {
 	InputInfo::Pointer * p = &pointers[id % pointers.size()];
 	updatedPointer = p;
 	return *p;
+}
+
+void InputInfo::finishMoving() {
+	for (InputInfo::Pointer* p : getActivePointers()) {
+		p->finishMoving();
+	}
 }
 
 void InputInfo::setModifiers(EKeyModifiers m) {
@@ -410,6 +422,10 @@ InputAdapter::~InputAdapter() {
 		std::printf("[~InputAdapter] %lu actions still registered on adapter ", actions.size());
 		std::printf("%s!!\n", getFullContext().c_str()); // could segfault if any parent is deleted before this
 	}
+}
+
+const InputManager& InputAdapter::getInputManager() const {
+	return parentAdapter ? parentAdapter->getInputManager() : *static_cast<const InputManager*>(this);
 }
 
 const std::string& InputAdapter::getContext() const {
@@ -643,6 +659,11 @@ InputManager::~InputManager() {
 	std::printf("[~InputManager]\n");
 }
 
+
+const InputInfo& InputManager::getLastInputInfo() const {
+	return *this;
+}
+
 void InputManager::tick() {
 	InputAdapter::tick(*this);
 }
@@ -669,6 +690,7 @@ bool InputManager::pointerDown(int id, Ptr::EType t, EPointerButtons changed, EP
 	std::printf("[InputManager] MDOWN: id=%d type=%c mods=%d changes=%d buttons=%d\n",
 			id, t == Ptr::MOUSE ? 'M' : 'T', InputInfo::getModifiers(), changed, buttons);
 
+	InputInfo::finishMoving();
 	InputInfo::getPointer(id).set(buttons, t);
 
 	lastTrigger = T_ONPRESS;
@@ -681,6 +703,7 @@ bool InputManager::pointerUp(int id, Ptr::EType t, EPointerButtons changed, EPoi
 	std::printf("[InputManager] MUP: id=%d type=%c mods=%d changes=%d buttons=%d\n",
 			id, t == Ptr::MOUSE ? 'M' : 'T', InputInfo::getModifiers(), changed, buttons);
 
+	InputInfo::finishMoving();
 	InputInfo::getPointer(id).set(buttons, t);
 
 	matchUp(changed, lastTrigger, *this);
@@ -846,8 +869,14 @@ int InputManager::handleTouchEvent(int type, const EmscriptenTouchEvent * ev, vo
 	return false;
 }
 
-int InputManager::handleFocusEvent(int type, const EmscriptenFocusEvent *, void * data) {
+int InputManager::handleFocusEvent(int type, const EmscriptenFocusEvent * e, void * data) {
 	InputManager * im = static_cast<InputManager *>(data);
+
+	// avoid dumb blur events
+	if (im->kbTargetElement == EMSCRIPTEN_EVENT_TARGET_WINDOW
+			&& std::strcmp("#window", e->nodeName) != 0) {
+		return false;
+	}
 
 	switch (type) {
 		case EMSCRIPTEN_EVENT_BLUR:
