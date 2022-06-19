@@ -24,7 +24,7 @@ std::string_view svprintf(const char * fmt, Args... args) {
 }
 
 static Object mktitle(std::string_view title) {
-	Object t("span");
+	Object t;
 	t.setProperty("textContent", title);
 
 	return t;

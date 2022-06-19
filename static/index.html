@@ -3,7 +3,7 @@
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
-	<title>OWOP dev</title>
+	<title>World of Pixels (dev)</title>
 
 	<style>
 		body, html {
@@ -87,7 +87,9 @@
 
 		window.addEventListener('load', function() {
 			var st = document.getElementById("status");
+			var wo = document.getElementById("world");
 			st.innerHTML = 'Loading OWOP...';
+			wo.oncontextmenu = function() { return false; };
 
 			var lastSlash = location.href.lastIndexOf("/") + 1;
 			var worldName = location.href.slice(lastSlash).toLowerCase() || "main";
@@ -122,8 +124,8 @@
 	<link rel="manifest" href="/manifest.webmanifest">
 	<link rel="stylesheet" href="/css/eui.css" media="print" onload="this.onload=null;this.media='all'">
 </head>
-<body>
-	<canvas id="world" oncontextmenu="return false;"></canvas>
+<body data-theme="default">
+	<canvas id="world"></canvas>
 	<div id="eui-container"></div>
 
 	<div id="loader">

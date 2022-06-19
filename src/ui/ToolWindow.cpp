@@ -1,23 +1,16 @@
 #include "ToolWindow.hpp"
 
 #include <tools/ToolManager.hpp>
+#include <util/emsc/audio.hpp>
 
 #include <emscripten/html5.h>
 
-static eui::Object mkToolsTitle() {
-	eui::Object title("img");
-	title.setProperty("src", "/img/ui/default/tools_text.png");
-	title.setProperty("alt", "Tools");
-	title.setPropertyBool("draggable", false);
-
-	return title;
-}
 
 // assume only one ToolWindow will be active at a time
 static ToolWindow * tw = nullptr;
 
 ToolWindow::ToolWindow(ToolManager& tm)
-: Window({mkToolsTitle()}),
+: Window(),
   tm(tm) {
 	addClass("owop-tools");
 	tw = this;
@@ -73,5 +66,6 @@ int ToolWindow::selectToolEvent(int type, const EmscriptenMouseEvent *ev, void *
 		}
 	});
 
+	playAudioId("a-btn");
 	return true;
 }

@@ -1,38 +1,90 @@
+body[data-theme="default"] {
+	--tex-url-tools: url(/img/ui/default/tools.png);
+	--tex-url-tools-text: url(/img/ui/default/tools_text.png);
+	--tex-url-border: url(/img/ui/default/border.png);
+	--tex-url-border-active: url(/img/ui/default/border_active.png);
+}
+
+body[data-theme="easter"] {
+	--tex-url-tools: url(/img/ui/easter/tools.png);
+	--tex-url-tools-text: url(/img/ui/easter/tools_text.png);
+	--tex-url-border: url(/img/ui/easter/border.png);
+	--tex-url-border-active: url(/img/ui/easter/border_active.png);
+}
+
+body[data-theme="halloween"] {
+	--tex-url-tools: url(/img/ui/halloween/tools.png);
+	--tex-url-tools-text: url(/img/ui/halloween/tools_text.png);
+	--tex-url-border: url(/img/ui/halloween/border.png);
+	--tex-url-border-active: url(/img/ui/halloween/border_active.png);
+}
+
+body[data-theme="newyear"] {
+	--tex-url-tools: url(/img/ui/newyear/tools.png);
+	--tex-url-tools-text: url(/img/ui/newyear/tools_text.png);
+	--tex-url-border: url(/img/ui/newyear/border.png);
+	--tex-url-border-active: url(/img/ui/newyear/border_active.png);
+}
+
+
 #eui-container {
 	user-select: none;
 }
 
 .eui-win {
 	position: absolute;
-	border: 8px #423F4EB3 solid;
-	border-image: url(/img/ui/default/border.png) 8 repeat;
-	background-color: #423F4EB3;
+	border: 8px transparent solid;
+	background-color: transparent;
 	background-clip: padding-box;
 	color: #FFF;
+	border-image: var(--tex-url-border) 8 fill repeat;
 }
 
-/* .owop-tools > .eui-win-content {
-	max-height: 50px;
-}*/
+.owop-tools {
+	text-align: center;
+	top: 4px;
+	left: 4px;
+}
+
+.owop-tools .eui-win-title {
+	margin: auto;
+	height: 16px;
+	width: 36px;
+	background-image: var(--tex-url-tools-text);
+	background-repeat: no-repeat;
+	background-position: center;
+}
 
 .owop-tools .tool {
-	width: 32px;
-	height: 32px;
+	width: 24px;
+	height: 24px;
 	box-sizing: content-box;
 	padding: 0;
-	background-image: url(/img/ui/default/tools.png);
-	background-repeat: no-repeat;
-	background-position: 32px 0px;
-}
-
-.owop-tools .tool[data-tool="Pencil"] {
-	background-position: 0px 0px;
-}
-
-.owop-tools .tool[data-tool="Move"] {
-	background-position: -32px 0px;
+	border: 8px transparent solid;
+	background-color: transparent;
 }
 
 .owop-tools .tool.active {
-	filter: brightness(0.8);
+	border: 8px transparent solid;
+	border-image: var(--tex-url-border-active) 8 fill repeat;
+}
+
+.owop-tools .tool::after {
+	content: '';
+	background-image: var(--tex-url-tools);
+	background-repeat: no-repeat;
+	background-position: 32px 0px;
+	background-clip: content-box;
+	width: 32px;
+	height: 32px;
+	margin: -4px;
+	display: block;
+}
+
+.owop-tools .tool[data-tool="Pencil"]::after {
+	background-position: 0px 0px;
+}
+
+.owop-tools .tool[data-tool="Move"]::after {
+	background-position: -32px 0px;
 }
