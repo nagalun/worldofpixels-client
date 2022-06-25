@@ -298,19 +298,7 @@ void World::recalculateCursorPosition() {
 }
 
 void World::recalculateCursorPosition(const InputInfo& ii) {
-	auto dipSize = r.getGlContext().getDipSize();
-	float z = r.getZoom();
-	float worldX = r.getX();
-	float worldY = r.getY();
-	float screenX = ii.getX();
-	float screenY = ii.getY();
-	// coords origin to the center of the screen
-	screenX -= dipSize.w / 2.f;
-	screenY -= dipSize.h / 2.f;
-
-	// apply to the camera coords and zoom
-	worldX += screenX / z;
-	worldY += screenY / z;
-
-	getCursor().setPos(worldX, worldY);
+	float wx, wy;
+	r.getWorldPosFromScreenPos(ii.getMidX(), ii.getMidY(), &wx, &wy);
+	getCursor().setPos(wx, wy);
 }

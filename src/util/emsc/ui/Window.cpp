@@ -52,11 +52,11 @@ Window::Window(WindowOptions wo, std::string_view containerSelector)
 	const char * tbarSel = titleBar.getSelector().data();
 	const char * csel = containerSelector.data();
 
-	emscripten_set_mousedown_callback(tbarSel, this, true, Window::handleMouseEvent);
+	//emscripten_set_mousedown_callback(tbarSel, this, true, Window::handleMouseEvent);
 	// there is a delay between moving the mouse and sending the event, so
 	// mouseup can end up outside the window
-	emscripten_set_mousemove_callback(csel, this, true, Window::handleMouseEvent);
-	emscripten_set_mouseup_callback(csel, this, true, Window::handleMouseEvent);
+	//emscripten_set_mousemove_callback(csel, this, false, Window::handleMouseEvent);
+	//emscripten_set_mouseup_callback(csel, this, false, Window::handleMouseEvent);
 
 	move(wo.x, wo.y);
 	//resize(wo.width, wo.height);
@@ -118,7 +118,8 @@ unsigned int Window::getMinHeight() const {
 	return minHeight;
 }
 
-bool Window::pointerDown(int buttons) {
+bool Window::pointerDownTitle(int buttons) {
+	moving = true;
 	return false;
 }
 
@@ -134,12 +135,15 @@ void Window::pointerMove(int x, int y) {
 	if (moving) {
 		int deltaX = x - moveLastX;
 		int deltaY = y - moveLastY;
-		//moveLastX =
+		moveLastX = x;
+		moveLastY = y;
+		move(x, y);
 	}
 }
 
 int Window::handleMouseEvent(int type, const EmscriptenMouseEvent *ev, void *data) {
 	Window * win = static_cast<Window *>(data);
+	std::printf("%d, %d\n", win->moving, type);
 
 	switch (type) {
 		case EMSCRIPTEN_EVENT_MOUSEMOVE:
@@ -147,7 +151,7 @@ int Window::handleMouseEvent(int type, const EmscriptenMouseEvent *ev, void *dat
 			return false;
 
 		case EMSCRIPTEN_EVENT_MOUSEDOWN:
-			return win->pointerDown(ev->buttons);
+			return win->pointerDownTitle(ev->buttons);
 
 		case EMSCRIPTEN_EVENT_MOUSEUP:
 			return win->pointerUp(ev->buttons);

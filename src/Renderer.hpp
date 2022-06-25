@@ -57,8 +57,10 @@ public:
 	void chunkUnloaded(Chunk *);
 	void setFixViewportOnNextFrame();
 
+	void getScreenSize(int *w, int *h) const override;
 	void setPos(float, float) override;
 	void setZoom(float) override;
+	void setZoom(float z, float ox, float oy) override;
 	void translate(float, float) override;
 
 private:

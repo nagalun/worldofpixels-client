@@ -7,12 +7,13 @@
 #include <tools/Tool.hpp>
 #include <tools/impl/PencilTool.hpp>
 #include <tools/impl/MoveTool.hpp>
+#include <tools/impl/ZoomTool.hpp>
 
 class World;
 
 class ToolManager {
 public:
-	using ToolsTuple = std::tuple<PencilTool, MoveTool>;
+	using ToolsTuple = std::tuple<PencilTool, MoveTool, ZoomTool>;
 
 private:
 	Tool* selectedTool;

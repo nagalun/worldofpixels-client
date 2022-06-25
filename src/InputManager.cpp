@@ -1,6 +1,7 @@
 #include "InputManager.hpp"
 
 #include <algorithm>
+#include <numeric>
 #include <memory>
 #include <cctype>
 #include <cstdio>
@@ -141,7 +142,7 @@ ImAction::ImAction(InputAdapter& adapter, std::string name, u8 trg,
   bindingsChanged(false),
   trg((EActionTriggers)trg) {
   	if (trg & T_ONHOLD) {
-  		// ONHOLD implies ONPRESS
+  		// ONHOLD implies ONPRESS, either remove this or add a short delay to receive ONHOLD events
   		this->trg = (EActionTriggers)(trg | T_ONPRESS);
   	}
 
@@ -334,6 +335,47 @@ int InputInfo::getDx() const { return updatedPointer->getDx(); }
 int InputInfo::getDy() const { return updatedPointer->getDy(); }
 int InputInfo::getLastX() const { return updatedPointer->getLastX(); }
 int InputInfo::getLastY() const { return updatedPointer->getLastY(); }
+
+int InputInfo::getMidX() const {
+	const auto& p = getActivePointers();
+	return std::accumulate(p.cbegin(), p.cend(), 0.f, [] (float a, const Pointer* b) {
+		return a + b->getX();
+	}) / static_cast<float>(p.size());
+}
+
+int InputInfo::getMidY() const {
+	const auto& p = getActivePointers();
+	return std::accumulate(p.cbegin(), p.cend(), 0.f, [] (float a, const Pointer* b) {
+		return a + b->getY();
+	}) / static_cast<float>(p.size());
+}
+
+int InputInfo::getMidDx() const {
+	auto midX = getMidX();
+	auto lastMidX = getLastMidX();
+	return midX - lastMidX;
+}
+
+int InputInfo::getMidDy() const {
+	auto midY = getMidY();
+	auto lastMidY = getLastMidY();
+	return midY - lastMidY;
+}
+
+int InputInfo::getLastMidX() const {
+	const auto& p = getActivePointers();
+	return std::accumulate(p.cbegin(), p.cend(), 0.f, [] (float a, const Pointer* b) {
+		return a + b->getLastX();
+	}) / static_cast<float>(p.size());
+}
+
+int InputInfo::getLastMidY() const {
+	const auto& p = getActivePointers();
+	return std::accumulate(p.cbegin(), p.cend(), 0.f, [] (float a, const Pointer* b) {
+		return a + b->getLastY();
+	}) / static_cast<float>(p.size());
+}
+
 EPointerButtons InputInfo::getButtons() const { return updatedPointer->getButtons(); }
 
 const std::vector<InputInfo::Pointer*>& InputInfo::getActivePointers() const {
@@ -622,7 +664,7 @@ InputManager::InputManager(const char * kbTargetElement, const char * ptrTargetE
 	emscripten_set_blur_callback(kbTargetElement, this, true, InputManager::handleFocusEvent);
 
 	emscripten_set_mousemove_callback(ptrTargetElement, this, true, InputManager::handleMouseEvent);
-	emscripten_set_mousedown_callback(ptrTargetElement, this, true, InputManager::handleMouseEvent);
+	emscripten_set_mousedown_callback(ptrTargetElement, this, false, InputManager::handleMouseEvent);
 	emscripten_set_mouseup_callback(ptrTargetElement, this, true, InputManager::handleMouseEvent);
 	emscripten_set_mouseleave_callback(ptrTargetElement, this, true, InputManager::handleMouseEvent);
 	emscripten_set_mouseenter_callback(ptrTargetElement, this, true, InputManager::handleMouseEvent);
@@ -645,7 +687,7 @@ InputManager::~InputManager() {
 	emscripten_set_blur_callback(kbTargetElement, nullptr, true, nullptr);
 
 	emscripten_set_mousemove_callback(ptrTargetElement, nullptr, true, nullptr);
-	emscripten_set_mousedown_callback(ptrTargetElement, nullptr, true, nullptr);
+	emscripten_set_mousedown_callback(ptrTargetElement, nullptr, false, nullptr);
 	emscripten_set_mouseup_callback(ptrTargetElement, nullptr, true, nullptr);
 	emscripten_set_mouseleave_callback(ptrTargetElement, nullptr, true, nullptr);
 	emscripten_set_mouseenter_callback(ptrTargetElement, nullptr, true, nullptr);

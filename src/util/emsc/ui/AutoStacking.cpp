@@ -1,11 +1,15 @@
 #include <util/emsc/ui/AutoStacking.hpp>
 
+#include <cstdint>
 #include <emscripten/html5.h>
 
 using namespace eui;
 
+static std::uint32_t currentActiveId = 0;
+
 AutoStacking::AutoStacking(std::string_view containerSelector)
 : containerSelector(containerSelector) {
+	currentActiveId = Object::getId();
 	appendTo(containerSelector);
 
 	const char * target = getSelector().data();
@@ -21,5 +25,8 @@ AutoStacking::AutoStacking(std::string_view containerSelector)
 
 void AutoStacking::bringUp() {
 	// appending an element again to the same parent re-orders it
-	appendTo(containerSelector);
+	if (currentActiveId != Object::getId()) {
+		currentActiveId = Object::getId();
+		appendTo(containerSelector);
+	}
 }

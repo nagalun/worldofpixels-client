@@ -243,6 +243,13 @@ public:
 	int getDy() const;
 	int getLastX() const;
 	int getLastY() const;
+	// midpoint funcs, avg between all pointers
+	int getMidX() const;
+	int getMidY() const;
+	int getMidDx() const;
+	int getMidDy() const;
+	int getLastMidX() const;
+	int getLastMidY() const;
 	EPointerButtons getButtons() const;
 
 	const std::vector<Pointer *>& getActivePointers() const;

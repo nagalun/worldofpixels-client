@@ -52,7 +52,7 @@ public:
 	unsigned int getHeight() const;
 
 private:
-	bool pointerDown(int buttons);
+	bool pointerDownTitle(int buttons);
 	bool pointerUp(int buttons);
 	void pointerMove(int x, int y);
 	static int handleMouseEvent(int type, const EmscriptenMouseEvent * ev, void * data);

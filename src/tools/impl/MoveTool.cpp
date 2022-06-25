@@ -14,9 +14,6 @@ struct MoveTool::Keybinds {
 	ImAction iCamDown;
 	ImAction iCamLeft;
 	ImAction iCamRight;
-	ImAction iCamZoomIn;
-	ImAction iCamZoomOut;
-	ImAction iCamZoomWh;
 	ImAction iCamPanWh;
 	ImAction iCamPanMo;
 	ImAction iCamPanMoGl;
@@ -28,9 +25,6 @@ struct MoveTool::Keybinds {
 	  iCamDown(ia, "Camera ↓", T_ONHOLD),
 	  iCamLeft(ia, "Camera ←", T_ONHOLD),
 	  iCamRight(ia, "Camera →", T_ONHOLD),
-	  iCamZoomIn(ia, "Zoom +"),
-	  iCamZoomOut(ia, "Zoom -"),
-	  iCamZoomWh(ia, "Zoom Wheel", T_ONWHEEL),
 	  iCamPanWh(ia, "Pan Camera Wheel", T_ONWHEEL),
 	  iCamPanMo(ia, "Pan Camera Mouse", T_ONPRESS | T_ONMOVE),
 	  iCamPanMoGl(ia, "Pan Camera Mouse (Global)", T_ONPRESS | T_ONMOVE),
@@ -42,9 +36,6 @@ struct MoveTool::Keybinds {
 		iCamDown.setDefaultKeybind("ARROWDOWN");
 		iCamLeft.setDefaultKeybind("ARROWLEFT");
 		iCamRight.setDefaultKeybind("ARROWRIGHT");
-
-		iCamZoomIn.setDefaultKeybind({M_CTRL, "+"});
-		iCamZoomOut.setDefaultKeybind({M_CTRL, "-"});
 
 		iCamPanMo.setDefaultKeybind(P_MPRIMARY);
 		iCamPanMoGl.setDefaultKeybind(P_MMIDDLE);
@@ -58,6 +49,7 @@ MoveTool::MoveTool(std::tuple<ToolManager&, InputAdapter&> params)
   kb(std::make_unique<Keybinds>(std::get<1>(params).mkAdapter(getNameSt()))) {
 
 	Camera& c = tm.getWorld().getCamera();
+	Cursor& p = tm.getWorld().getCursor();
 
 	kb->iSelectTool.setCb([this] (auto&, const auto&) {
 		tm.selectTool<MoveTool>();
@@ -77,31 +69,6 @@ MoveTool::MoveTool(std::tuple<ToolManager&, InputAdapter&> params)
 
 	kb->iCamRight.setCb([&] (auto&, const auto&) {
 		c.translate(3.f / (c.getZoom() / 16.f), 0.f);
-	});
-
-	kb->iCamZoomIn.setCb([&] (auto&, const auto&) {
-		float nz = c.getZoom() * 2.f;
-		c.setZoom(nz >= 32.f ? 32.f : nz);
-	});
-
-	kb->iCamZoomOut.setCb([&] (auto&, const auto&) {
-		float nz = c.getZoom() / 2.f;
-		c.setZoom(nz);
-	});
-
-	kb->iCamZoomWh.setCb([&] (auto& ev, const auto& ii) {
-		if (!(ii.getModifiers() & M_CTRL)) {
-			ev.reject();
-			return;
-		}
-
-		double d = ii.getWheelDy();
-		if (d == 0.0) {
-			return;
-		}
-
-		float nz = std::min(32.f, std::max(1.f, c.getZoom() - (d > 0.0 ? 1.f : -1.f)));
-		c.setZoom(nz);
 	});
 
 	kb->iCamPanWh.setCb([&] (auto& ev, const auto& ii) {
@@ -126,29 +93,24 @@ MoveTool::MoveTool(std::tuple<ToolManager&, InputAdapter&> params)
 
 	kb->iCamTouch.setCb([
 		&,
-		lastDist{0.0}
+		lastDist{0.f}
 	] (auto& ev, const auto& ii) mutable {
-		const auto& p = ii.getActivePointers();
-		if (p.size() != 2) {
+		const auto& po = ii.getActivePointers();
+		if (po.size() != 2) {
 			ev.reject();
 			return;
 		}
 
-		double dist = std::sqrt(std::pow(p[1]->getX() - p[0]->getX(), 2) + std::pow(p[1]->getY() - p[0]->getY(), 2));
+		float dist = std::sqrt(std::pow(po[1]->getX() - po[0]->getX(), 2.f) + std::pow(po[1]->getY() - po[0]->getY(), 2.f));
 		if (ev.getActivationType() == T_ONPRESS) {
 			lastDist = dist;
 			return;
 		}
 
-		int lastMidX = (p[1]->getLastX() + p[0]->getLastX()) / 2;
-		int lastMidY = (p[1]->getLastY() + p[0]->getLastY()) / 2;
-		int midX = (p[1]->getX() + p[0]->getX()) / 2;
-		int midY = (p[1]->getY() + p[0]->getY()) / 2;
+		int midDx = ii.getMidDx();
+		int midDy = ii.getMidDy();
 
-		int midDx = midX - lastMidX;
-		int midDy = midY - lastMidY;
-
-		c.setZoom(std::max(1.f, c.getZoom() * (float)(dist / lastDist)));
+		c.setZoom(std::max(1.f, c.getZoom() * (dist / lastDist)), p.getFinalX(), p.getFinalY());
 		c.translate(
 			-midDx / c.getZoom(),
 			-midDy / c.getZoom()

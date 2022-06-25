@@ -126,6 +126,12 @@ void Renderer::setZoom(float z) {
 	std::printf("[Renderer] Zoom: %f\n", getZoom());
 }
 
+void Renderer::setZoom(float z, float ox, float oy) {
+	Camera::setZoom(z, ox, oy);
+	setupProjection();
+	std::printf("[Renderer] Zoom: %f\n", getZoom());
+}
+
 void Renderer::translate(float dx, float dy) {
 	setPos(getX() + dx, getY() + dy);
 }
@@ -377,4 +383,12 @@ void Renderer::doRender(void * r) {
 
 void Renderer::doDelayedGlReset(void * r) {
 	static_cast<Renderer *>(r)->delayedGlReset();
+}
+
+void Renderer::getScreenSize(int *w, int *h) const {
+	// use dipSize to get screen size in css pixels
+	// TODO: test if this works correctly to calculate mouse -> world coords on different dpi
+	auto s = ctx.getDipSize();
+	*w = s.w;
+	*h = s.h;
 }

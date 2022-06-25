@@ -20,8 +20,8 @@ private:
 	const Id playerId;
 	WorldPos x;
 	WorldPos y;
-	double smoothX;
-	double smoothY;
+	float smoothX;
+	float smoothY;
 	Step pixelStep;
 	Tid toolId;
 
@@ -32,8 +32,10 @@ public:
 	WorldPos getY() const;
 	Step getStep() const;
 
-	double getSmoothX() const;
-	double getSmoothY() const;
+	float getSmoothX() const;
+	float getSmoothY() const;
+	float getFinalX() const;
+	float getFinalY() const;
 
 	User& getUser() const;
 	Tid getToolId() const;

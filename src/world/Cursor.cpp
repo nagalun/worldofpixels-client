@@ -25,13 +25,22 @@ Cursor::Step Cursor::getStep() const {
 	return pixelStep;
 }
 
-double Cursor::getSmoothX() const {
+float Cursor::getSmoothX() const {
 	// TODO: actually smooth it
-	return (pixelStep & 0xF) / 16.0 + x;
+	return (pixelStep & 0xF) / 16.f + x;
 }
 
-double Cursor::getSmoothY() const {
-	return (pixelStep >> 4 & 0xF) / 16.0 + y;
+float Cursor::getSmoothY() const {
+	return (pixelStep >> 4 & 0xF) / 16.f + y;
+}
+
+float Cursor::getFinalX() const {
+	// TODO: actually smooth it
+	return (pixelStep & 0xF) / 16.f + x;
+}
+
+float Cursor::getFinalY() const {
+	return (pixelStep >> 4 & 0xF) / 16.f + y;
 }
 
 User& Cursor::getUser() const {
@@ -71,9 +80,9 @@ void Cursor::setPos(float worldX, float worldY) {
 	stepX = std::round(stepX * 16.f);
 	stepY = std::round(stepY * 16.f);
 
-	WorldPos x = worldX;
-	WorldPos y = worldY;
+	WorldPos nx = worldX;
+	WorldPos ny = worldY;
 	Cursor::Step step = ((u8) (stepX) & 0xF) | (((u8) (stepY) & 0xF) << 4);
 
-	setPos(x, y, step);
+	setPos(nx, ny, step);
 }
