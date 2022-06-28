@@ -4,8 +4,8 @@ SelfCursor::SelfCursor(User& u, Id id, WorldPos x, WorldPos y, Step s, Tid t, Bu
 : Cursor(u, id, x, y, s, t),
   paintLimiter(paint),
   chatLimiter(chat),
-  preciseX(getFinalX()),
-  preciseY(getFinalY()),
+  preciseX(x),
+  preciseY(y),
   chatAllowed(canChat),
   modifyWorldAllowed(canPaint) { }
 

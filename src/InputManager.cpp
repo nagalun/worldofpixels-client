@@ -336,47 +336,71 @@ int InputInfo::getDy() const { return updatedPointer->getDy(); }
 int InputInfo::getLastX() const { return updatedPointer->getLastX(); }
 int InputInfo::getLastY() const { return updatedPointer->getLastY(); }
 
-int InputInfo::getMidX() const {
+float InputInfo::getMidX() const {
 	const auto& p = getActivePointers();
+
+	if (p.size() == 0) {
+		return 0.f;
+	}
+
 	return std::accumulate(p.cbegin(), p.cend(), 0.f, [] (float a, const Pointer* b) {
 		return a + b->getX();
 	}) / static_cast<float>(p.size());
 }
 
-int InputInfo::getMidY() const {
+float InputInfo::getMidY() const {
 	const auto& p = getActivePointers();
+
+	if (p.size() == 0) {
+		return 0.f;
+	}
+
 	return std::accumulate(p.cbegin(), p.cend(), 0.f, [] (float a, const Pointer* b) {
 		return a + b->getY();
 	}) / static_cast<float>(p.size());
 }
 
-int InputInfo::getMidDx() const {
+float InputInfo::getMidDx() const {
 	auto midX = getMidX();
 	auto lastMidX = getLastMidX();
 	return midX - lastMidX;
 }
 
-int InputInfo::getMidDy() const {
+float InputInfo::getMidDy() const {
 	auto midY = getMidY();
 	auto lastMidY = getLastMidY();
 	return midY - lastMidY;
 }
 
-int InputInfo::getLastMidX() const {
+float InputInfo::getLastMidX() const {
 	const auto& p = getActivePointers();
+
+	if (p.size() == 0) {
+		return 0.f;
+	}
+
 	return std::accumulate(p.cbegin(), p.cend(), 0.f, [] (float a, const Pointer* b) {
 		return a + b->getLastX();
 	}) / static_cast<float>(p.size());
 }
 
-int InputInfo::getLastMidY() const {
+float InputInfo::getLastMidY() const {
 	const auto& p = getActivePointers();
+
+	if (p.size() == 0) {
+		return 0.f;
+	}
+
 	return std::accumulate(p.cbegin(), p.cend(), 0.f, [] (float a, const Pointer* b) {
 		return a + b->getLastY();
 	}) / static_cast<float>(p.size());
 }
 
 EPointerButtons InputInfo::getButtons() const { return updatedPointer->getButtons(); }
+
+int InputInfo::getNumActivePointers() const {
+	return getActivePointers().size();
+}
 
 const std::vector<InputInfo::Pointer*>& InputInfo::getActivePointers() const {
 	if (ptrListOutdated) {
@@ -933,6 +957,7 @@ int InputManager::handleWheelEvent(int type, const EmscriptenWheelEvent * ev, vo
 	InputManager * im = static_cast<InputManager *>(data);
 
 	im->setModifiers(ev->mouse.ctrlKey, ev->mouse.altKey, ev->mouse.shiftKey, ev->mouse.metaKey);
+	// TODO: use the remaining part of the mouse event to update InputInfo
 
 	switch (type) {
 		case EMSCRIPTEN_EVENT_WHEEL:
@@ -946,3 +971,4 @@ int InputManager::handleWheelEvent(int type, const EmscriptenWheelEvent * ev, vo
 
 	return false;
 }
+

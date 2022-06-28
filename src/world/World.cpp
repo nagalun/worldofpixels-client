@@ -298,7 +298,13 @@ void World::recalculateCursorPosition() {
 }
 
 void World::recalculateCursorPosition(const InputInfo& ii) {
+	if (ii.getNumActivePointers() == 0) {
+		return;
+	}
+
 	float wx, wy;
-	r.getWorldPosFromScreenPos(ii.getMidX(), ii.getMidY(), &wx, &wy);
+	float mx = ii.getMidX();
+	float my = ii.getMidY();
+	r.getWorldPosFromScreenPos(mx, my, &wx, &wy);
 	getCursor().setPos(wx, wy);
 }
