@@ -5,14 +5,21 @@
 #include <functional>
 
 #include <tools/Tool.hpp>
+
+#include <tools/providers/ColorProvider.hpp>
+#include <tools/providers/EditHistoryProvider.hpp>
+
 #include <tools/impl/PencilTool.hpp>
 #include <tools/impl/MoveTool.hpp>
 #include <tools/impl/ZoomTool.hpp>
 
 class World;
+class InputAdapter;
 
 class ToolManager {
 public:
+	// Providers manage shared context between tools, and they can also have keybinds
+	using ProvidersTuple = std::tuple<ColorProvider>;
 	using ToolsTuple = std::tuple<PencilTool, MoveTool, ZoomTool>;
 
 private:
@@ -20,6 +27,7 @@ private:
 	World& w;
 	std::function<void(Tool* old, Tool* cur)> onSelectionChanged;
 	const bool local; // is this instance from local player or remote?
+	ProvidersTuple providers;
 	ToolsTuple tools;
 
 public:
@@ -34,7 +42,7 @@ public:
 	constexpr void forEachTool(Fn cb);
 
 	template<typename T>
-	constexpr T getTool();
+	constexpr T& get();
 
 	Tool* getSelectedTool();
 	template<typename T>

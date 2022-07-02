@@ -1,3 +1,5 @@
+#include <type_traits>
+
 template<typename Fn>
 constexpr void ToolManager::forEachTool(Fn cb) {
 	std::apply([cb{std::move(cb)}] (auto&... x) {
@@ -7,8 +9,12 @@ constexpr void ToolManager::forEachTool(Fn cb) {
 }
 
 template<typename T>
-constexpr T ToolManager::getTool() {
-	return std::get<T>(tools);
+constexpr T& ToolManager::get() {
+	if constexpr (std::is_base_of_v<Tool, T>) {
+		return std::get<T>(tools);
+	} else {
+		return std::get<T>(providers);
+	}
 }
 
 template<typename T>

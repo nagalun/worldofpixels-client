@@ -279,6 +279,7 @@ public:
 };
 
 class InputAdapter {
+	const InputManager& im;
 	InputAdapter * const parentAdapter;
 	InputStorage& storage;
 	const std::string context;

@@ -2,46 +2,90 @@
 
 #include <cstdio>
 
+#include <util/misc.hpp>
 #include <InputManager.hpp>
+
 #include <tools/ToolManager.hpp>
+#include <tools/providers/ColorProvider.hpp>
+
 #include <world/World.hpp>
 #include <world/SelfCursor.hpp>
 
-struct PencilTool::Keybinds {
+struct PencilTool::LocalContext {
 	ImAction iSelectTool;
 	ImAction iDrawPrimaryClr;
 	ImAction iDrawSecondaryClr;
 
-	Keybinds(InputAdapter& ia)
+	World::Pos lastX;
+	World::Pos lastY;
+
+	LocalContext(InputAdapter& ia)
 	: iSelectTool(ia, "Select", T_ONPRESS),
-	  iDrawPrimaryClr(ia, "Draw Primary Color", T_ONPRESS | T_ONMOVE),
-	  iDrawSecondaryClr(ia, "Draw Secondary Color", T_ONPRESS | T_ONMOVE) {
+	  iDrawPrimaryClr(ia, "Draw Primary Color", T_ONPRESS | T_ONMOVE | T_ONHOLD),
+	  iDrawSecondaryClr(ia, "Draw Secondary Color", T_ONPRESS | T_ONMOVE | T_ONHOLD),
+	  lastX(0),
+	  lastY(0) {
 
 		iSelectTool.setDefaultKeybind("B");
 		iDrawPrimaryClr.setDefaultKeybind(P_MPRIMARY);
 		iDrawSecondaryClr.setDefaultKeybind(P_MSECONDARY);
+	}
+
+	void setLastPoint(World::Pos x, World::Pos y) {
+		lastX = x;
+		lastY = y;
+	}
+
+	World::Pos getLastX() const {
+		return lastX;
+	}
+
+	World::Pos getLastY() const {
+		return lastY;
 	}
 };
 
 // local ctor
 PencilTool::PencilTool(std::tuple<ToolManager&, InputAdapter&> params)
 : Tool(std::get<0>(params)),
-  kb(std::make_unique<Keybinds>(std::get<1>(params).mkAdapter(getNameSt()))) {
+  lctx(std::make_unique<LocalContext>(std::get<1>(params).mkAdapter(getNameSt()))) {
 
 	World& w = tm.getWorld();
+	// TODO: research whether SelfCursor should have its own events that may integrate with
+	// InputManager somehow to keep keybind api but listen to something like T_ONPLAYERMOVE
+	// T_ONHOLD is a dumb workaround for that issue, moving camera moves player without T_ONMOVE
 	SelfCursor& sc = w.getCursor();
+	ColorProvider& clr = tm.get<ColorProvider>();
 
-	kb->iSelectTool.setCb([this] (ImAction::Event& e, const InputInfo& ii) {
+	lctx->iSelectTool.setCb([this] (ImAction::Event& e, const InputInfo& ii) {
 		tm.selectTool<PencilTool>();
 	});
 
-	kb->iDrawPrimaryClr.setCb([&] (ImAction::Event& e, const InputInfo& ii) {
-		w.setPixel(sc.getX(), sc.getY(), {{255, 0, 0, 255}});
-	});
+	const auto drawHandler = [&] (auto plotter) {
+		return [&, plotter{std::move(plotter)}] (ImAction::Event& e, const InputInfo& ii) {
+			switch (e.getActivationType()) {
+			case T_ONPRESS:
+				lctx->setLastPoint(sc.getX(), sc.getY());
+				[[fallthrough]];
+			case T_ONMOVE:
+			case T_ONHOLD:
+				line(lctx->getLastX(), lctx->getLastY(), sc.getX(), sc.getY(), std::move(plotter));
+				lctx->setLastPoint(sc.getX(), sc.getY());
+				break;
 
-	kb->iDrawSecondaryClr.setCb([&] (ImAction::Event& e, const InputInfo& ii) {
-		std::printf("Draw secondary color\n");
-	});
+			default:
+				break;
+			}
+		};
+	};
+
+	lctx->iDrawPrimaryClr.setCb(drawHandler([&w, &clr] (auto x, auto y) {
+		w.setPixel(x, y, clr.getPrimaryColor());
+	}));
+
+	lctx->iDrawSecondaryClr.setCb(drawHandler([&w, &clr] (auto x, auto y) {
+		w.setPixel(x, y, clr.getSecondaryColor());
+	}));
 
 	onSelectionChanged(false);
 }
@@ -61,12 +105,12 @@ std::string_view PencilTool::getName() const {
 }
 
 void PencilTool::onSelectionChanged(bool selected) {
-	if (!kb) {
+	if (!lctx) {
 		return;
 	}
 
-	kb->iDrawPrimaryClr.setEnabled(selected);
-	kb->iDrawSecondaryClr.setEnabled(selected);
+	lctx->iDrawPrimaryClr.setEnabled(selected);
+	lctx->iDrawSecondaryClr.setEnabled(selected);
 }
 
 bool PencilTool::isEnabled() {

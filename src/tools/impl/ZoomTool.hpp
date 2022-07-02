@@ -5,9 +5,9 @@
 #include <tuple>
 
 #include <tools/Tool.hpp>
-#include <InputManager.hpp>
 
 class ToolManager;
+class InputAdapter;
 
 class ZoomTool : public Tool {
 	struct Keybinds;

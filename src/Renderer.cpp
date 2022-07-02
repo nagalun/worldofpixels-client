@@ -136,6 +136,10 @@ void Renderer::translate(float dx, float dy) {
 	setPos(getX() + dx, getY() + dy);
 }
 
+void Renderer::recalculateCursorPosition() const {
+	w.recalculateCursorPosition();
+}
+
 void Renderer::render() {
 	using LoadState = ChunkGlState::LoadState;
 
@@ -392,3 +396,4 @@ void Renderer::getScreenSize(int *w, int *h) const {
 	*w = s.w;
 	*h = s.h;
 }
+

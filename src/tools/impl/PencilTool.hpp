@@ -5,13 +5,13 @@
 #include <tuple>
 
 #include <tools/Tool.hpp>
-#include <InputManager.hpp>
 
 class ToolManager;
+class InputAdapter;
 
 class PencilTool : public Tool {
-	struct Keybinds;
-	std::unique_ptr<Keybinds> kb;
+	struct LocalContext;
+	std::unique_ptr<LocalContext> lctx;
 
 public:
 	PencilTool(std::tuple<ToolManager&, InputAdapter&>); // local ctor

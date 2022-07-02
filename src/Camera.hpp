@@ -21,4 +21,7 @@ public:
 	virtual void setZoom(float z, float ox, float oy); // with non-center camera-coords origin
 	
 	virtual void translate(float dx, float dy);
+
+private:
+	virtual void recalculateCursorPosition() const = 0;
 };

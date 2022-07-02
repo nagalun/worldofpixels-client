@@ -29,10 +29,12 @@ float Camera::getZoom() const {
 void Camera::setPos(float nx, float ny) {
 	x = nx;
 	y = ny;
+	recalculateCursorPosition();
 }
 
 void Camera::setZoom(float nz) {
 	zoom = nz;
+	recalculateCursorPosition();
 }
 
 void Camera::setZoom(float nz, float ox, float oy) {

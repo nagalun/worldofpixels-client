@@ -64,6 +64,8 @@ public:
 	void translate(float, float) override;
 
 private:
+	void recalculateCursorPosition() const override;
+
 	void render();
 
 	bool setupView();

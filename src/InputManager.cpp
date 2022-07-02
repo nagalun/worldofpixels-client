@@ -474,7 +474,8 @@ void InputStorage::storeKeybinds(const std::string& name, std::vector<Keybind>& 
 
 
 InputAdapter::InputAdapter(InputAdapter * parent, InputStorage& is, std::string context, int priority)
-: parentAdapter(parent),
+: im(parent == nullptr ? *static_cast<const InputManager*>(this) : parent->getInputManager()),
+  parentAdapter(parent),
   storage(is),
   context(std::move(context)),
   priority(priority),
@@ -491,7 +492,7 @@ InputAdapter::~InputAdapter() {
 }
 
 const InputManager& InputAdapter::getInputManager() const {
-	return parentAdapter ? parentAdapter->getInputManager() : *static_cast<const InputManager*>(this);
+	return im;
 }
 
 const std::string& InputAdapter::getContext() const {

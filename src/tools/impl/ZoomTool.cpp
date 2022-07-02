@@ -50,7 +50,6 @@ ZoomTool::ZoomTool(std::tuple<ToolManager&, InputAdapter&> params)
 		float wx = p.getFinalX();
 		float wy = p.getFinalY();
 		c.setZoom(nz >= 32.f ? 32.f : nz, wx, wy);
-		w.recalculateCursorPosition(ii); // TODO: move this to camera
 	};
 
 	auto zoomOutCb = [&] (auto&, const auto& ii) {
@@ -58,7 +57,6 @@ ZoomTool::ZoomTool(std::tuple<ToolManager&, InputAdapter&> params)
 		float wx = p.getFinalX();
 		float wy = p.getFinalY();
 		c.setZoom(nz, wx, wy);
-		w.recalculateCursorPosition(ii);
 	};
 
 	kb->iCamZoomIn.setCb(zoomInCb);
@@ -81,7 +79,6 @@ ZoomTool::ZoomTool(std::tuple<ToolManager&, InputAdapter&> params)
 		float wx = p.getFinalX();
 		float wy = p.getFinalY();
 		c.setZoom(nz, wx, wy);
-		w.recalculateCursorPosition(ii);
 	});
 
 
