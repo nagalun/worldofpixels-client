@@ -65,9 +65,12 @@ varying vec2 vTexCoordV;
 
 void main() {
 	vec4 texClr = texture2D(pxTex, vTexCoordV);
-	texClr.rgb *= gridMult();
+	float grid = gridMult();
+	float alpha = 1.0 - grid * (1.0 - texClr.a);
+	texClr.rgb *= texClr.a * grid / alpha;
+	texClr.a = alpha;
 	gl_FragColor = texClr;
-})"};
+})"}; // skipping grid color: (0.0 * grid / alpha) +
 
 	static constexpr std::string_view emptyFragment{
 			R"(#version 100
