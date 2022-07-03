@@ -12,6 +12,7 @@
 #include <tools/impl/PencilTool.hpp>
 #include <tools/impl/MoveTool.hpp>
 #include <tools/impl/ZoomTool.hpp>
+#include <tools/impl/PipetteTool.hpp>
 
 class World;
 class InputAdapter;
@@ -20,7 +21,7 @@ class ToolManager {
 public:
 	// Providers manage shared context between tools, and they can also have keybinds
 	using ProvidersTuple = std::tuple<ColorProvider>;
-	using ToolsTuple = std::tuple<PencilTool, MoveTool, ZoomTool>;
+	using ToolsTuple = std::tuple<PencilTool, MoveTool, ZoomTool, PipetteTool>;
 
 private:
 	Tool* selectedTool;

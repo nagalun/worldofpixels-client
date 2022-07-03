@@ -92,3 +92,7 @@ body[data-theme="newyear"] {
 .owop-tools .tool[data-tool="Zoom"]::after {
 	background-position: -64px 0px;
 }
+
+.owop-tools .tool[data-tool="Pipette"]::after {
+	background-position: -96px 0px;
+}
