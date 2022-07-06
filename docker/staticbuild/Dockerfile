@@ -1,5 +1,6 @@
-FROM emscripten/emsdk:3.1.1 AS builder
+FROM emscripten/emsdk:3.1.15 AS builder
 RUN apt-get update && apt-get install -y libglm-dev inotify-tools libssl-dev libz-dev
+RUN embuilder.py build zlib libpng
 WORKDIR /project
 COPY . .
 RUN make VERSION=${VERSION:-unk} DISABLE_AUTO_REFRESH=1 -j $(nproc) -l $(nproc) ${MAKEOPTS:-all}

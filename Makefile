@@ -10,10 +10,12 @@ OBJ_DIR = build
 SRC_FILES = $(call rwildcard, $(SRC_DIR)/, *.cpp)
 OBJ_FILES = $(SRC_FILES:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 DEP_FILES = $(OBJ_FILES:.o=.d)
+DWO_FILES = $(OBJ_FILES:.o=.dwo)
 
-# Use the emscripten compilers
+# Use the emscripten toolchain
 CXX = em++
 CC  = emcc
+DWP = emdwp
 
 # also builds owop.wasm
 TARGET = $(OUT_DIR)/owop.js
@@ -31,8 +33,12 @@ OPT_REL += -O3 -ffast-math
 # for post-compile emscripten stuff
 LD_REL  += -s GL_TRACK_ERRORS=0 --closure 1 $(OPT_REL)
 
-OPT_DBG += -g
-LD_DBG  += $(OPT_DBG) -s ASSERTIONS=2 -s STACK_OVERFLOW_CHECK=2 -s DEMANGLE_SUPPORT=1 -gsource-map --source-map-base "/"
+OPT_DBG += -O0 -g -gdwarf-5 -gsplit-dwarf -gpubnames
+OPT_DBG += -ffile-prefix-map=$(CURDIR)=.
+#-gseparate-dwarf=$(TARGET:.js=.dbg.wasm)
+LD_DBG  += $(OPT_DBG)
+LD_DBG  += -s ERROR_ON_WASM_CHANGES_AFTER_LINK=1 -s ASSERTIONS=1
+
 OPT_DBG += -D DEBUG=1
 ifdef DISABLE_AUTO_REFRESH
 OPT_DBG += -D DISABLE_AUTO_REFRESH=1
@@ -46,6 +52,7 @@ EM_CONF_LD += -s GL_SUPPORT_AUTOMATIC_ENABLE_EXTENSIONS=0 -s GL_SUPPORT_SIMPLE_E
 EM_CONF_LD += -s GL_EXTENSIONS_IN_PREFIXED_FORMAT=0 -s GL_EMULATE_GLES_VERSION_STRING_FORMAT=0
 
 EM_CONF_LD += -s INITIAL_MEMORY=8MB -s TOTAL_STACK=32KB -s ALLOW_MEMORY_GROWTH=0 -s ABORTING_MALLOC=0 #-s MALLOC=emmalloc
+EM_CONF_LD += -s WASM_BIGINT=1
 EM_CONF_LD += -s FETCH_SUPPORT_INDEXEDDB=0 -s WEBGL2_BACKWARDS_COMPATIBILITY_EMULATION=1
 EM_CONF_LD += -s HTML5_SUPPORT_DEFERRING_USER_SENSITIVE_REQUESTS=0
 EM_CONF_LD += -s INCOMING_MODULE_JS_API=[] -s EXPORTED_RUNTIME_METHODS=['callMain']
@@ -85,6 +92,9 @@ rel: static $(TARGET)
 
 $(TARGET): $(OBJ_FILES)
 	$(CXX) $(LDFLAGS) -o $@ $^ $(LDLIBS)
+	$(DWP) -e $(@:.js=.wasm) -o $(@:.js=.wasm.dwp)
+
+#$(DWP) -e $(@:.js=.dbg.wasm) -o $(@:.js=.dbg.wasm.dwp)
 
 static: $(OUT_DIR)
 	cp -RT $(STATIC_DIR)/ $(OUT_DIR)/
