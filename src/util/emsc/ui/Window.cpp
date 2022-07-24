@@ -1,27 +1,16 @@
-#include <util/emsc/ui/Window.hpp>
+#include "Window.hpp"
 #include <cstdio>
 #include <cstdint>
 
 #include <emscripten/html5.h>
 
+#include <util/misc.hpp>
+
 namespace eui {
 
 // "translate(-2147483648px,-2147483648px)" + null
 // "-2147483648px" + null // w, h
-static char propBuf[11 * 2 + 16 + 1] = {0};
-
-template<typename... Args>
-std::string_view svprintf(const char * fmt, Args... args) {
-	int written = std::snprintf(propBuf, sizeof(propBuf), fmt, args...);
-
-	if (written < 0) {
-		written = 0;
-	} else if ((std::uint32_t)written > sizeof(propBuf)) {
-		written = sizeof(propBuf);
-	}
-
-	return std::string_view(propBuf, written);
-}
+constexpr std::size_t bufSz = 11 * 2 + 16 + 1;
 
 static Object mktitle(std::string_view title) {
 	Object t;
@@ -31,8 +20,7 @@ static Object mktitle(std::string_view title) {
 }
 
 Window::Window(WindowOptions wo, std::string_view containerSelector)
-: AutoStacking(containerSelector),
-  titleBar(wo.title.index() == 0 ? mktitle(std::get<0>(wo.title)) : std::move(std::get<1>(wo.title))),
+: titleBar(wo.title.index() == 0 ? mktitle(std::get<0>(wo.title)) : std::move(std::get<1>(wo.title))),
   content(std::move(wo.content)),
   width(wo.width),
   height(wo.height),
@@ -63,17 +51,17 @@ Window::Window(WindowOptions wo, std::string_view containerSelector)
 }
 
 void Window::move(int x, int y) {
-	setProperty("style.transform", svprintf("translate(%ipx,%ipx)", x, y));
+	setProperty("style.transform", svprintf<bufSz>("translate(%ipx,%ipx)", x, y));
 }
 
 void Window::resize(unsigned int newWidth, unsigned int newHeight) {
 	if (newWidth != width) {
-		setProperty("style.width", svprintf("%ipx", newWidth));
+		setProperty("style.width", svprintf<bufSz>("%ipx", newWidth));
 		width = newWidth;
 	}
 
 	if (newHeight != height) {
-		setProperty("style.height", svprintf("%ipx", newHeight));
+		setProperty("style.height", svprintf<bufSz>("%ipx", newHeight));
 		height = newHeight;
 	}
 }

@@ -2,26 +2,31 @@
 
 #include <utility>
 
+#include <ui/ColorWidget.hpp>
 #include <InputManager.hpp>
 
 struct ColorProvider::LocalContext {
+	ColorWidget cw;
 	ImAction iSwapColors;
 
-	LocalContext(InputAdapter& ia)
-	: iSwapColors(ia, "Swap Colors", T_ONPRESS) {
-		//iSwapColors.setDefaultKeybind("X");
+	LocalContext(ColorProvider& clr, InputAdapter& ia)
+	: cw(clr),
+	  iSwapColors(ia, "Swap Colors", T_ONPRESS) {
+		iSwapColors.setDefaultKeybind("X");
 	}
 };
 
 // local ctor
 ColorProvider::ColorProvider(std::tuple<ToolManager&, InputAdapter&> params)
-: lctx(std::make_unique<LocalContext>(std::get<1>(params))),
+: lctx(std::make_unique<LocalContext>(*this, std::get<1>(params))),
   primaryColor{{0, 0, 0, 255}},
   secondaryColor{{255, 255, 255, 255}} {
 
 	lctx->iSwapColors.setCb([this] (auto&, const auto&) {
 		swapColors();
 	});
+
+	lctx->cw.update();
 }
 
 // remote ctor
@@ -42,12 +47,21 @@ RGB_u ColorProvider::getSecondaryColor() const {
 
 void ColorProvider::swapColors() {
 	std::swap(primaryColor, secondaryColor);
+	if (lctx) {
+		lctx->cw.update();
+	}
 }
 
 void ColorProvider::setPrimaryColor(RGB_u clr) {
 	primaryColor = clr;
+	if (lctx) {
+		lctx->cw.update();
+	}
 }
 
 void ColorProvider::setSecondaryColor(RGB_u clr) {
 	secondaryColor = clr;
+	if (lctx) {
+		lctx->cw.update();
+	}
 }

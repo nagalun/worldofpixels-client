@@ -4,7 +4,9 @@
 #include <string>
 #include <string_view>
 #include <cstdint>
+#include <functional>
 
+#include <util/emsc/ui/EventHandle.hpp>
 
 namespace eui {
 
@@ -29,11 +31,12 @@ public:
 	std::string getProperty(std::string_view name) const;
 	void setProperty(std::string_view name, std::string_view value);
 	void setPropertyBool(std::string_view name, bool value);
-	//void setHandler(std::string_view name, void * usr, void(*cb)(void*));
+	EventHandle createHandler(std::string_view name, std::function<bool(void)> cb);
 
 	void appendTo(std::string_view selector);
 	void appendTo(std::uint32_t id);
 	void appendTo(const Object&);
+	void appendToMainContainer();
 
 	void remove();
 

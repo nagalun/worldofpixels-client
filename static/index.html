@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en" data-theme="default">
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
@@ -94,11 +94,27 @@
 			var lastSlash = location.href.lastIndexOf("/") + 1;
 			var worldName = location.href.slice(lastSlash).toLowerCase() || "main";
 			var wsUrl = location.origin.replace('http', 'ws');
-			AppOWOP()
-			.then(function(module) {
-				st.innerHTML = "Initializing...";
-				module.callMain([wsUrl, worldName]);
-			});
+			
+			function err(e) {
+				var msg = "An error ocurred. Check the console (F12) for more info.";
+				
+				if (!('WebAssembly' in window)) {
+					msg = "No WebAssembly support! Can't load OWOP.";
+				}
+				
+				st.innerHTML = msg;
+				console.error(e);
+			}
+			
+			try {
+				AppOWOP()
+				.then(function(module) {
+					st.innerHTML = "Initializing...";
+					module.callMain([wsUrl, worldName]);
+				}, err);
+			} catch (e) {
+				err(e);
+			}
 		});
 
 		// prevent scrolling zoom
@@ -122,9 +138,9 @@
 	</script>
 
 	<link rel="manifest" href="/manifest.webmanifest">
-	<link rel="stylesheet" href="/css/eui.css" media="print" onload="this.onload=null;this.media='all'">
+	<link rel="stylesheet" href="/css/style.css" media="print" onload="this.onload=null;this.media='all'">
 </head>
-<body data-theme="default">
+<body>
 	<canvas id="world"></canvas>
 	<div id="eui-container"></div>
 

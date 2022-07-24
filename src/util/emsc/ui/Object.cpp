@@ -42,7 +42,7 @@ void Object::delClass(std::string_view cl) {
 std::string Object::getProperty(std::string_view name) const {
 	std::size_t len = eui_elem_property_len(id, name.data(), name.size());
 	std::string buf(len, '\0');
-	eui_elem_property_get(id, buf.data(), buf.size(), name.data(), name.size());
+	eui_elem_property_get(id, buf.data(), buf.size() + 1, name.data(), name.size());
 
 	return buf;
 }
@@ -53,6 +53,10 @@ void Object::setProperty(std::string_view name, std::string_view value) {
 
 void Object::setPropertyBool(std::string_view name, bool value) {
 	eui_elem_property_set_bool(id, name.data(), name.size(), value);
+}
+
+EventHandle Object::createHandler(std::string_view name, std::function<bool(void)> cb) {
+	return EventHandle(getId(), name, std::move(cb));
 }
 
 void Object::appendTo(std::string_view selector) {
@@ -67,6 +71,10 @@ void Object::appendTo(const Object& o) {
 	eui_append_elem(o.getId(), id);
 }
 
+void Object::appendToMainContainer() {
+	appendTo("#eui-container");
+}
+
 void Object::remove() {
 	eui_remove_elem(id);
 }
@@ -76,3 +84,4 @@ void Object::destroy() {
 		eui_destroy_elem(id);
 	}
 }
+

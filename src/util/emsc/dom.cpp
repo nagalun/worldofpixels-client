@@ -2,11 +2,15 @@
 #include <emscripten.h>
 #include "dom.hpp"
 
+using EvtCb = bool(*)(void *);
+
 EM_JS(std::uint32_t, eui_create_elem, (const char * tag, std::size_t len), {
 	if (!Module.EUI) {
 		Module.EUI = {
 			elemid: 0,
-			elems: {}
+			elems: {},
+			evts: {},
+			lastEvent: null
 		};
 	}
 
@@ -51,6 +55,56 @@ EM_JS(void, eui_destroy_elem, (std::uint32_t id), {
 	e.remove();
 });
 
+EM_JS(void, eui_elem_add_handler, (std::uint32_t id, const char * evt, std::size_t len, void * data, EvtCb cb), {
+	var e = Module.EUI.elems[id];
+	var evts = Module.EUI.evts[id] = (Module.EUI.evts[id] || []);
+	var evtNames = UTF8ToString(evt, len).split(" ");
+	for (var i = 0; i < evtNames.length; i++) {
+		var obj = {
+			data: data,
+			evt: evtNames[i],
+			cb: cb,
+			jscb: null
+		};
+
+		obj.jscb = function(ev) {
+			Module.EUI.lastEvent = ev;
+			if (Module["_eui_call_evt_handler"](obj.data, obj.cb)) {
+				ev.preventDefault();
+			}
+		};
+
+		e.addEventListener(obj.evt, obj.jscb);
+		evts.push(obj);
+	}
+});
+
+EM_JS(void, eui_elem_ch_handler, (std::uint32_t id, void * data, EvtCb cb, void * newData, EvtCb newCb), {
+	var e = Module.EUI.elems[id];
+	var evts = Module.EUI.evts[id] = (Module.EUI.evts[id] || []);
+	for (var i = 0; i < evts.length; i++) {
+		var ev = evts[i];
+		if (ev.data === data && ev.cb === cb) {
+			ev.cb = newCb;
+			ev.data = newData;
+		}
+	}
+});
+
+EM_JS(void, eui_elem_del_handler, (std::uint32_t id, void * data, EvtCb cb), {
+	var e = Module.EUI.elems[id];
+	var evts = Module.EUI.evts[id] = (Module.EUI.evts[id] || []);
+	for (var i = 0; i < evts.length; i++) {
+		var ev = evts[i];
+		if (ev.data === data && ev.cb === cb) {
+			evts.splice(i, 1);
+			--i;
+
+			e.removeEventListener(ev.evt, ev.jscb);
+		}
+	}
+});
+
 const char * eui_elem_selector(std::uint32_t id) {
 	// "#eui-" + "4294967295" + '\0'
 	static char buf[5 + 10 + 1] = "#eui-";
@@ -92,3 +146,19 @@ EM_JS(void, eui_elem_property_set_bool, (std::uint32_t id, const char * prop, st
 	while (prop.length > 1) obj = obj[prop.shift()];
 	obj[prop[0]] = !!val;
 });
+
+EM_JS(void, eui_root_css_property_set, (const char * prop, std::size_t proplen, const char * val, std::size_t vallen), {
+	var r = document.querySelector(":root");
+	r.style.setProperty(UTF8ToString(prop, proplen), UTF8ToString(val, vallen));
+});
+
+
+
+EMSCRIPTEN_KEEPALIVE
+bool eui_call_evt_handler(void * data, EvtCb cb) {
+	return cb(data);
+}
+
+void eui_root_css_property_set(std::string_view prop, std::string_view val) {
+	eui_root_css_property_set(prop.data(), prop.size(), val.data(), val.size());
+}

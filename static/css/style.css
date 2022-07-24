@@ -1,49 +1,72 @@
-body[data-theme="default"] {
+:root[data-theme="default"] {
 	--tex-url-tools: url(/img/ui/default/tools.png);
 	--tex-url-tools-text: url(/img/ui/default/tools_text.png);
 	--tex-url-border: url(/img/ui/default/border.png);
 	--tex-url-border-active: url(/img/ui/default/border_active.png);
+	--tex-url-ui: url(/img/ui/default/ui.png);
 }
 
-body[data-theme="easter"] {
+:root[data-theme="easter"] {
 	--tex-url-tools: url(/img/ui/easter/tools.png);
 	--tex-url-tools-text: url(/img/ui/easter/tools_text.png);
 	--tex-url-border: url(/img/ui/easter/border.png);
 	--tex-url-border-active: url(/img/ui/easter/border_active.png);
+	--tex-url-ui: url(/img/ui/easter/ui.png);
 }
 
-body[data-theme="halloween"] {
+:root[data-theme="halloween"] {
 	--tex-url-tools: url(/img/ui/halloween/tools.png);
 	--tex-url-tools-text: url(/img/ui/halloween/tools_text.png);
 	--tex-url-border: url(/img/ui/halloween/border.png);
 	--tex-url-border-active: url(/img/ui/halloween/border_active.png);
+	--tex-url-ui: url(/img/ui/halloween/ui.png);
 }
 
-body[data-theme="newyear"] {
+:root[data-theme="newyear"] {
 	--tex-url-tools: url(/img/ui/newyear/tools.png);
 	--tex-url-tools-text: url(/img/ui/newyear/tools_text.png);
 	--tex-url-border: url(/img/ui/newyear/border.png);
 	--tex-url-border-active: url(/img/ui/newyear/border_active.png);
+	--tex-url-ui: url(/img/ui/newyear/ui.png);
 }
 
+:root, ::before, ::after {
+	--clr-pri: inherit;
+	--clr-sec: inherit;
+}
+
+/* ui anim */
+
+.owop-colors button:hover {
+	filter: brightness(1.1);
+}
+
+.owop-colors button:active {
+	filter: brightness(0.8);
+}
+
+/* EUI */
 
 #eui-container {
 	user-select: none;
 }
 
-.eui-win {
-	position: absolute;
+.eui-win, .eui-wg {
+	position: fixed;
 	border: 8px transparent solid;
 	background-color: transparent;
 	background-clip: padding-box;
 	color: #FFF;
 	border-image: var(--tex-url-border) 8 fill repeat;
+	text-align: center;
 }
 
+/* TOOL WINDOW */
+
 .owop-tools {
-	text-align: center;
-	top: 4px;
+	top: 32px;
 	left: 4px;
+	width: min-content;
 }
 
 .owop-tools .eui-win-title {
@@ -95,4 +118,67 @@ body[data-theme="newyear"] {
 
 .owop-tools .tool[data-tool="Pipette"]::after {
 	background-position: -96px 0px;
+}
+
+/* COLOR WIDGET */
+
+.owop-colors {
+	display: flex;
+	flex-wrap: wrap;
+	left: 4px;
+	bottom: 4px;
+	width: 64px;
+}
+
+.owop-colors > * {
+	width: 32px;
+	height: 32px;
+	appearance: none;
+	background-color: transparent;
+	border: 0;
+	padding: 0;
+}
+
+.owop-colors > input[type="color"]::before {
+	content: '';
+	display: block;
+	position: absolute;
+	width: 30px;
+	height: 30px;
+	border: 1px solid #00000055;
+}
+
+.owop-colors > .primary-clr {
+	margin: 2px -2px -2px 2px;
+	z-index: 1;
+}
+
+.owop-colors > .secondary-clr {
+	margin: -2px 2px 2px -2px;
+}
+
+.owop-colors > .palette-btn {
+	margin: 0 -2px 0 2px;
+}
+
+.owop-colors > .primary-clr::before {
+	background-color: var(--clr-pri);
+}
+
+.owop-colors > .secondary-clr::before {
+	background-color: var(--clr-sec);
+}
+
+.owop-colors > button {
+	background-image: var(--tex-url-ui);
+	background-repeat: no-repeat;
+	background-position: center;
+}
+
+.owop-colors > .palette-btn {
+	background-position: -64px 0px;
+}
+
+.owop-colors > .swap-clr-btn {
+	background-position: -32px 0px;
 }

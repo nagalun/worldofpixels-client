@@ -933,7 +933,7 @@ int InputManager::handleTouchEvent(int type, const EmscriptenTouchEvent * ev, vo
 		}
 	}
 
-	return false;
+	return true;
 }
 
 int InputManager::handleFocusEvent(int type, const EmscriptenFocusEvent * e, void * data) {

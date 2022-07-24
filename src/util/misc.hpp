@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <cmath>
+#include <cstdio>
 
 template<typename Coord, typename Fn>
 void line(Coord x1, Coord y1, Coord x2, Coord y2, Fn plot) {
@@ -35,3 +36,18 @@ template <typename Tuple, typename ...Args>
 static Tuple cartesian_make_tuple(Args&&... args) {
     return do_cartesian_make_tuple<Tuple>(std::make_index_sequence<std::tuple_size_v<Tuple>>(), std::forward<Args>(args)...);
 }
+
+template<std::size_t bufSz, typename... Args>
+std::string_view svprintf(const char * fmt, Args... args) {
+	static char propBuf[bufSz] = {0};
+	int written = std::snprintf(propBuf, sizeof(propBuf), fmt, args...);
+
+	if (written < 0) {
+		written = 0;
+	} else if ((std::uint32_t)written > sizeof(propBuf)) {
+		written = sizeof(propBuf);
+	}
+
+	return std::string_view(propBuf, written);
+}
+

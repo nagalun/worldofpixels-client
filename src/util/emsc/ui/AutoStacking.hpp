@@ -1,16 +1,17 @@
 #pragma once
 
 #include <util/emsc/ui/Object.hpp>
+#include <util/emsc/ui/EventHandle.hpp>
 
 namespace eui {
 
 class AutoStacking : public eui::Object {
-	std::string_view containerSelector;
+	EventHandle eh;
 
 public:
-	AutoStacking(std::string_view container);
+	AutoStacking();
 
-	void bringUp();
+	bool bringUp();
 };
 
 }
