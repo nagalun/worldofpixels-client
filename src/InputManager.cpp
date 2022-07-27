@@ -694,8 +694,8 @@ InputManager::InputManager(const char * kbTargetElement, const char * ptrTargetE
 	emscripten_set_mouseleave_callback(ptrTargetElement, this, true, InputManager::handleMouseEvent);
 	emscripten_set_mouseenter_callback(ptrTargetElement, this, true, InputManager::handleMouseEvent);
 
-	emscripten_set_touchstart_callback(ptrTargetElement, this, true, InputManager::handleTouchEvent);
-	emscripten_set_touchend_callback(ptrTargetElement, this, true, InputManager::handleTouchEvent);
+	emscripten_set_touchstart_callback(ptrTargetElement, this, false, InputManager::handleTouchEvent);
+	emscripten_set_touchend_callback(ptrTargetElement, this, false, InputManager::handleTouchEvent);
 	emscripten_set_touchmove_callback(ptrTargetElement, this, true, InputManager::handleTouchEvent);
 	emscripten_set_touchcancel_callback(ptrTargetElement, this, true, InputManager::handleTouchEvent);
 
@@ -717,8 +717,8 @@ InputManager::~InputManager() {
 	emscripten_set_mouseleave_callback(ptrTargetElement, nullptr, true, nullptr);
 	emscripten_set_mouseenter_callback(ptrTargetElement, nullptr, true, nullptr);
 
-	emscripten_set_touchstart_callback(ptrTargetElement, nullptr, true, nullptr);
-	emscripten_set_touchend_callback(ptrTargetElement, nullptr, true, nullptr);
+	emscripten_set_touchstart_callback(ptrTargetElement, nullptr, false, nullptr);
+	emscripten_set_touchend_callback(ptrTargetElement, nullptr, false, nullptr);
 	emscripten_set_touchmove_callback(ptrTargetElement, nullptr, true, nullptr);
 	emscripten_set_touchcancel_callback(ptrTargetElement, nullptr, true, nullptr);
 
@@ -903,6 +903,7 @@ int InputManager::handleTouchEvent(int type, const EmscriptenTouchEvent * ev, vo
 	InputManager * im = static_cast<InputManager *>(data);
 
 	im->setModifiers(ev->ctrlKey, ev->altKey, ev->shiftKey, ev->metaKey);
+	bool cancel = true;
 
 	for (int i = 0; i < ev->numTouches; i++) {
 		const EmscriptenTouchPoint& tp = ev->touches[i];
@@ -929,11 +930,12 @@ int InputManager::handleTouchEvent(int type, const EmscriptenTouchEvent * ev, vo
 
 			case EMSCRIPTEN_EVENT_TOUCHCANCEL:
 				im->pointerCancel(tp.identifier, Ptr::TOUCH);
+				cancel = false;
 				break;
 		}
 	}
 
-	return true;
+	return cancel;
 }
 
 int InputManager::handleFocusEvent(int type, const EmscriptenFocusEvent * e, void * data) {

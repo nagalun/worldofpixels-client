@@ -41,6 +41,8 @@ ColorWidget::ColorWidget(ColorProvider& clr)
 	paletteBtn.appendTo(*this);
 	swapBtn.appendTo(*this);
 	secondaryClr.appendTo(*this);
+
+	appendToMainContainer();
 }
 
 void ColorWidget::update() {

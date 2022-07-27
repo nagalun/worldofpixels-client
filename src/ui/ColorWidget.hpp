@@ -7,7 +7,7 @@
 
 class ColorProvider;
 
-class ColorWidget : public eui::AutoStacking {
+class ColorWidget : public eui::Object {
 	ColorProvider& clr;
 	eui::Object primaryClr;
 	eui::Object secondaryClr;

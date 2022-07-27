@@ -125,12 +125,16 @@
 			}
 		}, {passive: false});
 		
-		window.addEventListener('mousedown', function(e) {
+		function stopEvt(e) {
 			if (e.target && e.target.id !== 'world') {
 				e.stopImmediatePropagation();
-				return false;
+				return;
 			}
-		}, false);
+		}
+		
+		window.addEventListener('mousedown', stopEvt, false);
+		window.addEventListener('touchstart', stopEvt, false);
+		window.addEventListener('touchend', stopEvt, false);
 
 		if (navigator.serviceWorker) {
 			//navigator.serviceWorker.register('/sw.js');
