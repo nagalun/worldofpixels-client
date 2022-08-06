@@ -81,9 +81,69 @@
 		</style>
 	</noscript>
 
+	<script src="/lib/color-picker/index.js" async defer></script>
 	<script src="/owop.js" async defer></script>
 	<script>
 		"use strict";
+
+		function initColorPicker(box, source) {
+			var color = source.value;
+			box.value = color;
+			source.type = 'hidden';
+			var picker = new CP(box);
+			box.className = picker.state.class + ' ' + source.className;
+			box.style.backgroundColor = source.value;
+
+			var cx = 0;
+			var cy = 0;
+			picker.self.addEventListener('mousedown', function(e) {
+				cx = e.offsetX;
+				cy = e.offsetY;
+			});
+
+			picker.self.addEventListener('mouseup', function(e) {
+				var b = picker.self.getBoundingClientRect();
+				if (cx < 0 || cy < 0 || cx > b.width || cy > b.height) {
+					picker.exit();
+				}
+			});
+
+			picker.on('fit', function() {
+				/* align it to the top of the element */
+				var b = box.getBoundingClientRect();
+				this.self.style.top = 'unset';
+				this.self.style.bottom = window.innerHeight - b.top + 'px';
+				cx = 0;
+				cy = 0;
+			});
+
+			var init = true; // absolutely terrible
+			picker.on('change', function(r, g, b, a) {
+				if (init) {
+					init = false;
+					return;
+				}
+
+				var ncolor = this.color(r, g, b, a);
+				source.value = ncolor;
+				box.value = ncolor;
+				box.style.backgroundColor = ncolor;
+				source.dispatchEvent(new Event('change'));
+			});
+		}
+
+		function checkPixelPerfection() {
+			var r = window.devicePixelRatio;
+			var html = document.documentElement;
+			if (r - Math.floor(r) === 0) {
+				html.classList.add("pxperf");
+			} else {
+				html.classList.remove("pxperf");
+			}
+		}
+
+		window.addEventListener("resize", checkPixelPerfection);
+		checkPixelPerfection();
 
 		window.addEventListener('load', function() {
 			var st = document.getElementById("status");
@@ -94,18 +154,18 @@
 			var lastSlash = location.href.lastIndexOf("/") + 1;
 			var worldName = location.href.slice(lastSlash).toLowerCase() || "main";
 			var wsUrl = location.origin.replace('http', 'ws');
-			
+
 			function err(e) {
 				var msg = "An error ocurred. Check the console (F12) for more info.";
-				
+
 				if (!('WebAssembly' in window)) {
 					msg = "No WebAssembly support! Can't load OWOP.";
 				}
-				
+
 				st.innerHTML = msg;
 				console.error(e);
 			}
-			
+
 			try {
 				AppOWOP()
 				.then(function(module) {
@@ -124,14 +184,14 @@
 				return false;
 			}
 		}, {passive: false});
-		
+
 		function stopEvt(e) {
 			if (e.target && e.target.id !== 'world') {
 				e.stopImmediatePropagation();
 				return;
 			}
 		}
-		
+
 		window.addEventListener('mousedown', stopEvt, false);
 		window.addEventListener('touchstart', stopEvt, false);
 		window.addEventListener('touchend', stopEvt, false);
@@ -141,8 +201,9 @@
 		}
 	</script>
 
-	<link rel="manifest" href="/manifest.webmanifest">
+	<link rel="stylesheet" href="/lib/color-picker/index.css" media="print" onload="this.onload=null;this.media='all'">
 	<link rel="stylesheet" href="/css/style.css" media="print" onload="this.onload=null;this.media='all'">
+	<link rel="manifest" href="/manifest.webmanifest">
 </head>
 <body>
 	<canvas id="world"></canvas>

@@ -29,6 +29,7 @@ public:
 	void delClass(std::string_view);
 
 	std::string getProperty(std::string_view name) const;
+	void setProperty(std::string_view name);
 	void setProperty(std::string_view name, std::string_view value);
 	void setPropertyBool(std::string_view name, bool value);
 	EventHandle createHandler(std::string_view name, std::function<bool(void)> cb);

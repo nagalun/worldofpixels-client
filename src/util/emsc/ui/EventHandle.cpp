@@ -31,6 +31,9 @@ void EventHandle::setCb(std::function<bool(void)> newCb) {
 	cb = std::move(newCb);
 }
 
+EventHandle::EventHandle()
+: objId(0) { }
+
 bool EventHandle::eventFired(void * data) {
 	EventHandle* eh = static_cast<EventHandle*>(data);
 	if (eh->cb) {

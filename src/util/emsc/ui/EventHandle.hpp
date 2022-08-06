@@ -13,6 +13,7 @@ class EventHandle {
 	EventHandle(std::uint32_t objId, std::string_view evt, std::function<bool(void)>);
 
 public:
+	EventHandle();
 	~EventHandle();
 	EventHandle& operator=(EventHandle &&other);
 	EventHandle(EventHandle &&other);

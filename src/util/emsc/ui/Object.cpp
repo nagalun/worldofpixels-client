@@ -47,6 +47,10 @@ std::string Object::getProperty(std::string_view name) const {
 	return buf;
 }
 
+void Object::setProperty(std::string_view name) {
+	setProperty(name, name);
+}
+
 void Object::setProperty(std::string_view name, std::string_view value) {
 	eui_elem_property_set(id, name.data(), name.size(), value.data(), value.size());
 }

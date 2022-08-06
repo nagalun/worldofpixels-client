@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <cmath>
 #include <cstdio>
+#include <string_view>
 
 template<typename Coord, typename Fn>
 void line(Coord x1, Coord y1, Coord x2, Coord y2, Fn plot) {
