@@ -37,10 +37,6 @@
 
 /* ux */
 
-:root.pxperf {
-	image-rendering: pixelated;
-}
-
 .owop-colors button:hover {
 	filter: brightness(1.1);
 }

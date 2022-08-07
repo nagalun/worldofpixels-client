@@ -32,9 +32,11 @@ void ColorPicker::setColor(RGB_u nclr) {
 	}
 
 	u32 cssClr = bswap_32(nclr.rgb);
-	auto x = svprintf<bufSz>("#%08X", cssClr);
-	input.setProperty("value", x);
-	setProperty("style.backgroundColor", x);
+	auto hexClr = svprintf<bufSz>("#%08X", cssClr);
+	input.setProperty("value", hexClr);
+	setProperty("value", hexClr);
+	setProperty("style.backgroundColor", hexClr);
+	color = nclr;
 }
 
 RGB_u ColorPicker::getColor() const {

@@ -6,6 +6,10 @@
 	<title>World of Pixels (dev)</title>
 
 	<style>
+		:root.pxperf {
+			image-rendering: pixelated;
+		}
+
 		body, html {
 			overflow: hidden;
 			touch-action: none;
@@ -96,6 +100,10 @@
 
 			var cx = 0;
 			var cy = 0;
+			box.addEventListener('touchstart', function(e) {
+				e.preventDefault();
+			});
+
 			picker.self.addEventListener('mousedown', function(e) {
 				cx = e.offsetX;
 				cy = e.offsetY;
