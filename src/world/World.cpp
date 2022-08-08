@@ -21,6 +21,7 @@ World::World(InputAdapter& base, std::string name, std::unique_ptr<SelfCursor> m
   aWorld(base.mkAdapter("World")),
   toolMan(*this, aWorld),
   toolWin(toolMan),
+  posUi(this->me.getX(), this->me.getY(), r.getZoom()),
   iMoveCursor(aWorld, "Move cursor", T_ONMOVE),
   iPrintCoords(aWorld, "Print Coordinates"),
   iRoundCoords(aWorld, "Round Coordinates"),
@@ -307,4 +308,7 @@ void World::recalculateCursorPosition(const InputInfo& ii) {
 	float my = ii.getMidY();
 	r.getWorldPosFromScreenPos(mx, my, &wx, &wy);
 	getCursor().setPos(wx, wy);
+
+	const Camera& cam = getCamera();
+	posUi.setPos(wx, wy, cam.getX(), cam.getY(), cam.getZoom());
 }

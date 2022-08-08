@@ -59,6 +59,22 @@ void Object::setPropertyBool(std::string_view name, bool value) {
 	eui_elem_property_set_bool(id, name.data(), name.size(), value);
 }
 
+std::string Object::getAttribute(std::string_view name) const {
+	std::size_t len = eui_elem_attr_len(id, name.data(), name.size());
+	std::string buf(len, '\0');
+	eui_elem_attr_get(id, buf.data(), buf.size() + 1, name.data(), name.size());
+
+	return buf;
+}
+
+void Object::setAttribute(std::string_view name) {
+	setAttribute(name, name);
+}
+
+void Object::setAttribute(std::string_view name, std::string_view value) {
+	eui_elem_attr_set(id, name.data(), name.size(), value.data(), value.size());
+}
+
 EventHandle Object::createHandler(std::string_view name, std::function<bool(void)> cb) {
 	return EventHandle(getId(), name, std::move(cb));
 }

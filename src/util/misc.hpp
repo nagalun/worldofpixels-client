@@ -40,7 +40,7 @@ static Tuple cartesian_make_tuple(Args&&... args) {
 
 template<std::size_t bufSz, typename... Args>
 std::string_view svprintf(const char * fmt, Args... args) {
-	static char propBuf[bufSz] = {0};
+	static char propBuf[bufSz + 1] = {0}; // + 1 for null
 	int written = std::snprintf(propBuf, sizeof(propBuf), fmt, args...);
 
 	if (written < 0) {

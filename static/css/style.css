@@ -51,13 +51,16 @@
 	user-select: none;
 }
 
-.eui-win, .eui-wg {
-	position: fixed;
+.eui-win, .eui-wg, .eui-themed {
 	border: 8px transparent solid;
 	background-color: transparent;
 	background-clip: padding-box;
 	color: #FFF;
 	border-image: var(--tex-url-border) 8 fill repeat;
+}
+
+.eui-win, .eui-wg {
+	position: fixed;
 	text-align: center;
 }
 
@@ -202,3 +205,17 @@
     width: 100vw;
     height: 100vh;
 }
+
+/* POSITION WIDGET */
+
+.owop-pos {
+	border-top: none;
+	border-left: none;
+	padding-left: 3px;
+    padding-top: 3px;
+}
+
+.owop-pos::before {
+	content: 'X: ' attr(data-cur-x) ', Y: ' attr(data-cur-y);
+}
+

@@ -8,9 +8,9 @@
 
 namespace eui {
 
-// "translate(-2147483648px,-2147483648px)" + null
-// "-2147483648px" + null // w, h
-constexpr std::size_t bufSz = 11 * 2 + 16 + 1;
+// "translate(-2147483648px,-2147483648px)"
+// "-2147483648px" // w, h
+constexpr std::size_t bufSz = 11 * 2 + 16;
 
 static Object mktitle(std::string_view title) {
 	Object t;

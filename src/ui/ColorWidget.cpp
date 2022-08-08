@@ -9,8 +9,8 @@
 #include <util/explints.hpp>
 #include <util/emsc/dom.hpp>
 
-// "#89ABCDEF" + null
-constexpr std::size_t bufSz = 9 + 1;
+// "'#89ABCDEF'"
+constexpr std::size_t bufSz = 11;
 
 ColorWidget::ColorWidget(ColorProvider& clr)
 : clr(clr),

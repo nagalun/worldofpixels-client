@@ -12,8 +12,8 @@ EM_JS(void, init_color_picker_on, (std::uint32_t boxId, std::uint32_t inputId), 
 	initColorPicker(box, input);
 });
 
-// "#89ABCDEF" + null
-constexpr std::size_t bufSz = 9 + 1;
+// "#89ABCDEF"
+constexpr std::size_t bufSz = 9;
 
 ColorPicker::ColorPicker(std::function<void(RGB_u)> cb)
 : Object("span"),

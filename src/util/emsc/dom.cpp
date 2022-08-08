@@ -147,6 +147,27 @@ EM_JS(void, eui_elem_property_set_bool, (std::uint32_t id, const char * prop, st
 	obj[prop[0]] = !!val;
 });
 
+EM_JS(std::size_t, eui_elem_attr_len, (std::uint32_t id, const char * prop, std::size_t len), {
+	var e = Module.EUI.elems[id];
+	var prop = UTF8ToString(prop, len);
+	return (e.getAttribute(prop) || "").length;
+});
+
+EM_JS(std::size_t, eui_elem_attr_get, (std::uint32_t id, const char * buf, std::size_t maxlen, const char * prop, std::size_t len), {
+	var e = Module.EUI.elems[id];
+	var prop = UTF8ToString(prop, len);
+	var val = e.getAttribute(prop) || "";
+	stringToUTF8(val, buf, maxlen);
+	var written = lengthBytesUTF8(val); // stringToUTF8 could return the bytes written...
+	return written >= maxlen ? maxlen : written;
+});
+
+EM_JS(void, eui_elem_attr_set, (std::uint32_t id, const char * prop, std::size_t proplen, const char * val, std::size_t vallen), {
+	var e = Module.EUI.elems[id];
+	var prop = UTF8ToString(prop, proplen);
+	e.setAttribute(prop, UTF8ToString(val, vallen));
+});
+
 EM_JS(void, eui_root_css_property_set, (const char * prop, std::size_t proplen, const char * val, std::size_t vallen), {
 	var r = document.querySelector(":root");
 	r.style.setProperty(UTF8ToString(prop, proplen), UTF8ToString(val, vallen));

@@ -15,8 +15,9 @@
 
 #include <InputManager.hpp>
 #include <Renderer.hpp>
-#include <ui/ToolWindow.hpp>
 #include <tools/ToolManager.hpp>
+#include <ui/ToolWindow.hpp>
+#include <ui/PositionWidget.hpp>
 
 
 class alignas(32) World {
@@ -43,6 +44,7 @@ private:
 	InputAdapter& aWorld;
 	ToolManager toolMan;
 	ToolWindow toolWin;
+	PositionWidget posUi;
 
 	ImAction iMoveCursor;
 	ImAction iPrintCoords;
