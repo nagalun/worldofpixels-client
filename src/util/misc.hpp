@@ -6,18 +6,19 @@
 #include <string_view>
 
 template<typename Coord, typename Fn>
-void line(Coord x1, Coord y1, Coord x2, Coord y2, Fn plot) {
+void line(Coord x1, Coord y1, Coord x2, Coord y2, Fn& plot, bool skipfirst = true) {
 	Coord dx =  std::abs(x2 - x1), sx = x1 < x2 ? 1 : -1;
 	Coord dy = -std::abs(y2 - y1), sy = y1 < y2 ? 1 : -1;
 	Coord err = dx + dy,
 			e2;
 
-	while(true) {
-		plot(x1, y1);
-		if (x1 == x2 && y1 == y2) break;
+	if (!skipfirst) { plot(x1, y1); }
+
+	while(!(x1 == x2 && y1 == y2)) {
 		e2 = 2 * err;
 		if (e2 >= dy) { err += dy; x1 += sx; }
 		if (e2 <= dx) { err += dx; y1 += sy; }
+		plot(x1, y1);
 	}
 }
 

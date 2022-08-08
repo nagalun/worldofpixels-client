@@ -66,11 +66,15 @@ PencilTool::PencilTool(std::tuple<ToolManager&, InputAdapter&> params)
 			switch (e.getActivationType()) {
 			case T_ONPRESS:
 				lctx->setLastPoint(sc.getX(), sc.getY());
-				[[fallthrough]];
+				plotter(sc.getX(), sc.getY());
+				break;
+
 			case T_ONMOVE:
 			case T_ONHOLD:
-				line(lctx->getLastX(), lctx->getLastY(), sc.getX(), sc.getY(), std::move(plotter));
-				lctx->setLastPoint(sc.getX(), sc.getY());
+				if (sc.getX() != lctx->getLastX() || sc.getY() != lctx->getLastY()) {
+					line(lctx->getLastX(), lctx->getLastY(), sc.getX(), sc.getY(), plotter);
+					lctx->setLastPoint(sc.getX(), sc.getY());
+				}
 				break;
 
 			default:
