@@ -219,3 +219,36 @@
 	content: 'X: ' attr(data-cur-x) ', Y: ' attr(data-cur-y);
 }
 
+/* show camera position instead on touch devices */
+@media (pointer:coarse) {
+	.owop-pos::before {
+		content: 'X: ' attr(data-cam-x) ', Y: ' attr(data-cam-y);
+	}
+}
+
+/* CURSOR COUNT WIDGET */
+
+.owop-cursor-count {
+	border-top: none;
+	border-right: none;
+	padding-right: 3px;
+	padding-top: 3px;
+	right: 0;
+}
+
+.owop-cursor-count[data-num-cur-world="1"]::before {
+	content: attr(data-num-cur-world) ' cursor online';
+}
+
+.owop-cursor-count::before {
+	content: attr(data-num-cur-world) ' cursors online';
+}
+
+.owop-cursor-count[data-num-cur-global="1"]:active::before {
+	content: attr(data-num-cur-global) ' cursor globally';
+}
+
+.owop-cursor-count:active::before {
+	content: attr(data-num-cur-global) ' cursors globally';
+}
+

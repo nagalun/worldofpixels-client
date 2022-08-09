@@ -18,6 +18,7 @@
 #include <tools/ToolManager.hpp>
 #include <ui/ToolWindow.hpp>
 #include <ui/PositionWidget.hpp>
+#include <ui/PlayerCountWidget.hpp>
 
 
 class alignas(32) World {
@@ -39,12 +40,12 @@ private:
 
 	std::optional<User::Id> owner;
 	SelfCursor me;
-	u32 cursorCount;
 
 	InputAdapter& aWorld;
 	ToolManager toolMan;
 	ToolWindow toolWin;
 	PositionWidget posUi;
+	PlayerCountWidget pCntUi;
 
 	ImAction iMoveCursor;
 	ImAction iPrintCoords;
@@ -57,7 +58,7 @@ public:
 	World(InputAdapter& base, std::string name, std::unique_ptr<SelfCursor>,
 			RGB_u bgClr, bool restricted, std::optional<User::Id> owner);
 
-	void setCursorCount(u32);
+	void setCursorCount(u32 worldCount, u32 globalCount);
 	void tick();
 
 	sz_t unloadChunks(sz_t amount = 8);

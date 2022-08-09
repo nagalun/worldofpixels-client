@@ -17,7 +17,6 @@ World::World(InputAdapter& base, std::string name, std::unique_ptr<SelfCursor> m
   chunkLoaderQueue({std::pair<Chunk::Pos, Chunk::Pos>{0, 0}}),
   owner(std::move(owner)),
   me(std::move(*me)),
-  cursorCount(1),
   aWorld(base.mkAdapter("World")),
   toolMan(*this, aWorld),
   toolWin(toolMan),
@@ -47,8 +46,8 @@ World::World(InputAdapter& base, std::string name, std::unique_ptr<SelfCursor> m
 	//loadMissingChunksTick();
 }
 
-void World::setCursorCount(u32 c) {
-	cursorCount = c;
+void World::setCursorCount(u32 worldCount, u32 globalCount) {
+	pCntUi.setCounts(worldCount, globalCount);
 }
 
 void World::tick() {

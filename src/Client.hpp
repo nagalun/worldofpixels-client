@@ -39,7 +39,6 @@ private:
 	std::unique_ptr<World> world;
 	std::unique_ptr<SelfCursor> preJoinSelfCursorData;
 	User::Id selfUid;
-	u32 globalCursorCount;
 	long tickTimer;
 	EConnectError lastError;
 

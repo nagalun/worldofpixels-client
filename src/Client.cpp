@@ -58,7 +58,6 @@ Client::Client(JsApiProxy& api)
   im(EMSCRIPTEN_EVENT_TARGET_WINDOW, EMSCRIPTEN_EVENT_TARGET_WINDOW/*"#world"*/),
   aClient(im.mkAdapter("Client", -1)),
   selfUid(0),
-  globalCursorCount(0),
   tickTimer(emscripten_set_interval(Client::doTick, 1000.0 / Client::ticksPerSec, this)),
   lastError(CE_NONE) {
 	std::printf("[Client] Created\n");
@@ -185,8 +184,7 @@ void Client::registerPacketTypes() {
 
 	pr.on<Stats>([this] (u32 worldCursors, u32 globalCursors) { // this is only received if we're in a world
 		std::printf("Stats: CursorsInWorld=%u CursorsInServer=%u\n", worldCursors, globalCursors);
-		world->setCursorCount(worldCursors);
-		globalCursorCount = globalCursors;
+		world->setCursorCount(worldCursors, globalCursors);
 	});
 }
 
@@ -260,7 +258,6 @@ void Client::wsClose(u16 code) {
 	world = nullptr;
 	users.clear();
 	selfUid = 0;
-	globalCursorCount = 0;
 }
 
 void Client::wsMessage(const char * buf, sz_t s, bool) {
