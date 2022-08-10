@@ -24,8 +24,9 @@ EM_JS(void, ctx_give_up, (void), {
 
 namespace gl {
 
-WebGlContext::WebGlContext(const char * targetCanvas, bool forceWebgl1)
+WebGlContext::WebGlContext(const char * targetCanvas, const char * targetSizeElem, bool forceWebgl1)
 : targetCanvas(targetCanvas),
+  targetSizeElem(targetSizeElem),
   sizeCache{-1, -1},
   renderLoopSet(false),
   renderPaused(false) {
@@ -41,6 +42,7 @@ WebGlContext::WebGlContext(WebGlContext&& other)
 : GlContext(std::move(other)),
   ctxInfo(std::exchange(other.ctxInfo, 0)),
   targetCanvas(std::exchange(other.targetCanvas, nullptr)),
+  targetSizeElem(std::exchange(other.targetSizeElem, nullptr)),
   renderLoopSet(other.renderLoopSet),
   renderPaused(other.renderPaused) { }
 
@@ -51,6 +53,7 @@ WebGlContext& WebGlContext::operator=(WebGlContext&& other) {
 
 	ctxInfo = std::exchange(other.ctxInfo, 0);
 	targetCanvas = std::exchange(other.targetCanvas, nullptr);
+	targetSizeElem = std::exchange(other.targetSizeElem, nullptr);
 	renderLoopSet = other.renderLoopSet;
 	renderPaused = other.renderPaused;
 
@@ -85,10 +88,10 @@ GlContext::Size WebGlContext::getDipSize() const {
 	GlContext::Size dipSize;
 	double w;
 	double h;
-	emscripten_get_element_css_size(targetCanvas, &w, &h);
+	emscripten_get_element_css_size(targetSizeElem, &w, &h);
 
-	dipSize.w = std::round(w);
-	dipSize.h = std::round(h);
+	dipSize.w = std::ceil(w);
+	dipSize.h = std::ceil(h);
 
 	return dipSize;
 }
@@ -143,22 +146,15 @@ bool WebGlContext::activateRenderingContextAs(bool webgl1) {
 	emscripten_set_webglcontextrestored_callback(targetCanvas, this, true, emEvent);
 	emscripten_set_resize_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, this, true, +[] (int, const EmscriptenUiEvent * ev, void * ctx) -> EM_BOOL {
 		WebGlContext& c = *static_cast<WebGlContext *>(ctx);
-
-		double canvasWidth;
-		double canvasHeight;
-		emscripten_get_element_css_size(c.targetCanvas, &canvasWidth, &canvasHeight);
-
-		c.resize(std::round(canvasWidth), std::round(canvasHeight));
+		auto s = c.getDipSize();
+		c.resize(s.w, s.h);
 		return false;
 	});
 
 	std::printf("[WebGlContext] Created WebGL%c rendering context\n", webgl1 ? '1' : '2');
 
-	double canvasWidth;
-	double canvasHeight;
-
-	emscripten_get_element_css_size(targetCanvas, &canvasWidth, &canvasHeight);
-	resize(std::round(canvasWidth), std::round(canvasHeight));
+	auto s = getDipSize();
+	resize(s.w, s.h);
 
 	return true;
 }

@@ -6,16 +6,27 @@
 	<title>World of Pixels (dev)</title>
 
 	<style>
+		@font-face {
+			font-family: pixel-op;
+			src: url(/font/pixeloperator.woff2) format('woff2'),
+				url(/font/pixeloperator.woff) format('woff');
+			font-weight: normal;
+			font-style: normal;
+		}
+
 		:root.pxperf {
 			image-rendering: pixelated;
 		}
 
 		body, html {
+			margin: 0;
 			overflow: hidden;
 			touch-action: none;
-			font-family: sans-serif;
+			font: 16px pixel-op, sans-serif;
+			color: #fff;
+			text-shadow: -1px 0 #000, 0 1px #000, 1px 0 #000, 0 -1px #000;
 		}
-		
+
 		#world {
 			user-select: none;
 		}
@@ -25,8 +36,8 @@
 			top: 0;
 			left: 0;
 		}
-		
-		#world, #loader {
+
+		#loader {
 			width: 100vw;
 			height: 100vh;
 		}

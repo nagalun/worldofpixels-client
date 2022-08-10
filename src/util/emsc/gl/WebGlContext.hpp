@@ -10,12 +10,13 @@ namespace gl {
 class WebGlContext : public GlContext {
 	std::int32_t ctxInfo;
 	const char * targetCanvas;
+	const char * targetSizeElem;
 	mutable Size sizeCache;
 	bool renderLoopSet;
 	bool renderPaused;
 
 public:
-	WebGlContext(const char * targetCanvas = "#canvas", bool forceWebgl1 = false);
+	WebGlContext(const char * targetCanvas = "#canvas", const char * targetSizeElem = "#canvas", bool forceWebgl1 = false);
 	~WebGlContext();
 
 	WebGlContext(WebGlContext&& other);

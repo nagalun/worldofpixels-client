@@ -143,6 +143,10 @@
 	padding: 0;
 }
 
+.owop-clr-picker, .color-picker__dialog {
+	color-scheme: light only;
+}
+
 .owop-clr-picker::before, .owop-clr-picker::after {
 	content: '';
 	display: block;
@@ -155,8 +159,8 @@
 
 .owop-clr-picker::before {
 	background-image: linear-gradient(45deg, #ddd 25%, transparent 25%, transparent 75%, #ddd 75%, #ddd 100%), linear-gradient(45deg, #ddd 25%, #fff 25%, #fff 75%, #ddd 75%, #ddd 100%);
-    background-position: 0 0, 0.25em 0.25em;
-    background-size: 0.5em 0.5em;
+	background-position: 0 0, 0.25em 0.25em;
+	background-size: 0.5em 0.5em;
 }
 
 .owop-clr-picker::after {
@@ -197,13 +201,13 @@
 
 /* click shield for color picker */
 .color-picker__dialog::before {
-    content: '';
-    display: block;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
+	content: '';
+	display: block;
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100vw;
+	height: 100vh;
 }
 
 /* POSITION WIDGET */
@@ -212,7 +216,7 @@
 	border-top: none;
 	border-left: none;
 	padding-left: 3px;
-    padding-top: 3px;
+	padding-top: 3px;
 }
 
 .owop-pos::before {

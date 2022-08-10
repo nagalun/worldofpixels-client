@@ -22,7 +22,7 @@
 
 Renderer::Renderer(World& w)
 : w(w),
-  ctx("#world"),
+  ctx("#world", "#loader"),
   view(1.0f),
   projection(1.0f),
   lastRenderTime(ctx.getTime() / 1000.f),
