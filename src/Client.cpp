@@ -157,10 +157,18 @@ void Client::registerPacketTypes() {
 				cid, x, y, step, tid, prate, pper, pallowance, crate, cper, callowance, canChat, canPaint);
 
 		// cid, prate and crate has type due to eclipse cdt bug
-		preJoinSelfCursorData = std::make_unique<SelfCursor>(
-				users.at(selfUid), Cursor::Id{cid}, x, y, step, tid,
-				Bucket(Bucket::Rate{prate}, pper, pallowance), Bucket(Bucket::Rate{crate}, cper, callowance),
-				canChat, canPaint);
+		preJoinSelfCursorData = std::make_unique<SelfCursor::Builder>();
+		SelfCursor::Builder& cur = *preJoinSelfCursorData.get();
+		cur.setUser(users.at(selfUid))
+				.setId(Cursor::Id{cid})
+				.setSpawnX(x)
+				.setSpawnY(y)
+				.setStep(step)
+				.setToolId(tid)
+				.setPaintBucket(Bucket(Bucket::Rate{prate}, pper, pallowance))
+				.setChatBucket(Bucket(Bucket::Rate{crate}, cper, callowance))
+				.setCanChat(canChat)
+				.setCanPaint(canPaint);
 	});
 
 	pr.on<WorldData>([this] (std::string worldName, std::string motd, u32 bgClr, bool restricted, std::optional<User::Id> owner) {

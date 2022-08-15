@@ -45,15 +45,18 @@ Chunk::Pos Chunk::getY() const {
 	return y;
 }
 
-bool Chunk::setPixel(u16 pxX, u16 pxY, RGB_u clr) {
+bool Chunk::setPixel(u16 pxX, u16 pxY, RGB_u clr, bool alphaBlending) {
 	// pushing to the vectors could allocate...
 	preventUnloading(true);
 	pxX &= Chunk::size - 1;
 	pxY &= Chunk::size - 1;
 
-	//std::printf("ch setpixel %i, %i\n", this->x, this->y);
+	if (alphaBlending && clr.c.a != 255) {
+		glst.queueSetPixelWithBlending(pxX, pxY, clr);
+	} else {
+		glst.queueSetPixel(pxX, pxY, clr);
+	}
 
-	glst.queueSetPixel(pxX, pxY, clr);
 	w.signalChunkUpdated(this);
 	preventUnloading(false);
 	return true;
@@ -63,7 +66,7 @@ RGB_u Chunk::getPixel(u16 pxX, u16 pxY) const {
 	pxX &= Chunk::size - 1;
 	pxY &= Chunk::size - 1;
 
-	return glst.getPixel(w.getRenderer(), pxX, pxY);
+	return glst.getPixel(pxX, pxY);
 }
 
 void Chunk::setProtectionGid(ProtPos protX, ProtPos protY, u32 gid) {
@@ -125,7 +128,7 @@ void Chunk::loadCompleted(unsigned, void * e, void * buf, unsigned len) {
 			return true;
 		});
 
-		data.readFileOnMem(static_cast<u8 *>(buf), len);
+		data.readFileOnMem(static_cast<u8 *>(buf), len, false, true);
 //		if (c.downscaling > 1) {
 //			data.nearestDownscale(c.downscaling);
 //		}

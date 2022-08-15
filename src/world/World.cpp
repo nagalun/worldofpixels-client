@@ -7,16 +7,24 @@
 
 #include <InputManager.hpp>
 #include <Camera.hpp>
-#include <util/gl/GlContext.hpp>
 
-World::World(InputAdapter& base, std::string name, std::unique_ptr<SelfCursor> me,
+#include <util/gl/GlContext.hpp>
+#include <util/emsc/dom.hpp>
+#include <util/byteswap.hpp>
+#include <util/explints.hpp>
+#include <util/misc.hpp>
+
+// "'#89ABCDEF'"
+constexpr std::size_t bufSz = 11;
+
+World::World(InputAdapter& base, std::string name, std::unique_ptr<SelfCursor::Builder> me,
 		RGB_u bgClr, bool restricted, std::optional<User::Id> owner)
 : name(std::move(name)),
   bgClr(bgClr),
   r(*this),
   chunkLoaderQueue({std::pair<Chunk::Pos, Chunk::Pos>{0, 0}}),
   owner(std::move(owner)),
-  me(std::move(*me)),
+  me(me->build(*this)),
   aWorld(base.mkAdapter("World")),
   toolMan(*this, aWorld),
   toolWin(toolMan),
@@ -26,6 +34,9 @@ World::World(InputAdapter& base, std::string name, std::unique_ptr<SelfCursor> m
   iRoundCoords(aWorld, "Round Coordinates"),
   tickNum(0),
   drawingRestricted(restricted) {
+
+	u32 cssBgClr = bswap_32(bgClr.rgb);
+	eui_root_css_property_set("--bg-clr", svprintf<bufSz>("#%08X", cssBgClr));
 
 	iMoveCursor.setCb([this] (ImAction::Event& ev, const InputInfo& ii) {
 		recalculateCursorPosition(ii);
@@ -283,11 +294,11 @@ RGB_u World::getPixel(World::Pos x, World::Pos y) const {
 	return {{0, 0, 0, 0}};
 }
 
-bool World::setPixel(World::Pos x, World::Pos y, RGB_u clr) {
+bool World::setPixel(World::Pos x, World::Pos y, RGB_u clr, bool alphaBlending) {
 	Chunk * c = getChunkAt(x, y);
 
 	if (c) {
-		return c->setPixel(x, y, clr);
+		return c->setPixel(x, y, clr, alphaBlending);
 	}
 
 	return false;
@@ -309,5 +320,5 @@ void World::recalculateCursorPosition(const InputInfo& ii) {
 	getCursor().setPos(wx, wy);
 
 	const Camera& cam = getCamera();
-	posUi.setPos(wx, wy, cam.getX(), cam.getY(), cam.getZoom());
+	posUi.setPos(std::floor(wx), std::floor(wy), cam.getX(), cam.getY(), cam.getZoom());
 }

@@ -20,7 +20,7 @@ class PngImage {
 
 public:
 	PngImage();
-	PngImage(u8* filebuf, sz_t len);
+	PngImage(u8* filebuf, sz_t len, bool stripAlpha = false, bool addAlpha = false);
 	PngImage(u32 w, u32 h, RGB_u = {{255, 255, 255, 255}}, u8 chans = 4);
 
 	u8 getChannels() const;
@@ -31,14 +31,14 @@ public:
 
 	void applyTransform(std::function<RGB_u(u32 x, u32 y)>);
 	RGB_u getPixel(u32 x, u32 y) const;
-	void setPixel(u32 x, u32 y, RGB_u);
+	void setPixel(u32 x, u32 y, RGB_u, bool blending = false);
 	void fill(RGB_u);
 
 	void setChunkReader(const std::string&, std::function<bool(u8*, sz_t)>);
 	void setChunkWriter(const std::string&, std::function<std::pair<std::unique_ptr<u8[]>, sz_t>()>);
 
 	void allocate(u32 w, u32 h, RGB_u, u8 chans = 4);
-	void readFileOnMem(const u8 * filebuf, sz_t len);
+	void readFileOnMem(const u8 * filebuf, sz_t len, bool stripAlpha = false, bool addAlpha = false);
 	void writeFileOnMem(std::vector<u8>& out);
 	void nearestDownscale(u32 division);
 	void freeMem();

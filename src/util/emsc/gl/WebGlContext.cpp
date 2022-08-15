@@ -28,6 +28,7 @@ WebGlContext::WebGlContext(const char * targetCanvas, const char * targetSizeEle
 : targetCanvas(targetCanvas),
   targetSizeElem(targetSizeElem),
   sizeCache{-1, -1},
+  dipSizeCache{-1, -1},
   renderLoopSet(false),
   renderPaused(false) {
 	activateRenderingContext(forceWebgl1);
@@ -85,15 +86,18 @@ GlContext::Size WebGlContext::getSize() const {
 
 // aka. css pixels
 GlContext::Size WebGlContext::getDipSize() const {
-	GlContext::Size dipSize;
-	double w;
-	double h;
-	emscripten_get_element_css_size(targetSizeElem, &w, &h);
+	if (dipSizeCache.w < 0) {
+		GlContext::Size dipSize;
+		double w;
+		double h;
+		emscripten_get_element_css_size(targetSizeElem, &w, &h);
 
-	dipSize.w = std::ceil(w);
-	dipSize.h = std::ceil(h);
+		dipSize.w = std::ceil(w);
+		dipSize.h = std::ceil(h);
+		dipSizeCache = dipSize;
+	}
 
-	return dipSize;
+	return dipSizeCache;
 }
 
 void WebGlContext::setTitle(const char* name) {
@@ -146,6 +150,7 @@ bool WebGlContext::activateRenderingContextAs(bool webgl1) {
 	emscripten_set_webglcontextrestored_callback(targetCanvas, this, true, emEvent);
 	emscripten_set_resize_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, this, true, +[] (int, const EmscriptenUiEvent * ev, void * ctx) -> EM_BOOL {
 		WebGlContext& c = *static_cast<WebGlContext *>(ctx);
+		c.dipSizeCache.w = -1;
 		auto s = c.getDipSize();
 		c.resize(s.w, s.h);
 		return false;

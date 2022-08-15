@@ -4,6 +4,7 @@
 #include <tuple>
 #include <cstdio>
 #include <cstdlib>
+#include <cmath>
 
 #include <png.h>
 #include "PngImage.hpp"
@@ -53,7 +54,8 @@ static int pngReadChunkCb(png_structp pngPtr, png_unknown_chunkp chunk) {
 }
 
 static struct img_t loadPng(const u8* fbuffer, int len,
-		std::map<std::string, std::function<bool(u8*, sz_t)>>& chunkReaders) {
+		std::map<std::string, std::function<bool(u8*, sz_t)>>& chunkReaders,
+		bool stripAlpha = false, bool addAlpha = false) {
 	// create png_struct with the custom error handlers
 	png_structp pngPtr = png_create_read_struct_2(PNG_LIBPNG_VER_STRING, nullptr, pngError, pngWarning,
 			nullptr, pngMalloc, pngFree);
@@ -100,10 +102,15 @@ static struct img_t loadPng(const u8* fbuffer, int len,
 		chans++;
 	}
 
-	/*if (chans == 4) {
-		png_set_strip_alpha(pngPtr);// remove alpha
+	if (chans == 4 && stripAlpha) {
+		png_set_strip_alpha(pngPtr); // remove alpha
 		chans--;
-	}*/
+	}
+
+	if (chans == 3 && addAlpha) {
+		png_set_add_alpha(pngPtr, 0xFF, PNG_FILLER_AFTER);
+		chans++;
+	}
 
 	png_read_update_info(pngPtr, infoPtr);
 
@@ -201,8 +208,8 @@ PngImage::PngImage()
   h(0),
   chans(4) { }
 
-PngImage::PngImage(u8* filebuf, sz_t len) {
-	readFileOnMem(filebuf, len);
+PngImage::PngImage(u8* filebuf, sz_t len, bool stripAlpha, bool addAlpha) {
+	readFileOnMem(filebuf, len, stripAlpha, addAlpha);
 }
 
 PngImage::PngImage(u32 w, u32 h, RGB_u bg, u8 chans) {
@@ -248,16 +255,44 @@ RGB_u PngImage::getPixel(u32 x, u32 y) const {
 	}};
 }
 
-void PngImage::setPixel(u32 x, u32 y, RGB_u clr) {
+void PngImage::setPixel(u32 x, u32 y, RGB_u clr, bool blending) {
 	u8 * d = data.get();
 	u8 c = getChannels();
-	d[(y * w + x) * c] = clr.c.r;
-	d[(y * w + x) * c + 1] = clr.c.g;
-	d[(y * w + x) * c + 2] = clr.c.b;
-	if (c == 4) {
-		d[(y * w + x) * c + 3] = clr.c.a;
+	u8 defaultAlpha = 255;
+	u8 sR = clr.c.r;
+	u8 sG = clr.c.g;
+	u8 sB = clr.c.b;
+	u8 sA = clr.c.a;
+	u8 * dR = &d[(y * w + x) * c];
+	u8 * dG = &d[(y * w + x) * c + 1];
+	u8 * dB = &d[(y * w + x) * c + 2];
+	u8 * dA = c == 4 ? &d[(y * w + x) * c + 3] : &defaultAlpha;
+	if (!blending || sA == 255) {
+		*dR = sR;
+		*dG = sG;
+		*dB = sB;
+		*dA = sA;
+		return;
 	}
 
+	float sRf = sR / 255.f;
+	float sGf = sG / 255.f;
+	float sBf = sB / 255.f;
+	float sAf = sA / 255.f;
+	float dRf = *dR / 255.f;
+	float dGf = *dG / 255.f;
+	float dBf = *dB / 255.f;
+	float dAf = *dA / 255.f;
+
+	float fAf = sAf + dAf * (1.f - sAf);
+	float fRf = (sAf * sRf + dAf * dRf * (1.f - sAf)) / fAf;
+	float fGf = (sAf * sGf + dAf * dGf * (1.f - sAf)) / fAf;
+	float fBf = (sAf * sBf + dAf * dBf * (1.f - sAf)) / fAf;
+
+	*dR = std::round(std::min(fRf, 1.f) * 255.f);
+	*dG = std::round(std::min(fGf, 1.f) * 255.f);
+	*dB = std::round(std::min(fBf, 1.f) * 255.f);
+	*dA = std::round(std::min(fAf, 1.f) * 255.f);
 }
 
 void PngImage::fill(RGB_u clr) {
@@ -277,15 +312,18 @@ void PngImage::setChunkWriter(const std::string& s, std::function<std::pair<std:
 }
 
 void PngImage::allocate(u32 newWidth, u32 newHeight, RGB_u bg, u8 newChans) {
-	data = std::make_unique<u8[]>(newWidth * newHeight * newChans);
-	w = newWidth;
-	h = newHeight;
-	chans = newChans;
+	if (!(newWidth == w && newHeight == h && newChans == chans && data.get())) {
+		data = std::make_unique<u8[]>(newWidth * newHeight * newChans);
+		w = newWidth;
+		h = newHeight;
+		chans = newChans;
+	}
+
 	fill(bg);
 }
 
-void PngImage::readFileOnMem(const u8 * filebuf, sz_t len) {
-	auto img(loadPng(filebuf, len, chunkReaders));
+void PngImage::readFileOnMem(const u8 * filebuf, sz_t len, bool stripAlpha, bool addAlpha) {
+	auto img(loadPng(filebuf, len, chunkReaders, stripAlpha, addAlpha));
 	data = std::move(img.data);
 	w = img.w;
 	h = img.h;

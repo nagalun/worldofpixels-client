@@ -83,12 +83,12 @@ PencilTool::PencilTool(std::tuple<ToolManager&, InputAdapter&> params)
 		};
 	};
 
-	lctx->iDrawPrimaryClr.setCb(drawHandler([&w, &clr] (auto x, auto y) {
-		w.setPixel(x, y, clr.getPrimaryColor());
+	lctx->iDrawPrimaryClr.setCb(drawHandler([&sc, &clr] (auto x, auto y) {
+		sc.paint(x, y, clr.getPrimaryColor());
 	}));
 
-	lctx->iDrawSecondaryClr.setCb(drawHandler([&w, &clr] (auto x, auto y) {
-		w.setPixel(x, y, clr.getSecondaryColor());
+	lctx->iDrawSecondaryClr.setCb(drawHandler([&sc, &clr] (auto x, auto y) {
+		sc.paint(x, y, clr.getSecondaryColor());
 	}));
 
 	onSelectionChanged(false);

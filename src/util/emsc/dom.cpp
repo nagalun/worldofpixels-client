@@ -114,18 +114,18 @@ const char * eui_elem_selector(std::uint32_t id) {
 
 EM_JS(std::size_t, eui_elem_property_len, (std::uint32_t id, const char * prop, std::size_t len), {
 	var e = Module.EUI.elems[id];
-	var prop = UTF8ToString(prop, len).split(".");
+	var sprop = UTF8ToString(prop, len).split(".");
 	var obj = e;
-	while (prop.length > 1) obj = obj[prop.shift()];
-	return prop[0] in obj ? obj[prop[0]].toString().length : 0;
+	while (sprop.length > 1) obj = obj[sprop.shift()];
+	return sprop[0] in obj ? obj[sprop[0]].toString().length : 0;
 });
 
 EM_JS(std::size_t, eui_elem_property_get, (std::uint32_t id, const char * buf, std::size_t maxlen, const char * prop, std::size_t len), {
 	var e = Module.EUI.elems[id];
-	var prop = UTF8ToString(prop, len).split(".");
+	var sprop = UTF8ToString(prop, len).split(".");
 	var obj = e;
-	while (prop.length > 1) obj = obj[prop.shift()];
-	var val = prop[0] in obj ? obj[prop[0]].toString() : "";
+	while (sprop.length > 1) obj = obj[sprop.shift()];
+	var val = sprop[0] in obj ? obj[sprop[0]].toString() : "";
 	stringToUTF8(val, buf, maxlen);
 	var written = lengthBytesUTF8(val); // stringToUTF8 could return the bytes written...
 	return written >= maxlen ? maxlen : written;
@@ -133,30 +133,30 @@ EM_JS(std::size_t, eui_elem_property_get, (std::uint32_t id, const char * buf, s
 
 EM_JS(void, eui_elem_property_set, (std::uint32_t id, const char * prop, std::size_t proplen, const char * val, std::size_t vallen), {
 	var e = Module.EUI.elems[id];
-	var prop = UTF8ToString(prop, proplen).split(".");
+	var sprop = UTF8ToString(prop, proplen).split(".");
 	var obj = e;
-	while (prop.length > 1) obj = obj[prop.shift()];
-	obj[prop[0]] = UTF8ToString(val, vallen);
+	while (sprop.length > 1) obj = obj[sprop.shift()];
+	obj[sprop[0]] = UTF8ToString(val, vallen);
 });
 
 EM_JS(void, eui_elem_property_set_bool, (std::uint32_t id, const char * prop, std::size_t proplen, bool val), {
 	var e = Module.EUI.elems[id];
-	var prop = UTF8ToString(prop, proplen).split(".");
+	var sprop = UTF8ToString(prop, proplen).split(".");
 	var obj = e;
-	while (prop.length > 1) obj = obj[prop.shift()];
-	obj[prop[0]] = !!val;
+	while (sprop.length > 1) obj = obj[sprop.shift()];
+	obj[sprop[0]] = !!val;
 });
 
 EM_JS(std::size_t, eui_elem_attr_len, (std::uint32_t id, const char * prop, std::size_t len), {
 	var e = Module.EUI.elems[id];
-	var prop = UTF8ToString(prop, len);
-	return (e.getAttribute(prop) || "").length;
+	var sprop = UTF8ToString(prop, len);
+	return (e.getAttribute(sprop) || "").length;
 });
 
 EM_JS(std::size_t, eui_elem_attr_get, (std::uint32_t id, const char * buf, std::size_t maxlen, const char * prop, std::size_t len), {
 	var e = Module.EUI.elems[id];
-	var prop = UTF8ToString(prop, len);
-	var val = e.getAttribute(prop) || "";
+	var sprop = UTF8ToString(prop, len);
+	var val = e.getAttribute(sprop) || "";
 	stringToUTF8(val, buf, maxlen);
 	var written = lengthBytesUTF8(val); // stringToUTF8 could return the bytes written...
 	return written >= maxlen ? maxlen : written;
@@ -164,8 +164,8 @@ EM_JS(std::size_t, eui_elem_attr_get, (std::uint32_t id, const char * buf, std::
 
 EM_JS(void, eui_elem_attr_set, (std::uint32_t id, const char * prop, std::size_t proplen, const char * val, std::size_t vallen), {
 	var e = Module.EUI.elems[id];
-	var prop = UTF8ToString(prop, proplen);
-	e.setAttribute(prop, UTF8ToString(val, vallen));
+	var sprop = UTF8ToString(prop, proplen);
+	e.setAttribute(sprop, UTF8ToString(val, vallen));
 });
 
 EM_JS(void, eui_root_css_property_set, (const char * prop, std::size_t proplen, const char * val, std::size_t vallen), {

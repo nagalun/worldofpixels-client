@@ -37,7 +37,7 @@ bool ChunkGlState::loadTextures(PngImage&& pixelData, const ChunkConstants::Prot
 	}
 
 	if (ChunkConstants::pxTexNumChannels != pixelData.getChannels()) {
-		// ignore, for now
+		// shouldn't happen, loaded image is converted
 	}
 
 	GLint fmt = pixelData.getChannels() == 4 ? GL_RGBA : GL_RGB;
@@ -49,9 +49,10 @@ bool ChunkGlState::loadTextures(PngImage&& pixelData, const ChunkConstants::Prot
 
 	initAndUseProtTex();
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
-					ChunkConstants::pc, ChunkConstants::pc,
-					0, GL_RGBA, GL_UNSIGNED_BYTE, protData.data());
+			ChunkConstants::pc, ChunkConstants::pc,
+			0, GL_RGBA, GL_UNSIGNED_BYTE, protData.data());
 
+	// makes little sense since it's more likely that the cache won't be needed
 	// textureCache = std::move(pixelData);
 	ls = LoadState::TEXTURED;
 	return true;
@@ -69,9 +70,23 @@ LoadState ChunkGlState::getLoadState() const {
 void ChunkGlState::queueSetPixel(u16 x, u16 y, RGB_u rgba) {
 	pendingPxUpdates.emplace_back(PxUpdate{x, y, rgba});
 
-	/*if (ls == LoadState::TEXTURED && textureCache.getData()) {
+	if (textureCache.getData()) {
 		textureCache.setPixel(x, y, rgba);
-	}*/
+	}
+}
+
+void ChunkGlState::queueSetPixelWithBlending(u16 x, u16 y, RGB_u rgba) {
+	if (ls != LoadState::TEXTURED && ls != LoadState::EMPTY) {
+		// blending can't be done with no texture
+		return;
+	}
+
+	if (!textureCache.getData()) {
+		readTexToCache();
+	}
+
+	textureCache.setPixel(x, y, rgba, true);
+	pendingPxUpdates.emplace_back(PxUpdate{x, y, textureCache.getPixel(x, y)});
 }
 
 void ChunkGlState::queueSetProtectionGid(u16 x, u16 y, ChunkConstants::ProtGid gid) {
@@ -131,6 +146,8 @@ bool ChunkGlState::renderUpdates(ChunkUpdaterGlState& glst, bool glstActive) {
 
 		if (!glstActive) {
 			glstActive = true;
+			// colors in the pending updates vectors are pre-blended.
+			glDisable(GL_BLEND);
 			glst.use();
 		}
 	}
@@ -144,15 +161,6 @@ bool ChunkGlState::renderUpdates(ChunkUpdaterGlState& glst, bool glstActive) {
 		glViewport(0, 0, ChunkConstants::size, ChunkConstants::size);
 		glst.uploadPxData(pendingPxUpdates);
 		glDrawArraysInstancedANGLE(GL_TRIANGLES, 0, 6, pendingPxUpdates.size());
-
-		if (textureCache.getData()) {
-			for (const auto& px : pendingPxUpdates) {
-				//std::printf("(%i, %i), %i, %i, %i, %i\n", px.x, px.y, px.rgba.c.r, px.rgba.c.g, px.rgba.c.b, px.rgba.c.a);
-				textureCache.setPixel(px.x, px.y, px.rgba);
-			}
-		}
-
-		//std::printf("Updated chunk with %i px\n", (int)pendingPxUpdates.size());
 		pendingPxUpdates.clear();
 	}
 
@@ -187,27 +195,14 @@ void ChunkGlState::initAndUseProtTex() {
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 }
 
-RGB_u ChunkGlState::getPixel(Renderer& r, u16 x, u16 y) const {
-	if (ls != LoadState::TEXTURED) {
+RGB_u ChunkGlState::getPixel(u16 x, u16 y) const {
+	if (ls != LoadState::TEXTURED && pendingPxUpdates.size() == 0) {
 		return {{0, 0, 0, 0}};
 	}
 
-	if (textureCache.getData()) {
-		return textureCache.getPixel(x, y);
+	if (!textureCache.getData()) {
+		readTexToCache();
 	}
-
-	gl::Framebuffer fb; // this is probably really bad. figure out some way to get a long lived framebuffer here
-	fb.use(GL_FRAMEBUFFER);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, pixelTex.get(), 0);
-	glViewport(0, 0, ChunkConstants::size, ChunkConstants::size);
-	r.setFixViewportOnNextFrame();
-
-	// getChannels will return the num of channels of the last texture
-	GLint fmt = textureCache.getChannels() == 4 ? GL_RGBA : GL_RGB;
-
-	textureCache.allocate(ChunkConstants::size, ChunkConstants::size, RGB_u{{0, 0, 0, 0}}, textureCache.getChannels());
-	glReadPixels(0, 0, ChunkConstants::size, ChunkConstants::size, fmt, GL_UNSIGNED_BYTE, static_cast<void *>(textureCache.getData()));
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 	return textureCache.getPixel(x, y);
 }
@@ -224,4 +219,25 @@ void ChunkGlState::loadEmptyTextures() {
 			0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 
 	ls = LoadState::TEXTURED;
+}
+
+void ChunkGlState::readTexToCache() const {
+	glViewport(0, 0, ChunkConstants::size, ChunkConstants::size);
+
+	// getChannels will return the num of channels of the last texture
+	GLint fmt = textureCache.getChannels() == 4 ? GL_RGBA : GL_RGB;
+	textureCache.allocate(ChunkConstants::size, ChunkConstants::size, RGB_u{{0, 0, 0, 0}}, textureCache.getChannels());
+
+	if (ls == LoadState::TEXTURED) {
+		gl::Framebuffer fb; // this is probably really bad. figure out some way to get a long lived framebuffer here
+		fb.use(GL_FRAMEBUFFER);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, pixelTex.get(), 0);
+		glReadPixels(0, 0, ChunkConstants::size, ChunkConstants::size, fmt, GL_UNSIGNED_BYTE, static_cast<void *>(textureCache.getData()));
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	}
+
+	// catch up with updates
+	for (const auto& px : pendingPxUpdates) {
+		textureCache.setPixel(px.x, px.y, px.rgba);
+	}
 }

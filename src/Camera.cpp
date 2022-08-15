@@ -6,7 +6,7 @@
 Camera::Camera()
 : x(0.f),
   y(0.f),
-  zoom(8.f) { }
+  zoom(16.f) { }
 
 Camera::~Camera() { }
 

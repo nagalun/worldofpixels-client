@@ -30,9 +30,15 @@
 	--tex-url-ui: url(/img/ui/newyear/ui.png);
 }
 
-:root, ::before, ::after {
+::before, ::after {
 	--clr-pri: inherit;
 	--clr-sec: inherit;
+	--bg-clr: inherit;
+	--tex-url-tools: inherit;
+	--tex-url-tools-text: inherit;
+	--tex-url-border: inherit;
+	--tex-url-border-active: inherit;
+	--tex-url-ui: inherit;
 }
 
 /* ux */
@@ -43,6 +49,14 @@
 
 .owop-colors button:active {
 	filter: brightness(0.8);
+}
+
+#game-data::after { /* preload textures */
+	position: absolute;
+	width: 0;
+	height: 0;
+	content: var(--tex-url-tools) var(--tex-url-tools-text)
+		var(--tex-url-border) var(--tex-url-border-active) var(--tex-url-ui);
 }
 
 /* EUI */

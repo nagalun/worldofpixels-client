@@ -12,6 +12,7 @@
 				url(/font/pixeloperator.woff) format('woff');
 			font-weight: normal;
 			font-style: normal;
+			font-display: swap;
 		}
 
 		:root.pxperf {
@@ -42,7 +43,7 @@
 			height: 100vh;
 		}
 
-		#login, #game-data {
+		#login {
 			display: none;
 		}
 
@@ -67,9 +68,14 @@
 			touch-action: initial;
 		}
 
-		#loader.ok {
+		#loader.ok, #game-data {
 			opacity: 0;
 			visibility: hidden;
+		}
+
+		#game-data {
+			width: 0;
+			height: 0;
 		}
 
 		#logo {
@@ -134,6 +140,12 @@
 				this.self.style.bottom = window.innerHeight - b.top + 'px';
 				cx = 0;
 				cy = 0;
+			});
+
+			window.addEventListener('keydown', function(e) {
+				if (e.code === 'Escape') {
+					picker.exit();
+				}
 			});
 
 			var init = true; // absolutely terrible
@@ -220,6 +232,12 @@
 		}
 	</script>
 
+	<link rel="preload" href="/img/planet.gif" as="image" fetchpriority="high">
+	<link rel="preload" href="/img/banner.gif" as="image" fetchpriority="high">
+	<link rel="preload" href="/img/bg.png" as="image" fetchpriority="high">
+	<link rel="preload" href="/font/pixeloperator.woff2" as="font" crossorigin>
+	<link rel="preload" href="/owop.wasm" as="fetch" type="application/wasm" crossorigin fetchpriority="low">
+
 	<link rel="stylesheet" href="/lib/color-picker/index.css" media="print" onload="this.onload=null;this.media='all'">
 	<link rel="stylesheet" href="/css/style.css" media="print" onload="this.onload=null;this.media='all'">
 	<link rel="manifest" href="/manifest.webmanifest">
@@ -230,8 +248,8 @@
 
 	<div id="loader">
 		<div id="logo">
-			<img draggable="false" src="/img/planet.gif" width="200">
-			<img draggable="false" src="/img/banner.gif" width="180">
+			<img draggable="false" src="/img/planet.gif" alt="" width="200" height="200">
+			<img draggable="false" src="/img/banner.gif" alt="" width="180" height="128">
 
 			<noscript>
 				<p>World Of Pixels is an (almost) infinite canvas where you can draw online with other people, or explore many user created worlds.</p>

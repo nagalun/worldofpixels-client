@@ -37,7 +37,7 @@ private:
 	PacketReader pr;
 	std::unordered_map<User::Id, User> users;
 	std::unique_ptr<World> world;
-	std::unique_ptr<SelfCursor> preJoinSelfCursorData;
+	std::unique_ptr<SelfCursor::Builder> preJoinSelfCursorData;
 	User::Id selfUid;
 	long tickTimer;
 	EConnectError lastError;

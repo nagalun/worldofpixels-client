@@ -12,6 +12,7 @@ class WebGlContext : public GlContext {
 	const char * targetCanvas;
 	const char * targetSizeElem;
 	mutable Size sizeCache;
+	mutable Size dipSizeCache;
 	bool renderLoopSet;
 	bool renderPaused;
 

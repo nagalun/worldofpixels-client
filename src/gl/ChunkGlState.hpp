@@ -49,8 +49,9 @@ public:
 	const gl::Texture& getPixelGlTex() const;
 	const gl::Texture& getProtGlTex() const;
 
-	RGB_u getPixel(Renderer& r, u16 x, u16 y) const;
+	RGB_u getPixel(u16 x, u16 y) const;
 	void queueSetPixel(u16 x, u16 y, RGB_u rgba);
+	void queueSetPixelWithBlending(u16 x, u16 y, RGB_u rgba);
 	void queueSetProtectionGid(u16 x, u16 y, ChunkConstants::ProtGid gid);
 
 	/* returns true if the gl state is activated, else glstActive */
@@ -60,4 +61,6 @@ private:
 	void initAndUsePixelTex();
 	void initAndUseProtTex();
 	void loadEmptyTextures();
+
+	void readTexToCache() const;
 };

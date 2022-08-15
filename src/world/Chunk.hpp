@@ -30,7 +30,7 @@ public:
 	Pos getX() const;
 	Pos getY() const;
 
-	bool setPixel(u16 x, u16 y, RGB_u);
+	bool setPixel(u16 x, u16 y, RGB_u, bool alphaBlending);
 	RGB_u getPixel(u16 x, u16 y) const;
 
 	const u8 * getData() const;

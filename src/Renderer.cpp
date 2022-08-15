@@ -160,18 +160,6 @@ void Renderer::render() {
 
 	bool shouldKeepRendering = false;
 
-//	for (int i = -32; i < 32; i++) {
-//		for (int j = -32; j < 32; j++) {
-//			RGB_u clr = {{0, 0, 0, 0}};
-//			clr.rgb = u32(std::sqrt(std::pow(j, 2) + std::pow(i, 2)) * frameNum);
-//			clr.c.b = clr.c.r;
-//			clr.c.r = 0;
-//			clr.c.g *= 0.4;
-//			clr.c.a = 255;
-//			w.setPixel(j, i, clr);
-//		}
-//	}
-
 	bool glstActive = false;
 	for (auto ch : chunksToUpdate) {
 		ChunkGlState& cgl = ch->getGlState();
@@ -182,12 +170,10 @@ void Renderer::render() {
 
 	if (glstActive) {
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		glViewport(0, 0, s.w, s.h);
-	} else if (fixViewportOnNextFrame) {
-		glViewport(0, 0, s.w, s.h);
-		fixViewportOnNextFrame = false;
+		glEnable(GL_BLEND);
 	}
-	
+
+	glViewport(0, 0, s.w, s.h);
 	cRendererGl->use();
 
 	TexturedChunkProgram& tcp = cRendererGl->getTexChunkProg();
@@ -315,9 +301,11 @@ bool Renderer::setupRenderingContext() {
 	resizeRenderingContext();
 
 	RGB_u bgClr = w.getBackgroundColor();
-	glClearColor(bgClr.c.r / 255.f, bgClr.c.g / 255.f, bgClr.c.b / 255.f, 0.5f);
+	glClearColor(bgClr.c.r / 255.f, bgClr.c.g / 255.f, bgClr.c.b / 255.f, 1.0f);
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	//glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+	//glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
 
 	setupView();
 

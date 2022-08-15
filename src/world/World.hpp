@@ -55,7 +55,7 @@ private:
 	bool drawingRestricted;
 
 public:
-	World(InputAdapter& base, std::string name, std::unique_ptr<SelfCursor>,
+	World(InputAdapter& base, std::string name, std::unique_ptr<SelfCursor::Builder>,
 			RGB_u bgClr, bool restricted, std::optional<User::Id> owner);
 
 	void setCursorCount(u32 worldCount, u32 globalCount);
@@ -82,7 +82,7 @@ public:
 	const Chunk * getChunkAt(World::Pos, World::Pos) const;
 
 	RGB_u getPixel(World::Pos, World::Pos) const;
-	bool setPixel(World::Pos, World::Pos, RGB_u);
+	bool setPixel(World::Pos, World::Pos, RGB_u, bool alphaBlending = false);
 
 	RGB_u getBackgroundColor() const;
 	const char * getChunkUrl(Chunk::Pos, Chunk::Pos);
