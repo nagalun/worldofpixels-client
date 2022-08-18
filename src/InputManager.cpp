@@ -155,7 +155,6 @@ ImAction::ImAction(InputAdapter& adapter, std::string name,
 
 ImAction::~ImAction() {
 	adapter.del(this);
-	std::printf("[~ImAction]\n");
 }
 
 const std::string& ImAction::getName() const {
@@ -480,15 +479,19 @@ InputAdapter::InputAdapter(InputAdapter * parent, InputStorage& is, std::string 
   context(std::move(context)),
   priority(priority),
   enabled(true) {
+#ifdef DEBUG
 	std::printf("[InputAdapter] Registered %s, prio %d\n", getFullContext().c_str(), priority);
+#endif
 }
 
 InputAdapter::~InputAdapter() {
+#ifdef DEBUG
 	std::printf("[~InputAdapter] Del %s\n", context.c_str());
 	if (actions.size() > 0) {
 		std::printf("[~InputAdapter] %lu actions still registered on adapter ", actions.size());
 		std::printf("%s!!\n", getFullContext().c_str()); // could segfault if any parent is deleted before this
 	}
+#endif
 }
 
 const InputManager& InputAdapter::getInputManager() const {
@@ -640,7 +643,9 @@ void InputAdapter::add(ImAction * a) {
 
 	a->clearBindingsChanged();
 
+#ifdef DEBUG
 	std::printf("[InputAdapter] Registered action: %s\n", fullName.c_str());
+#endif
 	actions.push_back(a);
 }
 

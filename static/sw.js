@@ -1,24 +1,15 @@
 "use strict";
 
-var cacheVersion = "2";
+#ifdef DEBUG
+var cacheVersion = `OWOP_VERSION-dbg`;
+#else
+var cacheVersion = `OWOP_VERSION`;
+#endif
 
-var fileList = [
-	"/index.html",
-	"/owop.js",
-	"/owop.wasm",
-	"/favicon.ico",
-	"/sfx/button.mp3",
-	"/sfx/join.mp3",
-	"/sfx/pixel.mp3",
-	"/img/banner.gif",
-	"/img/bg.png",
-	"/img/planet.gif",
-	"/img/app/owop-72.png",
-	"/img/app/owop-96.png",
-	"/img/app/owop-2x-144.png",
-	"/img/app/owop-2x-192.png",
-	"/img/app/owop-512.png"
-];
+var fileList =
+`OWOP_SCRIPT_PATH
+#include <static_files.txt>
+OWOP_WASM_PATH`.split("\n");
 
 self.addEventListener("install", function(e) {
 	e.waitUntil(
@@ -26,31 +17,46 @@ self.addEventListener("install", function(e) {
 		.then(function(cache) {
 			return cache.addAll(fileList);
 		})
+		.then(function() {
+			return self.skipWaiting();
+		})
 	);
 });
 
 self.addEventListener("activate", function(e) {
-	e.waitUntil(
-		caches.keys()
-		.then(function(keyList) {
-			return Promise.all(keyList.map(function(key) {
-				if (key !== cacheVersion) {
-					return caches.delete(key);
-				}
-			}));
-		})
-	);
+	e.waitUntil((async function() {
+		console.log("[SW] Activating new service worker");
+		await self.clients.claim();
+
+		var keyList = await caches.keys();
+		await Promise.all(keyList.map(function(key) {
+			if (key !== cacheVersion) {
+				return caches.delete(key);
+			}
+		}));
+	})());
 });
 
 self.addEventListener("fetch", function(e) {
-	e.respondWith(
-		caches.match(e.request)
-		.then(function(r) {
-			if (r) {
-				return r;
-			}
+	var url = new URL(e.request.url);
+	if (!e.request.url.startsWith(self.location.origin)
+			|| e.request.method !== "GET"
+			|| url.pathname.startsWith("/api/")) {
+		return;
+	}
 
-			return fetch(e.request);
-		})
-	);
+	e.respondWith((async function() {
+		var r = await caches.match(e.request);
+
+		if (!r && url.pathname.slice(1).indexOf("/") === -1
+				&& !fileList.includes(url.pathname)) {
+			r = await caches.match("/index.html");
+		}
+
+		if (!r) {
+			r = await fetch(e.request);
+		}
+
+		return r;
+	})());
 });

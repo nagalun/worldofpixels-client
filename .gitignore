@@ -2,3 +2,4 @@ build
 profile
 tests
 owop.wasm.map
+static/preprocessor/static_files.txt

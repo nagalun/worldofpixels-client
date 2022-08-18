@@ -15,6 +15,7 @@ services:
       - DB_USER=owop
       - DB_PASSWORD=owop
       - API_HOST=localhost:8092
+      - AUTOBUILD=${AUTOBUILD:-1}
   owop_cli:
     build: ${SVC_OWOP_CLI:-.}/docker/builder
     user: ${UID:-1000}:${GID:-1000}
@@ -26,6 +27,8 @@ services:
       - ${SVC_OWOP_CLI:-.}/:/project:rw
     networks:
       - dev_uvias
+    environment:
+      - AUTOBUILD=${AUTOBUILD:-1}
   owop_www:
     image: nginx:stable-alpine
     container_name: "owop_www"

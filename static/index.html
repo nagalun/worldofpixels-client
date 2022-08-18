@@ -3,13 +3,20 @@
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
-	<title>World of Pixels (dev)</title>
+	<meta name="description" content="Draw pixels with other people in real-time on an (almost) infinite canvas!">
+	<meta name="keywords" content="pixel, game, draw, online, cursors, canvas, world, pixel editor, multiplayer pixel, collaborative">
+
+	<title>
+		World of Pixels
+#ifdef DEBUG
+		(dev)
+#endif
+	</title>
 
 	<style>
 		@font-face {
 			font-family: pixel-op;
-			src: url(/font/pixeloperator.woff2) format('woff2'),
-				url(/font/pixeloperator.woff) format('woff');
+			src: url(/font/pixeloperator.woff2) format("woff2");
 			font-weight: normal;
 			font-style: normal;
 			font-display: swap;
@@ -103,65 +110,10 @@
 	</noscript>
 
 	<script src="/lib/color-picker/index.js" async defer></script>
-	<script src="/owop.js" async defer></script>
+	<script src="/js/utils.js" async defer></script>
+	<script src=OWOP_SCRIPT_PATH async defer></script>
 	<script>
 		"use strict";
-
-		function initColorPicker(box, source) {
-			var color = source.value;
-			box.value = color;
-			source.type = 'hidden';
-			var picker = new CP(box);
-			box.className = picker.state.class + ' ' + source.className;
-			box.style.backgroundColor = source.value;
-
-			var cx = 0;
-			var cy = 0;
-			box.addEventListener('touchstart', function(e) {
-				e.preventDefault();
-			});
-
-			picker.self.addEventListener('mousedown', function(e) {
-				cx = e.offsetX;
-				cy = e.offsetY;
-			});
-
-			picker.self.addEventListener('mouseup', function(e) {
-				var b = picker.self.getBoundingClientRect();
-				if (cx < 0 || cy < 0 || cx > b.width || cy > b.height) {
-					picker.exit();
-				}
-			});
-
-			picker.on('fit', function() {
-				/* align it to the top of the element */
-				var b = box.getBoundingClientRect();
-				this.self.style.top = 'unset';
-				this.self.style.bottom = window.innerHeight - b.top + 'px';
-				cx = 0;
-				cy = 0;
-			});
-
-			window.addEventListener('keydown', function(e) {
-				if (e.code === 'Escape') {
-					picker.exit();
-				}
-			});
-
-			var init = true; // absolutely terrible
-			picker.on('change', function(r, g, b, a) {
-				if (init) {
-					init = false;
-					return;
-				}
-
-				var ncolor = this.color(r, g, b, a);
-				source.value = ncolor;
-				box.value = ncolor;
-				box.style.backgroundColor = ncolor;
-				source.dispatchEvent(new Event('change'));
-			});
-		}
 
 		function checkPixelPerfection() {
 			var r = window.devicePixelRatio;
@@ -176,20 +128,20 @@
 		window.addEventListener("resize", checkPixelPerfection);
 		checkPixelPerfection();
 
-		window.addEventListener('load', function() {
+		window.addEventListener("load", function() {
 			var st = document.getElementById("status");
 			var wo = document.getElementById("world");
-			st.innerHTML = 'Loading OWOP...';
+			st.innerHTML = "Loading OWOP...";
 			wo.oncontextmenu = function() { return false; };
 
 			var lastSlash = location.href.lastIndexOf("/") + 1;
 			var worldName = location.href.slice(lastSlash).toLowerCase() || "main";
-			var wsUrl = location.origin.replace('http', 'ws');
+			var wsUrl = location.origin.replace("http", "ws");
 
 			function err(e) {
 				var msg = "An error ocurred. Check the console (F12) for more info.";
 
-				if (!('WebAssembly' in window)) {
+				if (!("WebAssembly" in window)) {
 					msg = "No WebAssembly support! Can't load OWOP.";
 				}
 
@@ -209,7 +161,7 @@
 		});
 
 		// prevent scrolling zoom
-		window.addEventListener('wheel', function(e) {
+		window.addEventListener("wheel", function(e) {
 			if (e.ctrlKey) {
 				e.preventDefault();
 				return false;
@@ -217,18 +169,24 @@
 		}, {passive: false});
 
 		function stopEvt(e) {
-			if (e.target && e.target.id !== 'world') {
+			if (e.target && e.target.id !== "world") {
 				e.stopImmediatePropagation();
 				return;
 			}
 		}
 
-		window.addEventListener('mousedown', stopEvt, false);
-		window.addEventListener('touchstart', stopEvt, false);
-		window.addEventListener('touchend', stopEvt, false);
+		window.addEventListener("mousedown", stopEvt, false);
+		window.addEventListener("touchstart", stopEvt, false);
+		window.addEventListener("touchend", stopEvt, false);
 
 		if (navigator.serviceWorker) {
-			//navigator.serviceWorker.register('/sw.js');
+			navigator.serviceWorker.register("/sw.js")
+			.then(function(reg) {
+				window.SW = reg;
+				reg.onupdatefound = function() {
+					showUpdateAvailableAlert();
+				};
+			});
 		}
 	</script>
 
@@ -236,11 +194,11 @@
 	<link rel="preload" href="/img/banner.gif" as="image" fetchpriority="high">
 	<link rel="preload" href="/img/bg.png" as="image" fetchpriority="high">
 	<link rel="preload" href="/font/pixeloperator.woff2" as="font" crossorigin>
-	<link rel="preload" href="/owop.wasm" as="fetch" type="application/wasm" crossorigin fetchpriority="low">
+	<link rel="preload" href=OWOP_WASM_PATH as="fetch" type="application/wasm" crossorigin>
 
 	<link rel="stylesheet" href="/lib/color-picker/index.css" media="print" onload="this.onload=null;this.media='all'">
 	<link rel="stylesheet" href="/css/style.css" media="print" onload="this.onload=null;this.media='all'">
-	<link rel="manifest" href="/manifest.webmanifest">
+	<link rel="manifest" href="/js/manifest.webmanifest">
 </head>
 <body>
 	<canvas id="world"></canvas>

@@ -6,15 +6,18 @@
 #include <util/emsc/ui/Button.hpp>
 
 #include <ui/ColorPicker.hpp>
+#include <ui/PaletteListWidget.hpp>
 
 class ColorProvider;
 
 class ColorWidget : public eui::Object {
 	ColorProvider& clr;
+	eui::Object pickerContainer;
 	ColorPicker primaryClr;
 	ColorPicker secondaryClr;
 	eui::Button paletteBtn;
 	eui::Button swapBtn;
+	PaletteListWidget paletteWdg;
 
 public:
 	ColorWidget(ColorProvider&);

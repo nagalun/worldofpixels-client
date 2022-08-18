@@ -4,8 +4,12 @@ rwildcard=$(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2) $(filter $(subst 
 SRC_DIR = src
 STATIC_DIR = static
 
-OUT_DIR = out
 OBJ_DIR = build
+OUT_DIR = out
+
+STATIC_PRE_FILES = $(call rwildcard, $(STATIC_DIR)/, *.html) $(call rwildcard, $(STATIC_DIR)/, *.js)
+STATIC_OUT_FILES = $(STATIC_PRE_FILES:$(STATIC_DIR)/%=$(OUT_DIR)/%)
+STATIC_DEP_FILES = $(STATIC_PRE_FILES:%=$(OBJ_DIR)/%.d)
 
 SRC_FILES = $(call rwildcard, $(SRC_DIR)/, *.cpp)
 OBJ_FILES = $(SRC_FILES:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
@@ -17,8 +21,9 @@ CXX = em++
 CC  = emcc
 DWP = emdwp
 
-# also builds owop.wasm
-TARGET = $(OUT_DIR)/owop.js
+# Preprocessor for static files
+PP = cpp
+PPFLAGS = -traditional-cpp -nostdinc -undef -I "$(STATIC_DIR)/preprocessor/" -imacros macros.h -P -E -MMD -MP
 
 ifndef VERSION
 TREE_STATE = $(shell git rev-parse --short HEAD)
@@ -28,6 +33,9 @@ endif
 else
 TREE_STATE = $(VERSION)
 endif
+
+# also builds owop.wasm
+TARGET = $(OUT_DIR)/js/owop-$(TREE_STATE).js
 
 OPT_REL += -O3 -ffast-math
 # for post-compile emscripten stuff
@@ -39,9 +47,9 @@ OPT_DBG += -ffile-prefix-map=$(CURDIR)=.
 LD_DBG  += $(OPT_DBG)
 LD_DBG  += -s ERROR_ON_WASM_CHANGES_AFTER_LINK=1 -s ASSERTIONS=1
 
-OPT_DBG += -D DEBUG=1
 ifdef DISABLE_AUTO_REFRESH
 OPT_DBG += -D DISABLE_AUTO_REFRESH=1
+DEFS += -D DISABLE_AUTO_REFRESH=1
 endif
 
 EM_CONF_CC_LD += -s STRICT=1 -s USE_LIBPNG=1 -s USE_SDL=0
@@ -80,24 +88,33 @@ LDFLAGS  += -lGL
 
 all: dbg
 
-dbg: TREE_STATE := $(TREE_STATE)-dbg
-dbg: CPPFLAGS += $(OPT_DBG) -D OWOP_VERSION='"$(TREE_STATE)"'
+dbg: DEFS += -D OWOP_VERSION='$(TREE_STATE)' -D DEBUG=1
+dbg: CPPFLAGS += $(OPT_DBG) $(DEFS)
 dbg: LDFLAGS += $(LD_DBG)
+dbg: PPFLAGS += $(DEFS)
 dbg: static $(TARGET)
 
-rel: TREE_STATE := $(TREE_STATE)-rel
-rel: CPPFLAGS += $(OPT_REL) -D OWOP_VERSION='"$(TREE_STATE)"'
+rel: DEFS += -D OWOP_VERSION='$(TREE_STATE)'
+rel: CPPFLAGS += $(OPT_REL) $(DEFS)
 rel: LDFLAGS  += $(LD_REL)
+rel: PPFLAGS += $(DEFS)
 rel: static $(TARGET)
 
 $(TARGET): $(OBJ_FILES)
 	$(CXX) $(LDFLAGS) -o $@ $^ $(LDLIBS)
 	$(DWP) -e $(@:.js=.wasm) -o $(@:.js=.wasm.dwp)
 
-#$(DWP) -e $(@:.js=.dbg.wasm) -o $(@:.js=.dbg.wasm.dwp)
+static: $(OUT_DIR) $(STATIC_DIR)/preprocessor/static_files.txt $(STATIC_OUT_FILES)
+	cp -RTu $(STATIC_DIR)/ $(OUT_DIR)/
+	- $(RM) -rf $(filter-out $(wildcard $(TARGET:.js=)*),$(wildcard $(OUT_DIR)/owop-*)) ./$(OUT_DIR)/preprocessor
 
-static: $(OUT_DIR)
-	cp -RT $(STATIC_DIR)/ $(OUT_DIR)/
+$(STATIC_DIR)/preprocessor/static_files.txt: $(filter-out $(call rwildcard, $(STATIC_DIR)/preprocessor, *),$(call rwildcard, $(STATIC_DIR)/, *))
+	find $(STATIC_DIR)/ -type f -not -path '*/preprocessor/*' -printf '/%P\n' > $(STATIC_DIR)/preprocessor/static_files.txt
+
+$(OUT_DIR)/%: $(STATIC_DIR)/%
+	@mkdir -p $(dir $(OBJ_DIR)/$<) $(dir $(<:$(STATIC_DIR)/%=$(OUT_DIR)/%))
+	$(PP) $(PPFLAGS) -MT $@ -MF $(OBJ_DIR)/$<.d $< $@
+	@sed -i '1 s,:,: $$(TARGET) ,' $(OBJ_DIR)/$<.d
 
 .SECONDEXPANSION:
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp | $$(@D)
@@ -107,6 +124,6 @@ $(OUT_DIR) $(patsubst %/,%,$(sort $(dir $(OBJ_FILES)))):
 	@mkdir -p $@
 
 clean:
-	- $(RM) -r $(OBJ_DIR) $(OUT_DIR)/*
+	- $(RM) -r $(OBJ_DIR) ./$(OUT_DIR)/*
 
--include $(DEP_FILES)
+-include $(DEP_FILES) $(STATIC_DEP_FILES)
