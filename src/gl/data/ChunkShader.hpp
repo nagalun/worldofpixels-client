@@ -5,11 +5,16 @@
 
 #include <world/ChunkConstants.hpp>
 
+// TODO: fix grid rendering when highp is not supported
 #define GLSL_GRID_FUNC " \
 float gridMult() { \
-	vec2 pixelPos = vTexCoordV * chunkSize * zoom; \
-\
+	vec2 pixelPos = vPosV * zoom; \
 	float mult = 1.0; \
+\n\
+#ifndef GL_FRAGMENT_PRECISION_HIGH\n\
+	float checker = float((int(gl_FragCoord.x) ^ int(gl_FragCoord.y)) % 2 == 0);\
+\n\
+#else\n\
 	float checker = float(mod(pixelPos.x, 2.0) < 1.0 ^^ mod(pixelPos.y, 2.0) < 1.0); \
 \
 	vec2 line1 = mod(pixelPos, zoom); \
@@ -17,6 +22,9 @@ float gridMult() { \
 \
 	mult -= 0.2 * float(zoom > 2.0 && (line1.x < 1.0 || line1.y < 1.0)) * min(1.0, zoom / 2.0 - 1.0); \
 	mult -= 0.2 * float(line16.x < 1.0 || line16.y < 1.0); \
+\n\
+#endif\n\
+\
 	mult -= 0.2 * float(pixelPos.x < 1.0 || pixelPos.y < 1.0); \
 \
 	return mult + (checker * (1.0 - mult)); \
@@ -36,30 +44,43 @@ struct ChunkShader {
 
 	static constexpr std::string_view vertex{
 			R"(#version 100
-uniform mediump mat4 mat;
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+	precision highp float;
+#else
+	precision mediump float;
+#endif
+
+uniform mat4 mat;
 uniform vec2 chunkOffset;
 
 attribute vec2 vPosA;
 attribute vec2 vTexCoordA;
 
 varying vec2 vTexCoordV;
+varying vec2 vPosV;
 
 void main() {
 	vTexCoordV = vTexCoordA;
+	vPosV = vPosA;
 
-	gl_Position = mat * vec4(chunkOffset + vPosA, 0.5, 1.0);
+	gl_Position = mat * vec4(chunkOffset + vPosA, 1.0, 1.0);
 })"};
 
 	static constexpr std::string_view texturedFragment{
 			R"(#version 100
-precision mediump float;
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+	precision highp float;
+#else
+	precision mediump float;
+#endif
 
-uniform mediump float chunkSize;
-uniform mediump float zoom;
+uniform float chunkSize;
+uniform float zoom;
 uniform sampler2D pxTex;
 uniform sampler2D protTex;
 
 varying vec2 vTexCoordV;
+varying vec2 vPosV;
 
 )" GLSL_GRID_FUNC R"(
 
@@ -74,12 +95,17 @@ void main() {
 
 	static constexpr std::string_view emptyFragment{
 			R"(#version 100
-precision mediump float;
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+	precision highp float;
+#else
+	precision mediump float;
+#endif
 
-uniform mediump float chunkSize;
-uniform mediump float zoom;
+uniform float chunkSize;
+uniform float zoom;
 
 varying vec2 vTexCoordV;
+varying vec2 vPosV;
 
 )" GLSL_GRID_FUNC R"(
 
@@ -89,14 +115,19 @@ void main() {
 
 	static constexpr std::string_view loadingFragment{
 			R"(#version 100
-precision mediump float;
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+	precision highp float;
+#else
+	precision mediump float;
+#endif
 
-uniform mediump float time;
+uniform float time;
 
-uniform mediump float chunkSize;
-uniform mediump float zoom;
+uniform float chunkSize;
+uniform float zoom;
 
 varying vec2 vTexCoordV;
+varying vec2 vPosV;
 
 float twave(float i) {
 	return abs(mod(i, 4.0) - 2.0) - 1.0;
@@ -124,7 +155,7 @@ void main() {
 
 	float mult2 = (sin(time * 2.0) / 4.0) + 1.0;
 	mult *= mult2;
-	
+
 	gl_FragColor = vec4(0.0, 0.0, 0.0, 0.15 + 0.05 * mult);
 })"};
 

@@ -1,7 +1,7 @@
 {
   "short_name": "OWOP",
   "name": "Our World Of Pixels",
-  "description": "Pixel madness",
+  "description": "Draw pixels with other people in real-time on an (almost) infinite canvas!",
   "icons": [
     {
       "src": "/img/app/owop-72.png",
@@ -34,6 +34,7 @@
       "purpose": "any"
     }
   ],
+  "id": "/?type=pwa",
   "start_url": "/?type=pwa",
   "background_color": "#111114",
   "display": "standalone",
