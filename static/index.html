@@ -183,9 +183,9 @@
 			navigator.serviceWorker.register("/sw.js")
 			.then(function(reg) {
 				window.SW = reg;
-				reg.onupdatefound = function() {
-					showUpdateAvailableAlert();
-				};
+				navigator.serviceWorker.addEventListener("message", function(e) {
+					handleSwMsg(e);
+				});
 			});
 		}
 	</script>

@@ -106,7 +106,7 @@ $(TARGET): $(OBJ_FILES)
 
 static: $(OUT_DIR) $(STATIC_DIR)/preprocessor/static_files.txt $(STATIC_OUT_FILES)
 	cp -RTu $(STATIC_DIR)/ $(OUT_DIR)/
-	- $(RM) -rf $(filter-out $(wildcard $(TARGET:.js=)*),$(wildcard $(OUT_DIR)/owop-*)) ./$(OUT_DIR)/preprocessor
+	- $(RM) -rf $(filter-out $(wildcard $(TARGET:.js=)*),$(wildcard $(OUT_DIR)/js/owop-*)) ./$(OUT_DIR)/preprocessor
 
 $(STATIC_DIR)/preprocessor/static_files.txt: $(filter-out $(call rwildcard, $(STATIC_DIR)/preprocessor, *),$(call rwildcard, $(STATIC_DIR)/, *))
 	find $(STATIC_DIR)/ -type f -not -path '*/preprocessor/*' -printf '/%P\n' > $(STATIC_DIR)/preprocessor/static_files.txt

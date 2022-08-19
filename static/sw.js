@@ -11,6 +11,13 @@ var fileList =
 #include <static_files.txt>
 OWOP_WASM_PATH`.split("\n");
 
+async function sendMsg(msg) {
+	var clients = await self.clients.matchAll() || [];
+	for (var i = 0; i < clients.length; i++) {
+		clients[i].postMessage(msg);
+	}
+}
+
 self.addEventListener("install", function(e) {
 	e.waitUntil(
 		caches.open(cacheVersion)
@@ -27,6 +34,8 @@ self.addEventListener("activate", function(e) {
 	e.waitUntil((async function() {
 		console.log("[SW] Activating new service worker");
 		await self.clients.claim();
+
+		await sendMsg({t: "updateAvailable", v: cacheVersion});
 
 		var keyList = await caches.keys();
 		await Promise.all(keyList.map(function(key) {

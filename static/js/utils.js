@@ -68,7 +68,16 @@ function initColorPicker(box, source) {
 	});
 }
 
-function showUpdateAvailableAlert() {
+function handleSwMsg(e) {
+	var data = e.data;
+	switch(data.t) {
+		case "updateAvailable":
+			showUpdateAvailableAlert(data.v);
+			break;
+	}
+}
+
+function showUpdateAvailableAlert(ver) {
 #ifdef DEBUG
 #ifndef DISABLE_AUTO_REFRESH
 	location.reload(true);
