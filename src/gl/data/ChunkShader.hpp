@@ -21,7 +21,7 @@ float gridMult() { \
 	vec2 line16 = mod(pixelPos, 16.0 * zoom); \
 \
 	mult -= 0.2 * float(zoom > 2.0 && (line1.x < 1.0 || line1.y < 1.0)) * min(1.0, zoom / 2.0 - 1.0); \
-	mult -= 0.2 * float(line16.x < 1.0 || line16.y < 1.0); \
+	mult -= 0.2 * float(zoom > 0.25 && (line16.x < 1.0 || line16.y < 1.0)) * min(1.0, zoom / 0.25 - 1.0); \
 \n\
 #endif\n\
 \
@@ -68,6 +68,7 @@ void main() {
 
 	static constexpr std::string_view texturedFragment{
 			R"(#version 100
+
 #ifdef GL_FRAGMENT_PRECISION_HIGH
 	precision highp float;
 #else
@@ -84,8 +85,32 @@ varying vec2 vPosV;
 
 )" GLSL_GRID_FUNC R"(
 
+const int SAMPLES = 3;
+vec4 smoothTexture2D(sampler2D tex, vec2 texCoord) {
+	vec2 texCoordDx = vec2(1. / chunkSize / zoom, 0.); /*dFdx(texCoord);*/
+
+	float z = fract(zoom);
+	z = abs(-1. * float(z > 0.5) + z) * 2.;
+
+	vec4 no = vec4(0.0);
+
+	if (zoom < 6. && z > 0.01) {
+		for(int j=0; j < SAMPLES; j++)
+		for(int i=0; i < SAMPLES; i++) {
+			vec2 st = vec2(float(i), float(j)) / float(SAMPLES);
+			vec4 clr = texture2D(tex, texCoord + st.x * texCoordDx + st.y * texCoordDx.yx);
+			no += vec4(clr.rgb * clr.a, clr.a);
+		}
+
+		return no / float(SAMPLES * SAMPLES);
+	} else {
+		no = texture2D(tex, texCoord);
+		return vec4(no.rgb * no.a, no.a);
+	}
+}
+
 void main() {
-	vec4 texClr = texture2D(pxTex, vTexCoordV);
+	vec4 texClr = smoothTexture2D(pxTex, vTexCoordV);
 	float grid = gridMult();
 	float alpha = 1.0 - grid * (1.0 - texClr.a);
 	texClr.rgb *= texClr.a * grid / alpha;

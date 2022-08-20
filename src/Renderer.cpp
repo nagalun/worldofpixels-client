@@ -303,7 +303,7 @@ bool Renderer::setupRenderingContext() {
 	RGB_u bgClr = w.getBackgroundColor();
 	glClearColor(bgClr.c.r / 255.f, bgClr.c.g / 255.f, bgClr.c.b / 255.f, 1.0f);
 	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 	//glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 	//glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
 
