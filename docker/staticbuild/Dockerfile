@@ -1,9 +1,10 @@
 FROM emscripten/emsdk:3.1.15 AS builder
+ARG VERSION=unk
 RUN apt-get update && apt-get install -y libglm-dev inotify-tools libssl-dev libz-dev
 RUN embuilder.py build zlib libpng
 WORKDIR /project
 COPY . .
-RUN make VERSION=${VERSION:-unk} DISABLE_AUTO_REFRESH=1 -j $(nproc) -l $(nproc) ${MAKEOPTS:-all}
+RUN make VERSION=${VERSION} DISABLE_AUTO_REFRESH=1 -j $(nproc) -l $(nproc) ${MAKEOPTS:-all}
 
 FROM nginx:stable-alpine
 RUN sed -i -E 's,worker_processes.+auto;,worker_processes 1;,g' /etc/nginx/nginx.conf
