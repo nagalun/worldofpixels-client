@@ -17,13 +17,17 @@ ColorWidget::ColorWidget(ColorProvider& clr)
   primaryClr(std::bind(&ColorWidget::updatePrimaryClr, this)),
   secondaryClr(std::bind(&ColorWidget::updateSecondaryClr, this)),
   paletteBtn(std::bind(&ColorWidget::togglePaletteUi, this)),
-  swapBtn(std::bind(&ColorWidget::swapColors, this)) {
-	addClass("eui-wg");
-	addClass("owop-colors");
+  swapBtn(std::bind(&ColorWidget::swapColors, this)),
+  paletteWdg(clr),
+  paletteWdgShown(true) {
+	addClass("owop-clr-ui");
+
+	pickerContainer.addClass("eui-wg");
+	pickerContainer.addClass("owop-colors");
 
 	primaryClr.setProperty("title", "Primary color");
 	secondaryClr.setProperty("title", "Secondary color");
-	paletteBtn.setProperty("title", "Palette");
+	paletteBtn.setProperty("title", "Palettes");
 	swapBtn.setProperty("title", "Swap colors");
 
 	primaryClr.addClass("primary-clr");
@@ -31,10 +35,13 @@ ColorWidget::ColorWidget(ColorProvider& clr)
 	paletteBtn.addClass("palette-btn");
 	swapBtn.addClass("swap-clr-btn");
 
-	primaryClr.appendTo(*this);
-	paletteBtn.appendTo(*this);
-	swapBtn.appendTo(*this);
-	secondaryClr.appendTo(*this);
+	primaryClr.appendTo(pickerContainer);
+	paletteBtn.appendTo(pickerContainer);
+	swapBtn.appendTo(pickerContainer);
+	secondaryClr.appendTo(pickerContainer);
+
+	pickerContainer.appendTo(*this);
+	paletteWdg.appendTo(*this);
 
 	appendToMainContainer();
 }
@@ -67,5 +74,13 @@ bool ColorWidget::swapColors() {
 }
 
 bool ColorWidget::togglePaletteUi() {
+	if (!paletteWdgShown) {
+		paletteWdg.appendTo(*this);
+	} else {
+		paletteWdg.remove();
+	}
+
+	paletteWdgShown = !paletteWdgShown;
+
 	return true;
 }

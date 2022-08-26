@@ -81,7 +81,7 @@
 /* TOOL WINDOW */
 
 .owop-tools {
-	top: 32px;
+	top: 30px;
 	left: 4px;
 	width: min-content;
 }
@@ -139,13 +139,27 @@
 
 /* COLOR WIDGET */
 
+.owop-clr-ui {
+	display: flex;
+	align-items: flex-end;
+	position: fixed;
+	padding: 4px;
+	left: 0;
+	bottom: 0;
+	max-width: 100%;
+	box-sizing: border-box;
+}
+
+.owop-colors, .owop-palettes {
+	position: initial;
+}
+
 .owop-colors {
 	display: flex;
 	flex-wrap: wrap;
-	left: 4px;
-	bottom: 4px;
 	width: 80px;
 	height: 80px;
+	flex-shrink: 0;
 }
 
 .owop-colors > * {
@@ -157,6 +171,10 @@
 	padding: 0;
 }
 
+.owop-clr-picker {
+	position: relative;
+}
+
 .owop-clr-picker, .color-picker__dialog {
 	color-scheme: light only;
 }
@@ -165,8 +183,8 @@
 	content: '';
 	display: block;
 	position: absolute;
-	width: 50%;
-	height: 50%;
+	width: 100%;
+	height: 100%;
 	border: 1px solid #00000055;
 	box-sizing: border-box;
 }
@@ -222,6 +240,73 @@
 	left: 0;
 	width: 100vw;
 	height: 100vh;
+}
+
+/* PALETTE WIDGET */
+
+.owop-palettes {
+	width: 350px;
+	min-height: 80px;
+	margin-left: 3px;
+}
+
+.owop-palettes summary {
+	text-align: left;
+	background-color: #00000044;
+	border-radius: 3px;
+	padding: 3px;
+}
+
+.owop-palettes > details[open] > summary {
+	background-color: #00000055;
+}
+
+.owop-palettes > details + details {
+	margin-top: 3px;
+}
+
+.world-palettes summary::before {
+	content: 'World palettes (' attr(data-count) ')';
+}
+
+.user-palettes summary::before {
+	content: 'User palettes (' attr(data-count) ')';
+}
+
+.owop-palette {
+	display: flex;
+	justify-content: center;
+	flex-wrap: wrap;
+	align-items: stretch;
+	padding: 3px;
+	background-color: #000000AA;
+	position: relative;
+}
+
+.owop-palette + .owop-palette, summary + .owop-palette {
+	margin-top: 3px;
+}
+
+.owop-palette:hover::before {
+	content: attr(data-name) ' (' attr(data-clr-count) ' colors)';
+	display: block;
+	position: absolute;
+	right: 0;
+	top: 0;
+	transform: translateY(-100%);
+	background-color: #000000AA;
+	padding: 0 3px;
+	pointer-events: none;
+}
+
+.owop-pal-clr {
+	--w-perc: inherit;
+	flex-grow: 1;
+	appearance: none;
+	border: none;
+	min-height: 16px;
+	min-width: var(--w-perc, 24px);
+	min-width: max(var(--w-perc, 24px), 24px);
 }
 
 /* POSITION WIDGET */

@@ -134,6 +134,10 @@ EM_JS(std::size_t, eui_elem_property_get, (std::uint32_t id, const char * buf, s
 EM_JS(void, eui_elem_property_set, (std::uint32_t id, const char * prop, std::size_t proplen, const char * val, std::size_t vallen), {
 	var e = Module.EUI.elems[id];
 	var sprop = UTF8ToString(prop, proplen).split(".");
+	if (sprop.length == 2 && sprop[0] === "style" && sprop[1][0] === "-") {
+		e.style.setProperty(sprop[1], UTF8ToString(val, vallen));
+		return;
+	}
 	var obj = e;
 	while (sprop.length > 1) obj = obj[sprop.shift()];
 	obj[sprop[0]] = UTF8ToString(val, vallen);

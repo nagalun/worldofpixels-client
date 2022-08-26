@@ -15,6 +15,7 @@ class Renderer;
 class ChunkGlState {
 public:
 	enum class LoadState {
+		UNLOADED,
 		LOADING,
 		EMPTY,
 		TEXTURED,

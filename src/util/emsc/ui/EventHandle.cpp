@@ -17,7 +17,9 @@ EventHandle::~EventHandle() {
 }
 
 EventHandle& EventHandle::operator=(EventHandle &&other) {
-	eui_elem_ch_handler(objId, this, EventHandle::eventFired, &other, EventHandle::eventFired);
+	objId = std::exchange(other.objId, 0);
+	cb = std::exchange(other.cb, nullptr);
+	eui_elem_ch_handler(objId, &other, EventHandle::eventFired, this, EventHandle::eventFired);
 	return *this;
 }
 

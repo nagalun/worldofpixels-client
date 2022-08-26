@@ -113,13 +113,30 @@ sz_t World::unloadChunks(sz_t targetAmount) { /* pretty bad worst case perf, opt
 	return origAmount - targetAmount;
 }
 
+sz_t World::unloadNonVisibleNonReadyChunks() {
+	sz_t unloaded = 0;
+
+	for (auto it = chunks.cbegin(); it != chunks.cend(); ) {
+		const Chunk& c = it->second;
+
+		if (c.shouldUnload() && !r.isChunkVisible(c, 256.f) && !c.isReady()) {
+			it = chunks.erase(it);
+			unloaded++;
+		} else {
+			++it;
+		}
+	}
+
+	return unloaded;
+}
+
 sz_t World::unloadFarChunks() {
 	sz_t unloaded = 0;
 
 	for (auto it = chunks.cbegin(); it != chunks.cend(); ) {
 		const Chunk& c = it->second;
 
-		if (c.shouldUnload() && !r.isChunkVisible(c) && getDistanceToChunk(c) > 20.f) {
+		if (c.shouldUnload() && !r.isChunkVisible(c, 256.f) && (!c.isReady() || getDistanceToChunk(c) > 20.f)) {
 			it = chunks.erase(it);
 			unloaded++;
 		} else {
@@ -188,7 +205,10 @@ const std::unordered_map<Chunk::Key, Chunk>& World::getChunkMap() const {
 
 Chunk& World::getOrLoadChunk(Chunk::Pos x, Chunk::Pos y) {
 	auto it = chunks.try_emplace(Chunk::key(x, y), x, y, *this);
-	if (it.second) {
+	if (it.second) { // if a chunk was emplaced
+		r.queueRerender();
+		unloadNonVisibleNonReadyChunks();
+
 		sz_t ml = getMaxLoadedChunks();
 		if (chunks.size() >= Renderer::maxLoadedChunks) {
 			it.first->second.preventUnloading(true);
@@ -201,6 +221,10 @@ Chunk& World::getOrLoadChunk(Chunk::Pos x, Chunk::Pos y) {
 	}
 
 	return it.first->second;
+}
+
+const std::string& World::getName() const {
+	return name;
 }
 
 RGB_u World::getBackgroundColor() const {
@@ -302,6 +326,11 @@ bool World::setPixel(World::Pos x, World::Pos y, RGB_u clr, bool alphaBlending) 
 	}
 
 	return false;
+}
+
+void World::updateUi() {
+	posUi.paint();
+	pCntUi.paint();
 }
 
 void World::recalculateCursorPosition() {

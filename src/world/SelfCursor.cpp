@@ -101,7 +101,7 @@ SelfCursor::Builder& SelfCursor::Builder::setUser(User& nUsr) {
 	return *this;
 }
 
-SelfCursor SelfCursor::Builder::build(World& w) {
-	return SelfCursor(*usr, id, spawnX, spawnY, st, tid, w,
+SelfCursor SelfCursor::Builder::build(World& tw) {
+	return SelfCursor(*usr, id, spawnX, spawnY, st, tid, tw,
 			std::move(paint), std::move(chat), canChat, canPaint);
 }

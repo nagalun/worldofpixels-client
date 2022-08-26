@@ -2,12 +2,14 @@
 
 #include <util/misc.hpp>
 #include <world/World.hpp>
+#include <Renderer.hpp>
 
 // "-2147483647" "32.000000"
 constexpr std::size_t bufSz = 11;
 
 PositionWidget::PositionWidget(World::Pos x, World::Pos y, float zoom)
-: shownMouseX(x - 1),
+: painted(0),
+  shownMouseX(x - 1),
   shownMouseY(y - 1),
   shownCameraX(x - 1),
   shownCameraY(y - 1),
@@ -19,33 +21,66 @@ PositionWidget::PositionWidget(World::Pos x, World::Pos y, float zoom)
 }
 
 void PositionWidget::setPos(World::Pos mx, World::Pos my, World::Pos camx, World::Pos camy, float camZoom) {
+	std::uint8_t shouldPaint = 0;
 	if (mx != shownMouseX) {
-		setAttribute("data-cur-x", svprintf<bufSz>("%d", mx));
 		shownMouseX = mx;
+		shouldPaint |= P_MX;
 	}
 
 	if (my != shownMouseY) {
-		setAttribute("data-cur-y", svprintf<bufSz>("%d", my));
 		shownMouseY = my;
+		shouldPaint |= P_MY;
 	}
 
 	if (camx != shownCameraX) {
-		setAttribute("data-cam-x", svprintf<bufSz>("%d", camx));
 		shownCameraX = camx;
+		shouldPaint |= P_CX;
 	}
 
 	if (camy != shownCameraY) {
-		setAttribute("data-cam-y", svprintf<bufSz>("%d", camy));
 		shownCameraY = camy;
+		shouldPaint |= P_CY;
 	}
 
 	if (camZoom != shownZoom) {
-		auto zstr = svprintf<bufSz>("%.2f", camZoom);
+		shownZoom = camZoom;
+		shouldPaint |= P_ZOOM;
+	}
+
+	if (shouldPaint != 0) {
+		painted &= ~shouldPaint;
+		Renderer::queueUiUpdateSt();
+	}
+}
+
+void PositionWidget::paint() {
+	if (!(painted & P_MX)) {
+		setAttribute("data-cur-x", svprintf<bufSz>("%d", shownMouseX));
+		painted |= P_MX;
+	}
+
+	if (!(painted & P_MY)) {
+		setAttribute("data-cur-y", svprintf<bufSz>("%d", shownMouseY));
+		painted |= P_MY;
+	}
+
+	if (!(painted & P_CX)) {
+		setAttribute("data-cam-x", svprintf<bufSz>("%d", shownCameraX));
+		painted |= P_CX;
+	}
+
+	if (!(painted & P_CY)) {
+		setAttribute("data-cam-y", svprintf<bufSz>("%d", shownCameraY));
+		painted |= P_CY;
+	}
+
+	if (!(painted & P_ZOOM)) {
+		auto zstr = svprintf<bufSz>("%.2f", shownZoom);
 		if (zstr.compare(zstr.size() - 3, std::string_view::npos, ".00") == 0) {
 			zstr.remove_suffix(3);
 		}
 
 		setAttribute("data-cam-zoom", zstr);
-		shownZoom = camZoom;
+		painted |= P_ZOOM;
 	}
 }

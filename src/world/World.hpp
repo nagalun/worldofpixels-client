@@ -63,6 +63,7 @@ public:
 
 	sz_t unloadChunks(sz_t amount = 8);
 	sz_t unloadFarChunks();
+	sz_t unloadNonVisibleNonReadyChunks();
 	sz_t unloadAllChunks();
 	bool freeMemory(bool tryHarder = false);
 
@@ -84,10 +85,13 @@ public:
 	RGB_u getPixel(World::Pos, World::Pos) const;
 	bool setPixel(World::Pos, World::Pos, RGB_u, bool alphaBlending = false);
 
+	const std::string& getName() const;
 	RGB_u getBackgroundColor() const;
 	const char * getChunkUrl(Chunk::Pos, Chunk::Pos);
 	void signalChunkUpdated(Chunk *);
 	void signalChunkUnloaded(Chunk *);
+
+	void updateUi();
 
 private:
 	float getDistanceToChunk(const Chunk&) const;

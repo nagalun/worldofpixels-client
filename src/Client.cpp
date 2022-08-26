@@ -10,6 +10,7 @@
 #include <util/emsc/jswebsockets.hpp>
 #include <util/emsc/request.hpp>
 
+#include <world/World.hpp>
 #include <JsApiProxy.hpp>
 #include <PacketDefinitions.hpp>
 
@@ -111,7 +112,7 @@ void Client::setStatus(std::string_view s) {
 }
 
 void Client::registerPacketTypes() {
-	pr.on<AuthProgress>([this] (std::string currentProcessor) {
+	pr.on<AuthProgress>([] (std::string currentProcessor) {
 		setStatus("Authenticating... (" + currentProcessor + ")");
 		std::printf("AuthProgress: %s\n", currentProcessor.c_str());
 	});

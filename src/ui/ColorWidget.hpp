@@ -18,6 +18,7 @@ class ColorWidget : public eui::Object {
 	eui::Button paletteBtn;
 	eui::Button swapBtn;
 	PaletteListWidget paletteWdg;
+	bool paletteWdgShown;
 
 public:
 	ColorWidget(ColorProvider&);

@@ -26,14 +26,20 @@ public:
 			+ Chunk::pc * Chunk::pc * sizeof(Chunk::ProtGid));
 
 private:
+	enum RenderType : u8 {
+		R_NONE = 0,
+		R_WORLD = 1,
+		R_UI = 2
+	};
+
 	World& w;
 	gl::WebGlContext ctx;
 	std::optional<ChunkRendererGlState> cRendererGl;
 	std::optional<ChunkUpdaterGlState> cUpdaterGl;
 	glm::mat4 view; // view matrix
 	glm::mat4 projection;
-	float lastRenderTime;
-	bool fixViewportOnNextFrame;
+	float lastWorldRenderTime;
+	u8 pendingRenderType;
 	u8 contextFailureCount;
 	u16 frameNum;
 
@@ -51,11 +57,14 @@ public:
 	const gl::GlContext& getGlContext() const;
 
 	void loadMissingChunks();
-	bool isChunkVisible(Chunk::Pos x, Chunk::Pos y) const;
-	bool isChunkVisible(const Chunk&) const;
+	bool isChunkVisible(Chunk::Pos x, Chunk::Pos y, float extraPxMargin = 0.f) const;
+	bool isChunkVisible(const Chunk&, float extraPxMargin = 0.f) const;
 	void chunkToUpdate(Chunk *);
 	void chunkUnloaded(Chunk *);
-	void setFixViewportOnNextFrame();
+	void queueUiUpdate();
+	void queueRerender();
+	static void queueUiUpdateSt();
+	static void queueRerenderSt();
 
 	void getScreenSize(int *w, int *h) const override;
 	void setPos(float, float) override;
@@ -67,6 +76,8 @@ private:
 	void recalculateCursorPosition() const override;
 
 	void render();
+	bool renderWorld();
+	bool renderUi();
 
 	bool setupView();
 	bool setupProjection();

@@ -84,7 +84,9 @@ CPPFLAGS += -I ./src/
 LDFLAGS  += -lGL
 
 
-.PHONY: all dbg rel static clean
+.PHONY: all dbg rel static clean .FORCE
+
+.FORCE:
 
 all: dbg
 
@@ -119,6 +121,9 @@ $(OUT_DIR)/%: $(STATIC_DIR)/%
 .SECONDEXPANSION:
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp | $$(@D)
 	$(CXX) $(CPPFLAGS) -c -o $@ $<
+
+# force build of main to update version/date, and fix cache bug when c++ code has no changes
+$(OBJ_DIR)/main.o: .FORCE
 
 $(OUT_DIR) $(patsubst %/,%,$(sort $(dir $(OBJ_FILES)))):
 	@mkdir -p $@

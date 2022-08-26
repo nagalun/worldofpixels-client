@@ -4,10 +4,14 @@
 #include <vector>
 
 #include <util/emsc/ui/Object.hpp>
+#include <util/color.hpp>
 
 #include <ui/PaletteItem.hpp>
 
+class ColorProvider;
+
 class PaletteListWidget : public eui::Object {
+	ColorProvider& clr;
 	eui::Object worldPaletteContainer;
 	eui::Object worldPaletteSummary;
 	eui::Object userPaletteContainer;
@@ -17,6 +21,8 @@ class PaletteListWidget : public eui::Object {
 	bool limitedPalettes;
 
 public:
-	PaletteListWidget();
+	PaletteListWidget(ColorProvider&);
+
+	void setPalettes(std::vector<std::vector<RGB_u>> world, std::vector<std::vector<RGB_u>> user);
 };
 

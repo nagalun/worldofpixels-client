@@ -4,7 +4,6 @@
 #include <util/net/PacketReader.hpp>
 #include <uvias/User.hpp>
 #include <world/SelfCursor.hpp>
-#include <world/World.hpp>
 #include <memory>
 #include <unordered_map>
 #include <string>
@@ -23,6 +22,7 @@ enum EConnectError {
 };
 
 class JsApiProxy;
+class World;
 
 // UBSan complains that the class is not aligned to 16-bytes
 // when constructing it with make_unique...

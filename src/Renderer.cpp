@@ -17,6 +17,7 @@
 #include <glm/gtx/string_cast.hpp>
 
 #include <Client.hpp>
+#include <JsApiProxy.hpp>
 #include <world/World.hpp>
 #include <gl/data/ChunkShader.hpp>
 
@@ -25,8 +26,8 @@ Renderer::Renderer(World& w)
   ctx("#world", "#loader"),
   view(1.0f),
   projection(1.0f),
-  lastRenderTime(ctx.getTime() / 1000.f),
-  fixViewportOnNextFrame(false),
+  lastWorldRenderTime(ctx.getTime() / 1000.f),
+  pendingRenderType(R_UI | R_WORLD),
   contextFailureCount(0),
   frameNum(0) {
 	if (!ctx.ok()) {
@@ -76,21 +77,29 @@ void Renderer::loadMissingChunks() {
 	}
 }
 
-bool Renderer::isChunkVisible(Chunk::Pos px, Chunk::Pos py) const {
+bool Renderer::isChunkVisible(Chunk::Pos px, Chunk::Pos py, float extraPxMargin) const {
 	auto s = ctx.getSize();
 
 	float x = static_cast<float>(px) * Chunk::size;
 	float y = static_cast<float>(py) * Chunk::size;
 	float czoom = getZoom();
-	float tlcx = getX() - static_cast<float>(s.w) / 2.f / czoom;
 	float tlcy = getY() - static_cast<float>(s.h) / 2.f / czoom;
+	float tlcx = getX() - static_cast<float>(s.w) / 2.f / czoom;
+	float brcy = getY() + static_cast<float>(s.h) / 2.f / czoom;
+	float brcx = getX() + static_cast<float>(s.w) / 2.f / czoom;
 
-	return x + Chunk::size > tlcx && y + Chunk::size > tlcy &&
-	       x <= tlcx + s.w / czoom && y <= tlcy + s.h / czoom;
+	extraPxMargin /= czoom;
+	tlcx -= extraPxMargin;
+	tlcy -= extraPxMargin;
+	brcx += extraPxMargin;
+	brcy += extraPxMargin;
+
+	return x + Chunk::size > tlcx && y + Chunk::size > tlcy
+	    && x <= brcx && y <= brcy;
 }
 
-bool Renderer::isChunkVisible(const Chunk& c) const {
-	return isChunkVisible(c.getX(), c.getY());
+bool Renderer::isChunkVisible(const Chunk& c, float extraPxMargin) const {
+	return isChunkVisible(c.getX(), c.getY(), extraPxMargin);
 }
 
 
@@ -99,7 +108,7 @@ void Renderer::chunkToUpdate(Chunk * c) {
 		chunksToUpdate.emplace_back(c);
 	}
 
-	ctx.resumeRendering();
+	queueRerender();
 }
 
 void Renderer::chunkUnloaded(Chunk * c) {
@@ -108,12 +117,9 @@ void Renderer::chunkUnloaded(Chunk * c) {
 		chunksToUpdate.erase(it);
 	}
 
-	ctx.resumeRendering();
+	queueRerender();
 }
 
-void Renderer::setFixViewportOnNextFrame() {
-	fixViewportOnNextFrame = true;
-}
 
 void Renderer::setPos(float x, float y) {
 	Camera::setPos(x, y);
@@ -140,7 +146,57 @@ void Renderer::recalculateCursorPosition() const {
 	w.recalculateCursorPosition();
 }
 
+void Renderer::queueUiUpdate() {
+	pendingRenderType |= R_UI;
+	ctx.resumeRendering();
+}
+
+void Renderer::queueRerender() {
+	pendingRenderType |= R_WORLD;
+	ctx.resumeRendering();
+}
+
+void Renderer::queueUiUpdateSt() {
+	Renderer * r = JsApiProxy::getRenderer();
+	if (r) {
+		r->queueUiUpdate();
+	}
+}
+
+void Renderer::queueRerenderSt() {
+	Renderer * r = JsApiProxy::getRenderer();
+	if (r) {
+		r->queueRerender();
+	}
+}
+
 void Renderer::render() {
+	u8 currentRender = pendingRenderType;
+	u8 nextRender = R_NONE;
+	pendingRenderType = R_NONE; // functions called while rendering could request re-render
+
+	if (currentRender & R_WORLD) {
+		nextRender |= renderWorld() ? R_WORLD : R_NONE;
+	}
+
+	if (currentRender & R_UI) {
+		nextRender |= renderUi() ? R_UI : R_NONE;
+	}
+
+	/* wait until the render loop does nothing to pause rendering to avoid frequent start/stopping */
+	if ((currentRender | pendingRenderType | nextRender) == R_NONE) {
+		ctx.pauseRendering();
+	}
+
+	pendingRenderType |= nextRender;
+}
+
+bool Renderer::renderUi() {
+	w.updateUi();
+	return false;
+}
+
+bool Renderer::renderWorld() {
 	using LoadState = ChunkGlState::LoadState;
 
 	auto s = ctx.getSize();
@@ -186,19 +242,24 @@ void Renderer::render() {
 	for (; tly <= bry; tly += 1.f) {
 		for (float tlx2 = tlx; tlx2 <= brx; tlx2 += 1.f) {
 			auto search = chunks.find(Chunk::key(tlx2, tly));
+			const ChunkGlState * glst = nullptr;
+			LoadState ls = LoadState::UNLOADED;
 
 			if (search == chunks.end()) {
 				if (++loadCount < 6) {
 					w.getOrLoadChunk(tlx2, tly);
 				}
 
-				continue;
-			} else if (!search->second.isReady()) {
-				++loadCount;
+			} else {
+				glst = &search->second.getGlState();
+				ls = glst->getLoadState();
+
+				if (!search->second.isReady()) {
+					++loadCount;
+				}
 			}
 
-			const ChunkGlState& glst = search->second.getGlState();
-			switch (glst.getLoadState()) {
+			switch (ls) {
 				case LoadState::TEXTURED:
 					if (progInUse != LoadState::TEXTURED) {
 						tcp.use();
@@ -208,9 +269,9 @@ void Renderer::render() {
 					}
 
 					glActiveTexture(GL_TEXTURE1);
-					glst.getProtGlTex().use(GL_TEXTURE_2D);
+					glst->getProtGlTex().use(GL_TEXTURE_2D);
 					glActiveTexture(GL_TEXTURE0);
-					glst.getPixelGlTex().use(GL_TEXTURE_2D);
+					glst->getPixelGlTex().use(GL_TEXTURE_2D);
 
 					tcp.setUOffset({tlx2 * Chunk::size, tly * Chunk::size});
 					glDrawArrays(GL_TRIANGLES, 0, cRendererGl->vertexCount());
@@ -229,6 +290,7 @@ void Renderer::render() {
 					break;
 
 				case LoadState::ERROR:
+				case LoadState::UNLOADED:
 				case LoadState::LOADING:
 					if (progInUse != LoadState::LOADING) {
 						lcp.use();
@@ -249,18 +311,16 @@ void Renderer::render() {
 		}
 	}
 
-	if (!shouldKeepRendering) {
-		ctx.pauseRendering();
-	}
+	lastWorldRenderTime = now;
 
-	lastRenderTime = now;
+	return shouldKeepRendering;
 }
 
 bool Renderer::setupView() {
 	view = glm::translate(glm::mat4(1.0f), glm::vec3(-getX(), -getY(), 0.f));
 
 	//view = glm::lookAt(eye, center, up);
-	ctx.resumeRendering();
+	queueRerender();
 	return true;
 }
 
@@ -282,7 +342,7 @@ bool Renderer::setupProjection() {
 	projection = glm::scale(projection, glm::vec3(1.f, 1.f, -1.f));
 
 	//std::puts(glm::to_string(projection).c_str());
-	ctx.resumeRendering();
+	queueRerender();
 
 	return true;
 }
@@ -348,9 +408,9 @@ bool Renderer::resetGlState() {
 
 void Renderer::delayedGlReset() {
 	if (!ctx.ok()) {
-		if (ctx.getTime() / 1000.f - lastRenderTime > 1.f && !ctx.activateRenderingContext(contextFailureCount > 4)) {
+		if (ctx.getTime() / 1000.f - lastWorldRenderTime > 1.f && !ctx.activateRenderingContext(contextFailureCount > 4)) {
 			std::printf("[Renderer] Couldn't recreate the context. (%d)\n", contextFailureCount);
-			lastRenderTime = ctx.getTime() / 1000.f;
+			lastWorldRenderTime = ctx.getTime() / 1000.f;
 			if (++contextFailureCount >= 8) {
 				std::printf("[Renderer] Giving up after 8 tries.");
 				ctx.stopRenderLoop();
@@ -377,11 +437,11 @@ void Renderer::doDelayedGlReset(void * r) {
 	static_cast<Renderer *>(r)->delayedGlReset();
 }
 
-void Renderer::getScreenSize(int *w, int *h) const {
+void Renderer::getScreenSize(int *sw, int *sh) const {
 	// use dipSize to get screen size in css pixels
 	// TODO: test if this works correctly to calculate mouse -> world coords on different dpi
 	auto s = ctx.getDipSize();
-	*w = s.w;
-	*h = s.h;
+	*sw = s.w;
+	*sh = s.h;
 }
 

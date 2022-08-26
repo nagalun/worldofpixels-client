@@ -3,6 +3,9 @@
 #include <cstdint>
 
 class Client;
+class World;
+class Renderer;
+class Camera;
 
 class JsApiProxy {
 	Client * cli;
@@ -16,6 +19,9 @@ public:
 	static JsApiProxy& getInstance();
 
 	void setClientInstance(Client *);
-	Client * getClient();
+	static Client * getClient();
+	static World * getWorld();
+	static Renderer * getRenderer();
+	static Camera * getCamera();
 };
 

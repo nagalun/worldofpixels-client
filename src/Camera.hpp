@@ -19,7 +19,7 @@ public:
 	virtual void setPos(float x, float y);
 	virtual void setZoom(float z);
 	virtual void setZoom(float z, float ox, float oy); // with non-center camera-coords origin
-	
+
 	virtual void translate(float dx, float dy);
 
 private:
