@@ -93,6 +93,10 @@ bool Client::open(std::string url, std::string_view worldToJoin) {
 	return js_ws_open(url.data(), url.size(), "OWOP", 4);
 }
 
+bool Client::reconnect() {
+	return js_ws_reconnect();
+}
+
 void Client::close() {
 	js_ws_close(4000);
 }

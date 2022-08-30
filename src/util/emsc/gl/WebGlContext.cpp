@@ -25,7 +25,8 @@ EM_JS(void, ctx_give_up, (void), {
 namespace gl {
 
 WebGlContext::WebGlContext(const char * targetCanvas, const char * targetSizeElem, bool forceWebgl1)
-: targetCanvas(targetCanvas),
+: ctxInfo(0),
+  targetCanvas(targetCanvas),
   targetSizeElem(targetSizeElem),
   sizeCache{-1, -1},
   dipSizeCache{-1, -1},
@@ -229,6 +230,10 @@ bool WebGlContext::ok() const {
 }
 
 bool WebGlContext::pauseRendering() {
+	if (!renderLoopSet) {
+		return false;
+	}
+
 	if (!renderPaused) {
 		renderPaused = true;
 		emscripten_pause_main_loop();
@@ -238,6 +243,10 @@ bool WebGlContext::pauseRendering() {
 }
 
 bool WebGlContext::resumeRendering() {
+	if (!renderLoopSet) {
+		return false;
+	}
+
 	if (renderPaused) {
 		renderPaused = false;
 		emscripten_resume_main_loop();

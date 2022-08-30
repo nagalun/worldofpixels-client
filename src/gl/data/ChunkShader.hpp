@@ -21,11 +21,11 @@ float gridMult() { \
 	vec2 line16 = mod(pixelPos, 16.0 * zoom); \
 \
 	mult -= 0.2 * float(zoom > 2.0 && (line1.x < 1.0 || line1.y < 1.0)) * min(1.0, zoom / 2.0 - 1.0); \
-	mult -= 0.2 * float(zoom > 0.25 && (line16.x < 1.0 || line16.y < 1.0)) * min(1.0, zoom / 0.25 - 1.0); \
+	mult -= 0.125 * float(zoom > 0.25 && (line16.x < 1.0 || line16.y < 1.0)) * min(1.0, zoom / 0.25 - 1.0); \
 \n\
 #endif\n\
 \
-	mult -= 0.2 * float(pixelPos.x < 1.0 || pixelPos.y < 1.0); \
+	mult -= 0.125 * float(pixelPos.x < 1.0 || pixelPos.y < 1.0); \
 \
 	return mult + (checker * (1.0 - mult)); \
 }"

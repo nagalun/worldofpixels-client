@@ -47,6 +47,7 @@ public:
 	~Client();
 
 	bool open(std::string wsUrl, std::string_view worldToJoin);
+	bool reconnect();
 	void close();
 
 	World * getWorld();

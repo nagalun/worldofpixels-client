@@ -12,6 +12,7 @@ enum EWsReadyState : std::uint8_t {
 
 extern "C" { // C++ -> JS functions
 	bool js_ws_open(const char * url, std::size_t, const char * proto = nullptr, std::size_t = 0);
+	bool js_ws_reconnect(void);
 	void js_ws_close(std::uint16_t code);
 
 	void js_ws_send(const char *, std::size_t); // sends as binary data

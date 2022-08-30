@@ -704,7 +704,7 @@ InputManager::InputManager(const char * kbTargetElement, const char * ptrTargetE
 	emscripten_set_touchmove_callback(ptrTargetElement, this, true, InputManager::handleTouchEvent);
 	emscripten_set_touchcancel_callback(ptrTargetElement, this, true, InputManager::handleTouchEvent);
 
-	emscripten_set_wheel_callback(ptrTargetElement, this, true, InputManager::handleWheelEvent);
+	emscripten_set_wheel_callback(ptrTargetElement, this, false, InputManager::handleWheelEvent);
 
 	std::printf("[InputManager] Initialized. Target elements: keyboard=%s pointer=%s\n",
 			kbTargetElement == EMSCRIPTEN_EVENT_TARGET_WINDOW ? "window" : kbTargetElement,
@@ -727,7 +727,7 @@ InputManager::~InputManager() {
 	emscripten_set_touchmove_callback(ptrTargetElement, nullptr, true, nullptr);
 	emscripten_set_touchcancel_callback(ptrTargetElement, nullptr, true, nullptr);
 
-	emscripten_set_wheel_callback(ptrTargetElement, nullptr, true, nullptr);
+	emscripten_set_wheel_callback(ptrTargetElement, nullptr, false, nullptr);
 	std::printf("[~InputManager]\n");
 }
 

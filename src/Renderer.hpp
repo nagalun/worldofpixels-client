@@ -86,7 +86,7 @@ private:
 
 	bool resizeRenderingContext();
 	void destroyGlState();
-	bool resetGlState();
+	bool resetGlState(bool unloadChunks = true);
 
 	void delayedGlReset();
 

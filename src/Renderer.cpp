@@ -40,7 +40,8 @@ Renderer::Renderer(World& w)
 		std::exit(1);
 	}
 
-	resetGlState();
+	// we can't call unloadAllChunks yet because world hasn't been fully initialized, so skip that
+	resetGlState(false);
 	setupRenderingCallbacks();
 	ctx.startRenderLoop(Renderer::doRender, this);
 
@@ -396,8 +397,11 @@ void Renderer::destroyGlState() {
 	w.unloadAllChunks();
 }
 
-bool Renderer::resetGlState() {
-	w.unloadAllChunks();
+bool Renderer::resetGlState(bool unloadChunks) {
+	if (unloadChunks) {
+		w.unloadAllChunks();
+	}
+
 	cRendererGl = ChunkRendererGlState{};
 	cUpdaterGl = ChunkUpdaterGlState{};
 

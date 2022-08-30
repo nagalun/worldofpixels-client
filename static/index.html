@@ -34,6 +34,7 @@
 			color: #fff;
 			text-shadow: -1px 0 #000, 0 1px #000, 1px 0 #000, 0 -1px #000;
 			line-height: 1;
+			color-scheme: light only;
 		}
 
 		#world {
@@ -161,20 +162,20 @@
 			}
 		});
 
+		function stopEvt(e) { // avoids sending the event to owop
+			if (e.target && e.target.id !== "world") {
+				e.stopImmediatePropagation();
+			}
+		}
+
 		// prevent scrolling zoom
 		window.addEventListener("wheel", function(e) {
+			stopEvt(e);
 			if (e.ctrlKey) {
 				e.preventDefault();
 				return false;
 			}
 		}, {passive: false});
-
-		function stopEvt(e) {
-			if (e.target && e.target.id !== "world") {
-				e.stopImmediatePropagation();
-				return;
-			}
-		}
 
 		window.addEventListener("mousedown", stopEvt, false);
 		window.addEventListener("touchstart", stopEvt, false);

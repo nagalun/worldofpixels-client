@@ -14,12 +14,13 @@ static void (*on_close)(void *, std::uint16_t) = nullptr;
 static void (*on_message)(void *, char *, std::size_t, bool) = nullptr;
 
 EM_JS(bool, js_ws_open, (const char * url, std::size_t len, const char * proto, std::size_t protoLen), {
-	'use strict';
+	"use strict";
 	if (!Module.JSWS) {
 		Module.JSWS = {
 			ws: null,
 			bufSize: 0,
-			bufPtr: -1
+			bufPtr: -1,
+			lastProto: null
 		};
 	}
 
@@ -31,25 +32,40 @@ EM_JS(bool, js_ws_open, (const char * url, std::size_t len, const char * proto, 
 		var urlstr = UTF8ToString(url, len);
 		var protostr = UTF8ToString(proto, protoLen);
 		Module.JSWS.ws = new WebSocket(urlstr, protostr);
+		Module.JSWS.lastProto = protostr;
 	} catch (e) {
-		console.log('js_ws_open:', e);
+		console.log("js_ws_open:", e);
 		return false;
 	}
 
-	Module.JSWS.ws.binaryType = 'arraybuffer';
-	Module.JSWS.ws.onopen = Module['_js_ws_call_on_open'];
-	Module.JSWS.ws.onclose = function(e) { Module['_js_ws_call_on_close'](e.code); };
+	Module.JSWS.ws.binaryType = "arraybuffer";
+	Module.JSWS.ws.onopen = Module["_js_ws_call_on_open"];
+	Module.JSWS.ws.onclose = function(e) { Module["_js_ws_call_on_close"](e.code); };
 	Module.JSWS.ws.onmessage = function(e) {
 		var data = e.data;
 		if (data.byteLength > Module.JSWS.bufSize) {
-			Module.JSWS.bufPtr = Module['_js_ws_prepare_msg_buffer'](data.byteLength);
-			Module.JSWS.bufSize = Module['HEAP32'][Module.JSWS.bufPtr / Int32Array.BYTES_PER_ELEMENT];
+			Module.JSWS.bufPtr = Module["_js_ws_prepare_msg_buffer"](data.byteLength);
+			Module.JSWS.bufSize = Module["HEAP32"][Module.JSWS.bufPtr / Int32Array.BYTES_PER_ELEMENT];
 		}
 
-		Module['HEAPU8'].set(new Uint8Array(data), Module.JSWS.bufPtr);
-		Module['_js_ws_call_on_message'](data.byteLength);
+		Module["HEAPU8"].set(new Uint8Array(data), Module.JSWS.bufPtr);
+		Module["_js_ws_call_on_message"](data.byteLength);
 	};
 
+	return true;
+});
+
+EM_JS(bool, js_ws_reconnect, (void), {
+	if (Module.JSWS && Module.JSWS.ws && Module.JSWS.ws.readyState !== WebSocket.CLOSED) {
+		return false;
+	}
+
+	var oldWs = Module.JSWS.ws;
+	Module.JSWS.ws = new WebSocket(oldWs.url, Module.JSWS.lastProto);
+	Module.JSWS.ws.binaryType = "arraybuffer";
+	Module.JSWS.ws.onopen = oldWs.onopen;
+	Module.JSWS.ws.onclose = oldWs.onclose;
+	Module.JSWS.ws.onmessage = oldWs.onmessage;
 	return true;
 });
 
@@ -58,7 +74,7 @@ EM_JS(void, js_ws_close, (std::uint16_t code), {
 });
 
 EM_JS(void, js_ws_send, (const char * buf, std::size_t len), {
-	Module.JSWS.ws.send(Module['HEAPU8'].subarray(buf, buf + len));
+	Module.JSWS.ws.send(Module["HEAPU8"].subarray(buf, buf + len));
 });
 
 EM_JS(void, js_ws_send_str, (const char * buf, std::size_t len), {

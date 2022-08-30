@@ -30,12 +30,15 @@ EM_JS(void, create_api_structure, (void), {
 
 	window["OWOP"] = Module.api = {
 		world: {
-			getName: sf('owop_api_get_world_name'),
+			getName: sf("owop_api_get_world_name"),
 			getPixel: uf("owop_api_get_pixel"),
 			setPixel: f("owop_api_set_pixel"),
 			get name() { return this.getName(); }
 		},
-		client: {},
+		client: {
+			reconnect: f("owop_api_reconnect"),
+			get ws() { return Module.JSWS.ws; }
+		},
 		chat: {},
 		player: {},
 		camera: {
@@ -82,6 +85,20 @@ EMSCRIPTEN_KEEPALIVE
 u32 owop_api_get_pixel(World::Pos x, World::Pos y) {
 	World * w = JsApiProxy::getWorld();
 	return w ? w->getPixel(x, y).rgb : 0;
+}
+
+/******
+ * CLIENT API
+ ******/
+
+EMSCRIPTEN_KEEPALIVE
+bool owop_api_reconnect(void) {
+	Client * c = JsApiProxy::getClient();
+	if (!c) {
+		return false;
+	}
+
+	return c->reconnect();
 }
 
 /******
