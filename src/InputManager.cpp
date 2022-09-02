@@ -260,7 +260,7 @@ InputInfo::Pointer::Pointer()
   y(0),
   btns(P_NONE),
   type(InputInfo::Pointer::MOUSE),
-  active(false) { }
+  present(false) { }
 
 int InputInfo::Pointer::getX() const { return x; }
 int InputInfo::Pointer::getY() const { return y; }
@@ -269,7 +269,9 @@ int InputInfo::Pointer::getDy() const { return y - lastY; }
 int InputInfo::Pointer::getLastX() const { return lastX; }
 int InputInfo::Pointer::getLastY() const { return lastY; }
 EPointerButtons InputInfo::Pointer::getButtons() const { return btns; }
-bool InputInfo::Pointer::isActive() const { return active; }
+InputInfo::Pointer::EType InputInfo::Pointer::getType() const { return type; }
+bool InputInfo::Pointer::isPresent() const { return present; }
+bool InputInfo::Pointer::isActive() const { return btns != P_NONE; }
 
 void InputInfo::Pointer::finishMoving() {
 	lastX = x;
@@ -282,7 +284,7 @@ void InputInfo::Pointer::set(int nx, int ny, EPointerButtons nbtns, EType ntype)
 }
 
 void InputInfo::Pointer::set(int nx, int ny, EType ntype) {
-	if (active) {
+	if (present) {
 		lastX = x;
 		lastY = y;
 	} else {
@@ -294,18 +296,21 @@ void InputInfo::Pointer::set(int nx, int ny, EType ntype) {
 	y = ny;
 	type = ntype;
 
-	active = true;
+	present = true;
 }
 
 void InputInfo::Pointer::set(EPointerButtons nbtns, EType ntype) {
 	btns = nbtns;
 	type = ntype;
 
-	active = true;
+	present = true;
 }
 
-void InputInfo::Pointer::setActive(bool s) {
-	active = s;
+void InputInfo::Pointer::setPresent(bool s) {
+	present = s;
+	if (!s) {
+		btns = P_NONE;
+	}
 }
 
 
@@ -336,7 +341,7 @@ int InputInfo::getLastX() const { return updatedPointer->getLastX(); }
 int InputInfo::getLastY() const { return updatedPointer->getLastY(); }
 
 float InputInfo::getMidX() const {
-	const auto& p = getActivePointers();
+	const auto& p = getPointers();
 
 	if (p.size() == 0) {
 		return 0.f;
@@ -348,7 +353,7 @@ float InputInfo::getMidX() const {
 }
 
 float InputInfo::getMidY() const {
-	const auto& p = getActivePointers();
+	const auto& p = getPointers();
 
 	if (p.size() == 0) {
 		return 0.f;
@@ -372,7 +377,7 @@ float InputInfo::getMidDy() const {
 }
 
 float InputInfo::getLastMidX() const {
-	const auto& p = getActivePointers();
+	const auto& p = getPointers();
 
 	if (p.size() == 0) {
 		return 0.f;
@@ -384,7 +389,7 @@ float InputInfo::getLastMidX() const {
 }
 
 float InputInfo::getLastMidY() const {
-	const auto& p = getActivePointers();
+	const auto& p = getPointers();
 
 	if (p.size() == 0) {
 		return 0.f;
@@ -396,40 +401,52 @@ float InputInfo::getLastMidY() const {
 }
 
 EPointerButtons InputInfo::getButtons() const { return updatedPointer->getButtons(); }
+InputInfo::Pointer::EType InputInfo::getType() const { return updatedPointer->getType(); }
 
-int InputInfo::getNumActivePointers() const {
-	return getActivePointers().size();
+int InputInfo::getNumPointers() const {
+	return getPointers().size();
 }
 
-const std::vector<InputInfo::Pointer*>& InputInfo::getActivePointers() const {
+int InputInfo::getNumActivePointers() const {
+	int num = 0;
+	for (InputInfo::Pointer& p : pointers) {
+		num += p.isActive();
+	}
+
+	return num;
+}
+
+const std::vector<InputInfo::Pointer*>& InputInfo::getPointers() const {
 	if (ptrListOutdated) {
-		activePointers.clear();
+		pointersPresent.clear();
 
 		for (InputInfo::Pointer& p : pointers) {
 			if (p.isActive()) {
-				activePointers.push_back(&p);
+				pointersPresent.insert(pointersPresent.begin(), &p);
+			} else if (p.isPresent()) {
+				pointersPresent.push_back(&p);
 			}
 		}
 
 		ptrListOutdated = false;
 	}
 
-	return activePointers;
+	return pointersPresent;
 }
 
 const InputInfo::Pointer& InputInfo::getPointer(int id) const {
-	return pointers[id % pointers.size()];
+	return id < 0 ? *updatedPointer : pointers[id % pointers.size()];
 }
 
 InputInfo::Pointer& InputInfo::getPointer(int id) {
 	ptrListOutdated = true;
-	InputInfo::Pointer * p = &pointers[id % pointers.size()];
+	InputInfo::Pointer * p = id < 0 ? updatedPointer : &pointers[id % pointers.size()];
 	updatedPointer = p;
 	return *p;
 }
 
 void InputInfo::finishMoving() {
-	for (InputInfo::Pointer* p : getActivePointers()) {
+	for (InputInfo::Pointer* p : getPointers()) {
 		p->finishMoving();
 	}
 }
@@ -553,13 +570,15 @@ bool InputAdapter::matchDown(const T key, const InputInfo& ii) {
 
 		// bug: if the action's keybind changes, onrelease may not be fired
 		if (const Keybind * k = (*it)->getMatch(ii.getModifiers(), key)) {
-			if (std::find(activeActions.begin(), activeActions.end(), *it) != activeActions.end()
+			constexpr bool eventIsPointer = std::is_same_v<T, EPointerButtons>;
+			bool isActive = std::find(activeActions.begin(), activeActions.end(), *it) != activeActions.end();
+			if ((isActive && !eventIsPointer)
 					|| (((*it)->getTriggers() & T_ONPRESS) && !(**it)(T_ONPRESS, ii))) {
 				continue;
 			}
 
-			if ((*it)->getTriggers() & (T_ONHOLD | T_ONRELEASE | T_ONMOVE
-					| T_ONCANCEL | T_ONWHEEL | T_ONLEAVE)) {
+			if (((*it)->getTriggers() & (T_ONHOLD | T_ONRELEASE | T_ONMOVE
+					| T_ONCANCEL | T_ONWHEEL | T_ONLEAVE)) && !isActive) {
 				activeActions.emplace_back(*it);
 			}
 
@@ -581,6 +600,7 @@ void InputAdapter::matchEvent(EActionTriggers trigger, const InputInfo& ii) cons
 	for (auto it = actions.begin(); it != actions.end(); it++) {
 		// actions that don't register ONPRESS always get events like move, wheel, etc, except hold
 		if ((!((*it)->getTriggers() & T_ONPRESS) && trigger != T_ONHOLD)
+				|| trigger == T_ONENTER // ONENTER is always sent
 				|| std::find(activeActions.begin(), activeActions.end(), *it) != activeActions.end()) {
 			(**it)(trigger, ii);
 		}
@@ -590,6 +610,7 @@ void InputAdapter::matchEvent(EActionTriggers trigger, const InputInfo& ii) cons
 template<typename T>
 bool InputAdapter::matchUp(const T releasedKey, EActionTriggers lastTrigger,
 		const InputInfo& ii) {
+	constexpr bool eventIsPointer = std::is_same_v<T, EPointerButtons>;
 	bool consumed = false;
 
 	for (auto it = linkedAdapters.begin(); it != linkedAdapters.end(); ++it) {
@@ -603,11 +624,14 @@ bool InputAdapter::matchUp(const T releasedKey, EActionTriggers lastTrigger,
 				(**it)(T_ONRELEASE, ii);
 			}
 
-			it = activeActions.erase(it);
 			consumed = true;
-		} else {
-			++it;
+			if (!eventIsPointer || ii.getNumActivePointers() == 0) {
+				it = activeActions.erase(it);
+				continue;
+			}
 		}
+
+		++it;
 	}
 
 	return consumed;
@@ -758,7 +782,7 @@ bool InputManager::keyUp(const char * key) {
 	return handled;
 }
 
-bool InputManager::pointerDown(int id, Ptr::EType t, EPointerButtons changed, EPointerButtons buttons) {
+bool InputManager::pointerDown(int id, Ptr::EType t, EPointerButtons changed, EPointerButtons buttons, bool fireEvent) {
 	std::printf("[InputManager] MDOWN: id=%d type=%c mods=%d changes=%d buttons=%d\n",
 			id, t == Ptr::MOUSE ? 'M' : 'T', InputInfo::getModifiers(), changed, buttons);
 
@@ -766,40 +790,53 @@ bool InputManager::pointerDown(int id, Ptr::EType t, EPointerButtons changed, EP
 	InputInfo::getPointer(id).set(buttons, t);
 
 	lastTrigger = T_ONPRESS;
-	matchDown(changed, *this);
+	if (fireEvent) {
+		matchDown(changed, *this);
+	}
 
 	return false;
 }
 
-bool InputManager::pointerUp(int id, Ptr::EType t, EPointerButtons changed, EPointerButtons buttons) {
+bool InputManager::pointerUp(int id, Ptr::EType t, EPointerButtons changed, EPointerButtons buttons, bool fireEvent) {
 	std::printf("[InputManager] MUP: id=%d type=%c mods=%d changes=%d buttons=%d\n",
 			id, t == Ptr::MOUSE ? 'M' : 'T', InputInfo::getModifiers(), changed, buttons);
 
 	InputInfo::finishMoving();
 	InputInfo::getPointer(id).set(buttons, t);
 
-	matchUp(changed, lastTrigger, *this);
+	if (fireEvent) {
+		matchUp(changed, lastTrigger, *this);
+	}
 
 	return false;
 }
 
-void InputManager::pointerMove(int id, Ptr::EType t, int x, int y) {
+void InputManager::pointerMove(int id, Ptr::EType t, int x, int y, bool fireEvent) {
 	//std::printf("[InputManager] MMOVE: x=%d y=%d\n", x, y);
 	InputInfo::getPointer(id).set(x, y, t);
-	matchEvent(T_ONMOVE, *this);
+	if (fireEvent) {
+		matchEvent(T_ONMOVE, *this);
+	}
 }
 
-void InputManager::pointerCancel(int id, Ptr::EType t) {
-	matchEvent(T_ONCANCEL, *this);
+void InputManager::pointerCancel(int id, Ptr::EType t, bool fireEvent) {
+	if (fireEvent) {
+		matchEvent(T_ONCANCEL, *this);
+	}
 }
 
-void InputManager::pointerEnter(int id, Ptr::EType t) {
-	InputInfo::getPointer(id).setActive(true);
+void InputManager::pointerEnter(int id, Ptr::EType t, bool fireEvent) {
+	InputInfo::getPointer(id).setPresent(true);
+	if (fireEvent) {
+		matchEvent(T_ONENTER, *this);
+	}
 }
 
-void InputManager::pointerLeave(int id, Ptr::EType t) {
-	InputInfo::getPointer(id).setActive(false);
-	matchEvent(T_ONLEAVE, *this);
+void InputManager::pointerLeave(int id, Ptr::EType t, bool fireEvent) {
+	InputInfo::getPointer(id).setPresent(false);
+	if (fireEvent) {
+		matchEvent(T_ONLEAVE, *this);
+	}
 }
 
 bool InputManager::wheel(double dx, double dy, int type) {
@@ -907,8 +944,10 @@ int InputManager::handleMouseEvent(int type, const EmscriptenMouseEvent * ev, vo
 int InputManager::handleTouchEvent(int type, const EmscriptenTouchEvent * ev, void * data) {
 	InputManager * im = static_cast<InputManager *>(data);
 
+	im->finishMoving();
 	im->setModifiers(ev->ctrlKey, ev->altKey, ev->shiftKey, ev->metaKey);
 	bool cancel = true;
+	u8 eventsToTrigger = 0;
 
 	for (int i = 0; i < ev->numTouches; i++) {
 		const EmscriptenTouchPoint& tp = ev->touches[i];
@@ -919,25 +958,52 @@ int InputManager::handleTouchEvent(int type, const EmscriptenTouchEvent * ev, vo
 
 		switch (type) {
 			case EMSCRIPTEN_EVENT_TOUCHSTART:
-				im->pointerMove(tp.identifier, Ptr::TOUCH, tp.clientX, tp.clientY);
-				im->pointerEnter(tp.identifier, Ptr::TOUCH);
-				im->pointerDown(tp.identifier, Ptr::TOUCH, P_MPRIMARY, P_MPRIMARY);
-				break;
-
-			case EMSCRIPTEN_EVENT_TOUCHEND:
-				im->pointerUp(tp.identifier, Ptr::TOUCH, P_MPRIMARY, P_NONE);
-				im->pointerLeave(tp.identifier, Ptr::TOUCH);
-				break;
-
-			case EMSCRIPTEN_EVENT_TOUCHMOVE:
-				im->pointerMove(tp.identifier, Ptr::TOUCH, tp.clientX, tp.clientY);
+				im->pointerMove(tp.identifier, Ptr::TOUCH, tp.clientX, tp.clientY, false);
+				im->pointerEnter(tp.identifier, Ptr::TOUCH, false);
+				im->pointerDown(tp.identifier, Ptr::TOUCH, P_MPRIMARY, P_MPRIMARY, false);
+				eventsToTrigger |= T_ONENTER | T_ONPRESS;
 				break;
 
 			case EMSCRIPTEN_EVENT_TOUCHCANCEL:
-				im->pointerCancel(tp.identifier, Ptr::TOUCH);
+				im->pointerCancel(tp.identifier, Ptr::TOUCH, false);
+				eventsToTrigger |= T_ONCANCEL;
 				cancel = false;
+				[[fallthrough]];
+			case EMSCRIPTEN_EVENT_TOUCHEND:
+				im->pointerUp(tp.identifier, Ptr::TOUCH, P_MPRIMARY, P_NONE, false);
+				im->pointerLeave(tp.identifier, Ptr::TOUCH, false);
+				eventsToTrigger |= T_ONRELEASE | T_ONLEAVE;
+				break;
+
+			case EMSCRIPTEN_EVENT_TOUCHMOVE:
+				im->pointerMove(tp.identifier, Ptr::TOUCH, tp.clientX, tp.clientY, false);
+				eventsToTrigger |= T_ONMOVE;
 				break;
 		}
+	}
+
+	if (eventsToTrigger & T_ONENTER) {
+		im->matchEvent(T_ONENTER, *im);
+	}
+
+	if (eventsToTrigger & T_ONPRESS) {
+		im->matchDown(P_MPRIMARY, *im);
+	}
+
+	if (eventsToTrigger & T_ONMOVE) {
+		im->matchEvent(T_ONMOVE, *im);
+	}
+
+	if (eventsToTrigger & T_ONCANCEL) {
+		im->matchEvent(T_ONCANCEL, *im);
+	}
+
+	if (eventsToTrigger & T_ONRELEASE) {
+		im->matchUp(P_MPRIMARY, im->lastTrigger, *im);
+	}
+
+	if (eventsToTrigger & T_ONLEAVE) {
+		im->matchEvent(T_ONLEAVE, *im);
 	}
 
 	return cancel;

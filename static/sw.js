@@ -1,15 +1,26 @@
 "use strict";
 
+var owopVersion = `OWOP_VERSION`;
 #ifdef DEBUG
-var cacheVersion = `OWOP_VERSION-dbg`;
+var cacheVersion = owopVersion + "-dbg";
 #else
-var cacheVersion = `OWOP_VERSION`;
+var cacheVersion = owopVersion;
 #endif
 
 var fileList =
 `OWOP_SCRIPT_PATH
 #include <static_files.txt>
-OWOP_WASM_PATH`.split("\n");
+OWOP_WASM_PATH`.split("\n").map(function(e) {
+	if (e.indexOf(owopVersion) !== -1) {
+		return e;
+	}
+
+	if (e.endsWith(".js") || e.endsWith(".css") || e.endsWith(".webmanifest")) {
+		return e + "?" + owopVersion;
+	}
+
+	return e;
+});
 
 async function sendMsg(msg) {
 	var clients = await self.clients.matchAll() || [];

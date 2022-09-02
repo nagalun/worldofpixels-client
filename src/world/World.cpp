@@ -29,7 +29,7 @@ World::World(InputAdapter& base, std::string name, std::unique_ptr<SelfCursor::B
   toolMan(*this, aWorld),
   toolWin(toolMan),
   posUi(this->me.getX(), this->me.getY(), r.getZoom()),
-  iMoveCursor(aWorld, "Move cursor", T_ONMOVE),
+  iMoveCursor(aWorld, "Move cursor", T_ONENTER | T_ONMOVE | T_ONLEAVE),
   iPrintCoords(aWorld, "Print Coordinates"),
   iRoundCoords(aWorld, "Round Coordinates"),
   tickNum(0),
@@ -338,7 +338,7 @@ void World::recalculateCursorPosition() {
 }
 
 void World::recalculateCursorPosition(const InputInfo& ii) {
-	if (ii.getNumActivePointers() == 0) {
+	if (ii.getNumPointers() == 0) {
 		return;
 	}
 

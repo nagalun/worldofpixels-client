@@ -137,6 +137,17 @@
 	background-position: -96px 0px;
 }
 
+.owop-tools .tool[data-tool="Zoom"] {
+	display: none;
+}
+
+/* only show zoom tool if user has a mouse or precise pointing device */
+@media (any-pointer:fine) {
+	.owop-tools .tool[data-tool="Zoom"] {
+		display: initial;
+	}
+}
+
 /* COLOR WIDGET */
 
 .owop-clr-ui {

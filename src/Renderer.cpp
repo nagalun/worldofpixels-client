@@ -130,13 +130,13 @@ void Renderer::setPos(float x, float y) {
 void Renderer::setZoom(float z) {
 	Camera::setZoom(z);
 	setupProjection();
-	std::printf("[Renderer] Zoom: %f\n", getZoom());
+	//std::printf("[Renderer] Zoom: %f\n", getZoom());
 }
 
 void Renderer::setZoom(float z, float ox, float oy) {
 	Camera::setZoom(z, ox, oy);
 	setupProjection();
-	std::printf("[Renderer] Zoom: %f\n", getZoom());
+	//std::printf("[Renderer] Zoom: %f\n", getZoom());
 }
 
 void Renderer::translate(float dx, float dy) {

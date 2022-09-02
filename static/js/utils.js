@@ -96,7 +96,7 @@ function enableAutoRefreshClient() {
 			console.log(m.data);
 			clearTimeout(to);
 			to = setTimeout(function() {
-				if (window.SW && window.SW.update) {
+				if (window.SW && window.SW.active && window.SW.update) {
 					window.SW.update();
 				} else {
 					location.reload(true);

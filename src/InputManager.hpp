@@ -30,7 +30,7 @@
 // trigger an action bound as F1 and another bound with MCLICK1, unless
 // there is already a mixed binding listening to F1 + MCLICK1.
 
-// guarantee balance of PRESS/RELEASE calls, if listening on both
+// guarantee balance of PRESS/RELEASE calls, if listening on both (not for touch pointers due to multiple fingers...)
 
 // examples:
 
@@ -97,7 +97,8 @@ enum EActionTriggers : u8 {
 
 	T_ONWHEEL   = 16,
 	T_ONMOVE    = 32, // pointer move
-	T_ONLEAVE   = 64  // pointer left screen
+	T_ONENTER   = 64,  // new pointer entered screen
+	T_ONLEAVE   = 128  // pointer left screen
 };
 
 class Keybind {
@@ -201,7 +202,7 @@ public:
 		int y;
 		EPointerButtons btns;
 		EType type;
-		bool active;
+		bool present;
 
 	public:
 		Pointer();
@@ -213,19 +214,21 @@ public:
 		int getLastX() const;
 		int getLastY() const;
 		EPointerButtons getButtons() const;
+		EType getType() const;
+		bool isPresent() const;
 		bool isActive() const;
 		void finishMoving();
 		void set(int x, int y, EPointerButtons, EType);
 		void set(int x, int y, EType);
 		void set(EPointerButtons, EType);
-		void setActive(bool);
+		void setPresent(bool);
 	};
 
 private:
 	double wheelDx;
 	double wheelDy;
 	mutable std::array<Pointer, 8> pointers;
-	mutable std::vector<Pointer *> activePointers;
+	mutable std::vector<Pointer *> pointersPresent;
 	Pointer * updatedPointer;
 	EKeyModifiers currentModifiers;
 	mutable bool ptrListOutdated;
@@ -251,13 +254,16 @@ public:
 	float getLastMidX() const;
 	float getLastMidY() const;
 	EPointerButtons getButtons() const;
+	Pointer::EType getType() const;
 
-	int getNumActivePointers() const;
-	const std::vector<Pointer *>& getActivePointers() const;
-	const Pointer& getPointer(int) const;
+	int getNumPointers() const; // pointers inside viewport (present)
+	int getNumActivePointers() const; // pointers with any pressed buttons (active)
+	const std::vector<Pointer *>& getPointers() const; // active pointers ordered before present
+	// not specifying id returns last updated pointer
+	const Pointer& getPointer(int id = -1) const;
 
 protected:
-	Pointer& getPointer(int);
+	Pointer& getPointer(int id = -1);
 	void finishMoving();
 	void setModifiers(EKeyModifiers);
 	void setWheel(double, double);
@@ -344,12 +350,12 @@ public:
 	bool keyDown(const char * key);
 	bool keyUp(const char * key);
 
-	bool pointerDown(int id, Ptr::EType, EPointerButtons changed, EPointerButtons buttons);
-	bool pointerUp(int id, Ptr::EType, EPointerButtons changed, EPointerButtons buttons);
-	void pointerMove(int id, Ptr::EType, int x, int y);
-	void pointerCancel(int id, Ptr::EType);
-	void pointerEnter(int id, Ptr::EType);
-	void pointerLeave(int id, Ptr::EType);
+	bool pointerDown(int id, Ptr::EType, EPointerButtons changed, EPointerButtons buttons, bool fireEvent = true);
+	bool pointerUp(int id, Ptr::EType, EPointerButtons changed, EPointerButtons buttons, bool fireEvent = true);
+	void pointerMove(int id, Ptr::EType, int x, int y, bool fireEvent = true);
+	void pointerCancel(int id, Ptr::EType, bool fireEvent = true);
+	void pointerEnter(int id, Ptr::EType, bool fireEvent = true);
+	void pointerLeave(int id, Ptr::EType, bool fireEvent = true);
 
 	bool wheel(double dx, double dy, int type);
 
