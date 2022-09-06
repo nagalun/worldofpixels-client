@@ -5,6 +5,9 @@ class Camera {
 	float x;
 	float y;
 	float zoom;
+	float momentumDx;
+	float momentumDy;
+	float momentumStartTs;
 
 public:
 	Camera();
@@ -21,6 +24,10 @@ public:
 	virtual void setZoom(float z, float ox, float oy); // with non-center camera-coords origin
 
 	virtual void translate(float dx, float dy);
+	virtual void setMomentum(float dx, float dy);
+
+protected:
+	bool applyMomentum(float now, float dt);
 
 private:
 	virtual void recalculateCursorPosition() const = 0;

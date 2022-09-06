@@ -80,6 +80,7 @@
 		#loader.ok, #game-data {
 			opacity: 0;
 			visibility: hidden;
+			pointer-events: none;
 		}
 
 		#game-data {
@@ -169,7 +170,7 @@
 		}
 
 		// prevent scrolling zoom
-		window.addEventListener("wheel", function(e) {
+		document.addEventListener("wheel", function(e) {
 			stopEvt(e);
 			if (e.ctrlKey) {
 				e.preventDefault();
@@ -177,9 +178,9 @@
 			}
 		}, {passive: false});
 
-		window.addEventListener("mousedown", stopEvt, false);
-		window.addEventListener("touchstart", stopEvt, false);
-		window.addEventListener("touchend", stopEvt, false);
+		document.addEventListener("mousedown", stopEvt, false);
+		document.addEventListener("touchstart", stopEvt, false);
+		document.addEventListener("touchend", stopEvt, false);
 
 		if (navigator.serviceWorker) {
 			navigator.serviceWorker.register("/sw.js")

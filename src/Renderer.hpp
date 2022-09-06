@@ -38,7 +38,7 @@ private:
 	std::optional<ChunkUpdaterGlState> cUpdaterGl;
 	glm::mat4 view; // view matrix
 	glm::mat4 projection;
-	float lastWorldRenderTime;
+	float lastRenderTime;
 	u8 pendingRenderType;
 	u8 contextFailureCount;
 	u16 frameNum;
@@ -71,13 +71,15 @@ public:
 	void setZoom(float) override;
 	void setZoom(float z, float ox, float oy) override;
 	void translate(float, float) override;
+	void setMomentum(float, float) override;
 
 private:
 	void recalculateCursorPosition() const override;
 
 	void render();
-	bool renderWorld();
-	bool renderUi();
+	u8 preRenderUpdates(float now, float dt);
+	bool renderWorld(float now, float dt);
+	bool renderUi(float now, float dt);
 
 	bool setupView();
 	bool setupProjection();

@@ -29,7 +29,7 @@ World::World(InputAdapter& base, std::string name, std::unique_ptr<SelfCursor::B
   toolMan(*this, aWorld),
   toolWin(toolMan),
   posUi(this->me.getX(), this->me.getY(), r.getZoom()),
-  iMoveCursor(aWorld, "Move cursor", T_ONENTER | T_ONMOVE | T_ONLEAVE),
+  iMoveCursor(aWorld, "Move cursor", T_ONENTER | T_ONPRESS | T_ONMOVE | T_ONWHEEL | T_ONLEAVE | T_OPT_ALWAYS),
   iPrintCoords(aWorld, "Print Coordinates"),
   iRoundCoords(aWorld, "Round Coordinates"),
   tickNum(0),
@@ -38,6 +38,7 @@ World::World(InputAdapter& base, std::string name, std::unique_ptr<SelfCursor::B
 	u32 cssBgClr = bswap_32(bgClr.rgb);
 	eui_root_css_property_set("--bg-clr", svprintf<bufSz>("#%08X", cssBgClr));
 
+	iMoveCursor.setDefaultKeybind(Keybind::ANY_PTR_BTN);
 	iMoveCursor.setCb([this] (ImAction::Event& ev, const InputInfo& ii) {
 		recalculateCursorPosition(ii);
 	});
@@ -338,10 +339,6 @@ void World::recalculateCursorPosition() {
 }
 
 void World::recalculateCursorPosition(const InputInfo& ii) {
-	if (ii.getNumPointers() == 0) {
-		return;
-	}
-
 	float wx, wy;
 	float mx = ii.getMidX();
 	float my = ii.getMidY();
@@ -350,4 +347,5 @@ void World::recalculateCursorPosition(const InputInfo& ii) {
 
 	const Camera& cam = getCamera();
 	posUi.setPos(std::floor(wx), std::floor(wy), cam.getX(), cam.getY(), cam.getZoom());
+	r.queueUiUpdate();
 }

@@ -2,12 +2,16 @@
 
 #include <cstdio>
 #include <cmath>
+#include <chrono>
 
 #include <InputManager.hpp>
 #include <tools/ToolManager.hpp>
 #include <world/World.hpp>
 #include <world/SelfCursor.hpp>
 #include <Camera.hpp>
+
+#include <glm/geometric.hpp>
+#include <glm/vec2.hpp>
 
 struct MoveTool::Keybinds {
 	ImAction iSelectTool;
@@ -26,8 +30,8 @@ struct MoveTool::Keybinds {
 	  iCamLeft(ia, "Camera ←", T_ONHOLD),
 	  iCamRight(ia, "Camera →", T_ONHOLD),
 	  iCamPanWh(ia, "Pan Camera Wheel", T_ONWHEEL),
-	  iCamPan(ia, "Pan Camera", T_ONPRESS | T_ONMOVE),
-	  iCamPanGl(ia, "Pan Camera (Global)", T_ONPRESS | T_ONMOVE) {
+	  iCamPan(ia, "Pan Camera", T_ONPRESS | T_ONMOVE | T_ONCANCEL | T_ONRELEASE),
+	  iCamPanGl(ia, "Pan Camera (Global)", T_ONPRESS | T_ONMOVE | T_ONCANCEL | T_ONRELEASE) {
 
 		iSelectTool.setDefaultKeybind("V");
 
@@ -81,18 +85,25 @@ MoveTool::MoveTool(std::tuple<ToolManager&, InputAdapter&> params)
 
 	const auto panCb = [
 		&,
-		lastDist{0.f}
-	] (auto& ev, const auto& ii) mutable {
-//		using EType = InputInfo::Pointer::EType;
-//		if (ii.getType() != EType::TOUCH) {
-//			ev.reject();
-//			return;
-//		}
+		lastDist{0.f},
+		lastMoveTime{0.0},
+		vel{glm::vec2{0.f, 0.f}}
+	] (auto& ev, const InputInfo& ii) mutable {
+		using EType = InputInfo::Pointer::EType;
 
+		const float momentumSpeedMult = 142.f; // not sure if this should change depending on something (screen size?)
+		auto moveTime = ii.getTimestamp();
 		const auto& po = ii.getPointers();
+		int numActivePtrs = ii.getNumActivePointers();
 
-		if (ii.getNumActivePointers() > 1) {
+		if (ev.getActivationType() & (T_ONPRESS | T_ONCANCEL)) {
+			c.setMomentum(0.f, 0.f);
+			vel = {0.f, 0.f};
+		}
+
+		if (numActivePtrs > 1) {
 			float dist = std::sqrt(std::pow(po[1]->getX() - po[0]->getX(), 2.f) + std::pow(po[1]->getY() - po[0]->getY(), 2.f));
+			dist = std::max(dist, 0.05f);
 			if (ev.getActivationType() == T_ONPRESS) {
 				lastDist = dist;
 				return;
@@ -106,6 +117,28 @@ MoveTool::MoveTool(std::tuple<ToolManager&, InputAdapter&> params)
 			-ii.getMidDx() / c.getZoom(),
 			-ii.getMidDy() / c.getZoom()
 		);
+
+		if (ev.getActivationType() == T_ONRELEASE && ii.getType() == EType::TOUCH
+				&& numActivePtrs == 0 && (moveTime - lastMoveTime) < 25.0) {
+			glm::vec2 zVel = vel / c.getZoom() * momentumSpeedMult;
+			c.setMomentum(-zVel.x, -zVel.y);
+		}
+
+		// calculate velocity
+		if (ev.getActivationType() == T_ONMOVE) {
+			float dur = moveTime - lastMoveTime;
+			dur = std::max(dur, 2.f);
+			glm::vec2 lastVel = vel;
+			vel = glm::vec2{ii.getMidDx(), ii.getMidDy()} / dur;
+			vel = (vel + lastVel) / 2.f; // average
+
+			float velLength = glm::length(vel);
+			if (velLength != 0.f) { // don't normalize a zero-vector
+				vel = glm::normalize(vel) * std::min(velLength, 20.f); // limit max speed
+			}
+		}
+
+		lastMoveTime = moveTime;
 	};
 
 	kb->iCamPan.setCb(panCb);

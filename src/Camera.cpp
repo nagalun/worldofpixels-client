@@ -2,11 +2,15 @@
 
 #include <cmath>
 #include <cstdio>
+#include <chrono>
 
 Camera::Camera()
 : x(0.f),
   y(0.f),
-  zoom(16.f) { }
+  zoom(16.f),
+  momentumDx(0.f),
+  momentumDy(0.f),
+  momentumStartTs(0.f) { }
 
 Camera::~Camera() { }
 
@@ -74,3 +78,45 @@ void Camera::translate(float dx, float dy) {
 	setPos(x + dx, y + dy);
 }
 
+void Camera::setMomentum(float dx, float dy) {
+	using namespace std::chrono;
+	using fmillis = duration<float, std::milli>;
+	momentumDx = dx;
+	momentumDy = dy;
+	if (momentumDx != 0.f || momentumDy != 0.f) {
+		momentumStartTs = duration_cast<fmillis>(steady_clock::now().time_since_epoch()).count();
+	}
+}
+
+bool Camera::applyMomentum(float now, float dt) {
+	const float timeConstantMs = 230.f;// -(1000.0f / 60.0f) / std::log(0.93f);
+
+	if (momentumDx == 0.f && momentumDy == 0.f) {
+		return false;
+	}
+
+	now *= 1000.f;
+	dt *= 1000.f;
+
+	float elapsedMs = now - momentumStartTs;
+	float curExp = std::exp(-elapsedMs / timeConstantMs);
+	float lastExp = std::exp(-(elapsedMs - dt) / timeConstantMs);
+
+	float curDx = momentumDx * curExp;
+	float curDy = momentumDy * curExp;
+	float lastDx = momentumDx * lastExp;
+	float lastDy = momentumDy * lastExp;
+	float diffDx = lastDx - curDx;
+	float diffDy = lastDy - curDy;
+
+	translate(diffDx, diffDy);
+
+	// stop when remaining movement difference is less than a screen pixel
+	if (std::abs(curDx) + std::abs(curDy) < 1.f / zoom) {
+		momentumDx = 0.f;
+		momentumDy = 0.f;
+		momentumStartTs = 0.f;
+	}
+
+	return momentumDx != 0.f || momentumDy != 0.f;
+}

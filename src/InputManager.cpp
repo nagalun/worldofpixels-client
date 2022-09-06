@@ -92,15 +92,15 @@ bool Keybind::looseMatch(EKeyModifiers m, EPointerButtons btn) const {
 			break;
 	}
 
-	return (m & mods) == mods && button.size() == 6 && button[0] == match;
+	return (m & mods) == mods && (button == ANY_PTR_BTN || (button.size() == 6 && button[0] == match));
 }
 
 bool Keybind::looseMatch(EKeyModifiers m, const char * key) const {
-	return (m & mods) == mods && key == button;
+	return (m & mods) == mods && (button == ANY_KB_BTN || key == button);
 }
 
 bool Keybind::looseMatch(EKeyModifiers m, const std::string& key) const {
-	return (m & mods) == mods && key == button;
+	return (m & mods) == mods && (button == ANY_KB_BTN || key == button);
 }
 
 // always strict checking
@@ -133,7 +133,7 @@ void ImAction::Event::reject() {
 	rejected = true;
 }
 
-ImAction::ImAction(InputAdapter& adapter, std::string name, u8 trg,
+ImAction::ImAction(InputAdapter& adapter, std::string name, u32 trg,
 	std::function<void(ImAction::Event&, const InputInfo&)> cb)
 : name(std::move(name)),
   cb(std::move(cb)),
@@ -141,10 +141,10 @@ ImAction::ImAction(InputAdapter& adapter, std::string name, u8 trg,
   enabled(true),
   bindingsChanged(false),
   trg((EActionTriggers)trg) {
-  	if (trg & T_ONHOLD) {
-  		// ONHOLD implies ONPRESS, either remove this or add a short delay to receive ONHOLD events
-  		this->trg = (EActionTriggers)(trg | T_ONPRESS);
-  	}
+	if (trg & T_ONHOLD) {
+		// ONHOLD implies ONPRESS, either remove this or add a short delay to receive ONHOLD events
+		this->trg = (EActionTriggers)(trg | T_ONPRESS);
+	}
 
 	adapter.add(this);
 }
@@ -303,7 +303,7 @@ void InputInfo::Pointer::set(EPointerButtons nbtns, EType ntype) {
 	btns = nbtns;
 	type = ntype;
 
-	present = true;
+	present |= btns != P_NONE;
 }
 
 void InputInfo::Pointer::setPresent(bool s) {
@@ -315,7 +315,8 @@ void InputInfo::Pointer::setPresent(bool s) {
 
 
 InputInfo::InputInfo()
-: wheelDx(0.0),
+: timestamp(0.0),
+  wheelDx(0.0),
   wheelDy(0.0),
   updatedPointer(&pointers[0]),
   currentModifiers(M_NONE),
@@ -323,6 +324,10 @@ InputInfo::InputInfo()
 
 EKeyModifiers InputInfo::getModifiers() const {
 	return currentModifiers;
+}
+
+double InputInfo::getTimestamp() const {
+	return timestamp;
 }
 
 double InputInfo::getWheelDx() const {
@@ -344,7 +349,8 @@ float InputInfo::getMidX() const {
 	const auto& p = getPointers();
 
 	if (p.size() == 0) {
-		return 0.f;
+		// get pos from last updated pointer
+		return getX();
 	}
 
 	return std::accumulate(p.cbegin(), p.cend(), 0.f, [] (float a, const Pointer* b) {
@@ -356,7 +362,7 @@ float InputInfo::getMidY() const {
 	const auto& p = getPointers();
 
 	if (p.size() == 0) {
-		return 0.f;
+		return getY();
 	}
 
 	return std::accumulate(p.cbegin(), p.cend(), 0.f, [] (float a, const Pointer* b) {
@@ -380,7 +386,7 @@ float InputInfo::getLastMidX() const {
 	const auto& p = getPointers();
 
 	if (p.size() == 0) {
-		return 0.f;
+		return getX();
 	}
 
 	return std::accumulate(p.cbegin(), p.cend(), 0.f, [] (float a, const Pointer* b) {
@@ -392,7 +398,7 @@ float InputInfo::getLastMidY() const {
 	const auto& p = getPointers();
 
 	if (p.size() == 0) {
-		return 0.f;
+		return getY();
 	}
 
 	return std::accumulate(p.cbegin(), p.cend(), 0.f, [] (float a, const Pointer* b) {
@@ -458,6 +464,10 @@ void InputInfo::setModifiers(EKeyModifiers m) {
 void InputInfo::setWheel(double dx, double dy) {
 	wheelDx = dx;
 	wheelDy = dy;
+}
+
+void InputInfo::setTimestamp(double ts) {
+	timestamp = ts;
 }
 
 InputStorage::InputStorage() {
@@ -572,8 +582,17 @@ bool InputAdapter::matchDown(const T key, const InputInfo& ii) {
 		if (const Keybind * k = (*it)->getMatch(ii.getModifiers(), key)) {
 			constexpr bool eventIsPointer = std::is_same_v<T, EPointerButtons>;
 			bool isActive = std::find(activeActions.begin(), activeActions.end(), *it) != activeActions.end();
-			if ((isActive && !eventIsPointer)
-					|| (((*it)->getTriggers() & T_ONPRESS) && !(**it)(T_ONPRESS, ii))) {
+			EActionTriggers trgs = (*it)->getTriggers();
+
+			// skip sending multiple T_ONPRESS on this action if it's keyboard activated
+			// for pointer activated actions multiple presses can be sent because of touch events
+			if (isActive && !eventIsPointer) {
+				continue;
+			}
+
+			// skip activating if event was rejected, don't send onpress here if action requests all events,
+			// InputAdapter::matchEvent will send it instead
+			if ((trgs & T_ONPRESS) && !(trgs & T_OPT_ALWAYS) && !(**it)(T_ONPRESS, ii)) {
 				continue;
 			}
 
@@ -593,17 +612,27 @@ template bool InputAdapter::matchDown<const char *>(const char *, const InputInf
 template bool InputAdapter::matchDown<EPointerButtons>(const EPointerButtons, const InputInfo&);
 
 void InputAdapter::matchEvent(EActionTriggers trigger, const InputInfo& ii) const {
-	for (const auto& adapter : linkedAdapters) {
-		adapter.matchEvent(trigger, ii);
-	}
+	// these events are only sent by this function if T_OPT_ALWAYS is active
+	bool isSpecialTrg = trigger & (T_ONPRESS | T_ONRELEASE);
 
 	for (auto it = actions.begin(); it != actions.end(); it++) {
 		// actions that don't register ONPRESS always get events like move, wheel, etc, except hold
-		if ((!((*it)->getTriggers() & T_ONPRESS) && trigger != T_ONHOLD)
+		EActionTriggers trgs = (*it)->getTriggers();
+		if (isSpecialTrg && !(trgs & T_OPT_ALWAYS)) {
+			continue;
+		}
+
+		if ( (!(trgs & T_ONPRESS) && trigger != T_ONHOLD)
+				|| (trgs & T_OPT_ALWAYS) // if the action asks for it, always send all events
 				|| trigger == T_ONENTER // ONENTER is always sent
 				|| std::find(activeActions.begin(), activeActions.end(), *it) != activeActions.end()) {
 			(**it)(trigger, ii);
 		}
+	}
+
+	// hackish solution to give more priority to nearer actions (for cursor updating...)
+	for (const auto& adapter : linkedAdapters) {
+		adapter.matchEvent(trigger, ii);
 	}
 }
 
@@ -619,8 +648,9 @@ bool InputAdapter::matchUp(const T releasedKey, EActionTriggers lastTrigger,
 	}
 
 	for (auto it = activeActions.begin(); it != activeActions.end();) {
+		EActionTriggers trgs = (*it)->getTriggers();
 		if (const Keybind * k = (*it)->getMatch(M_ALL, releasedKey)) {
-			if (lastTrigger != T_ONRELEASE || ((*it)->getTriggers() & T_ONPRESS)) {
+			if (!(trgs & T_OPT_ALWAYS) && (lastTrigger != T_ONRELEASE || (trgs & T_ONPRESS))) {
 				(**it)(T_ONRELEASE, ii);
 			}
 
@@ -708,48 +738,47 @@ bool InputAdapter::operator <(const InputAdapter& rhs) const {
 
 
 
-InputManager::InputManager(const char * kbTargetElement, const char * ptrTargetElement)
+InputManager::InputManager(const char * ptrActionAreaTargetElement)
 : InputAdapter(nullptr, *this, "Base"),
-  kbTargetElement(kbTargetElement),
-  ptrTargetElement(ptrTargetElement),
+  kbTargetElement(EMSCRIPTEN_EVENT_TARGET_DOCUMENT),
+  ptrTargetElement(EMSCRIPTEN_EVENT_TARGET_DOCUMENT),
+  ptrActionAreaTargetElement(ptrActionAreaTargetElement),
   lastTrigger(T_ONPRESS) {
-	emscripten_set_keydown_callback(kbTargetElement, this, true, InputManager::handleKeyEvent);
-	emscripten_set_keyup_callback(kbTargetElement, this, true, InputManager::handleKeyEvent);
-	emscripten_set_blur_callback(kbTargetElement, this, true, InputManager::handleFocusEvent);
+	emscripten_set_keydown_callback(kbTargetElement, this, false, InputManager::handleKeyEvent);
+	emscripten_set_keyup_callback(kbTargetElement, this, false, InputManager::handleKeyEvent);
+	emscripten_set_blur_callback(kbTargetElement, this, false, InputManager::handleFocusEvent);
 
-	emscripten_set_mousemove_callback(ptrTargetElement, this, true, InputManager::handleMouseEvent);
+	emscripten_set_mousemove_callback(ptrTargetElement, this, false, InputManager::handleMouseEvent);
 	emscripten_set_mousedown_callback(ptrTargetElement, this, false, InputManager::handleMouseEvent);
-	emscripten_set_mouseup_callback(ptrTargetElement, this, true, InputManager::handleMouseEvent);
-	emscripten_set_mouseleave_callback(ptrTargetElement, this, true, InputManager::handleMouseEvent);
-	emscripten_set_mouseenter_callback(ptrTargetElement, this, true, InputManager::handleMouseEvent);
+	emscripten_set_mouseup_callback(ptrTargetElement, this, false, InputManager::handleMouseEvent);
+	emscripten_set_mouseleave_callback(ptrActionAreaTargetElement, this, true, InputManager::handleMouseEvent);
+	emscripten_set_mouseenter_callback(ptrActionAreaTargetElement, this, true, InputManager::handleMouseEvent);
 
 	emscripten_set_touchstart_callback(ptrTargetElement, this, false, InputManager::handleTouchEvent);
 	emscripten_set_touchend_callback(ptrTargetElement, this, false, InputManager::handleTouchEvent);
-	emscripten_set_touchmove_callback(ptrTargetElement, this, true, InputManager::handleTouchEvent);
-	emscripten_set_touchcancel_callback(ptrTargetElement, this, true, InputManager::handleTouchEvent);
+	emscripten_set_touchmove_callback(ptrTargetElement, this, false, InputManager::handleTouchEvent);
+	emscripten_set_touchcancel_callback(ptrTargetElement, this, false, InputManager::handleTouchEvent);
 
 	emscripten_set_wheel_callback(ptrTargetElement, this, false, InputManager::handleWheelEvent);
 
-	std::printf("[InputManager] Initialized. Target elements: keyboard=%s pointer=%s\n",
-			kbTargetElement == EMSCRIPTEN_EVENT_TARGET_WINDOW ? "window" : kbTargetElement,
-			ptrTargetElement == EMSCRIPTEN_EVENT_TARGET_WINDOW ? "window" : ptrTargetElement);
+	std::puts("[InputManager] Initialized.");
 }
 
 InputManager::~InputManager() {
-	emscripten_set_keydown_callback(kbTargetElement, nullptr, true, nullptr);
-	emscripten_set_keyup_callback(kbTargetElement, nullptr, true, nullptr);
-	emscripten_set_blur_callback(kbTargetElement, nullptr, true, nullptr);
+	emscripten_set_keydown_callback(kbTargetElement, nullptr, false, nullptr);
+	emscripten_set_keyup_callback(kbTargetElement, nullptr, false, nullptr);
+	emscripten_set_blur_callback(kbTargetElement, nullptr, false, nullptr);
 
-	emscripten_set_mousemove_callback(ptrTargetElement, nullptr, true, nullptr);
+	emscripten_set_mousemove_callback(ptrTargetElement, nullptr, false, nullptr);
 	emscripten_set_mousedown_callback(ptrTargetElement, nullptr, false, nullptr);
-	emscripten_set_mouseup_callback(ptrTargetElement, nullptr, true, nullptr);
-	emscripten_set_mouseleave_callback(ptrTargetElement, nullptr, true, nullptr);
-	emscripten_set_mouseenter_callback(ptrTargetElement, nullptr, true, nullptr);
+	emscripten_set_mouseup_callback(ptrTargetElement, nullptr, false, nullptr);
+	emscripten_set_mouseleave_callback(ptrActionAreaTargetElement, nullptr, true, nullptr);
+	emscripten_set_mouseenter_callback(ptrActionAreaTargetElement, nullptr, true, nullptr);
 
 	emscripten_set_touchstart_callback(ptrTargetElement, nullptr, false, nullptr);
 	emscripten_set_touchend_callback(ptrTargetElement, nullptr, false, nullptr);
-	emscripten_set_touchmove_callback(ptrTargetElement, nullptr, true, nullptr);
-	emscripten_set_touchcancel_callback(ptrTargetElement, nullptr, true, nullptr);
+	emscripten_set_touchmove_callback(ptrTargetElement, nullptr, false, nullptr);
+	emscripten_set_touchcancel_callback(ptrTargetElement, nullptr, false, nullptr);
 
 	emscripten_set_wheel_callback(ptrTargetElement, nullptr, false, nullptr);
 	std::printf("[~InputManager]\n");
@@ -783,14 +812,16 @@ bool InputManager::keyUp(const char * key) {
 }
 
 bool InputManager::pointerDown(int id, Ptr::EType t, EPointerButtons changed, EPointerButtons buttons, bool fireEvent) {
-	std::printf("[InputManager] MDOWN: id=%d type=%c mods=%d changes=%d buttons=%d\n",
-			id, t == Ptr::MOUSE ? 'M' : 'T', InputInfo::getModifiers(), changed, buttons);
+//	std::printf("[InputManager] MDOWN: id=%d type=%c mods=%d changes=%d buttons=%d\n",
+//			id, t == Ptr::MOUSE ? 'M' : 'T', InputInfo::getModifiers(), changed, buttons);
 
-	InputInfo::finishMoving();
-	InputInfo::getPointer(id).set(buttons, t);
+	InputInfo::Pointer& pointer = InputInfo::getPointer(id);
+	pointer.finishMoving();
+	pointer.set(buttons, t);
 
 	lastTrigger = T_ONPRESS;
 	if (fireEvent) {
+		matchEvent(T_ONPRESS, *this);
 		matchDown(changed, *this);
 	}
 
@@ -798,13 +829,15 @@ bool InputManager::pointerDown(int id, Ptr::EType t, EPointerButtons changed, EP
 }
 
 bool InputManager::pointerUp(int id, Ptr::EType t, EPointerButtons changed, EPointerButtons buttons, bool fireEvent) {
-	std::printf("[InputManager] MUP: id=%d type=%c mods=%d changes=%d buttons=%d\n",
-			id, t == Ptr::MOUSE ? 'M' : 'T', InputInfo::getModifiers(), changed, buttons);
+//	std::printf("[InputManager] MUP: id=%d type=%c mods=%d changes=%d buttons=%d\n",
+//			id, t == Ptr::MOUSE ? 'M' : 'T', InputInfo::getModifiers(), changed, buttons);
 
-	InputInfo::finishMoving();
-	InputInfo::getPointer(id).set(buttons, t);
+	InputInfo::Pointer& pointer = InputInfo::getPointer(id);
+	pointer.finishMoving();
+	pointer.set(buttons, t);
 
 	if (fireEvent) {
+		matchEvent(T_ONRELEASE, *this);
 		matchUp(changed, lastTrigger, *this);
 	}
 
@@ -833,7 +866,11 @@ void InputManager::pointerEnter(int id, Ptr::EType t, bool fireEvent) {
 }
 
 void InputManager::pointerLeave(int id, Ptr::EType t, bool fireEvent) {
-	InputInfo::getPointer(id).setPresent(false);
+	InputInfo::Pointer& pointer = InputInfo::getPointer(id);
+	if (!pointer.isActive()) { // pointer can leave screen but still have buttons pressed
+		pointer.setPresent(false);
+	}
+
 	if (fireEvent) {
 		matchEvent(T_ONLEAVE, *this);
 	}
@@ -858,6 +895,10 @@ void InputManager::setModifiers(bool ctrl, bool alt, bool shift, bool meta) {
 	InputInfo::setModifiers(static_cast<EKeyModifiers>(m));
 }
 
+void InputManager::setTimestamp(double ts) {
+	InputInfo::setTimestamp(ts);
+}
+
 void InputManager::lostFocus() {
 	std::printf("[InputManager] BLUR\n");
 	InputAdapter::releaseAll(*this);
@@ -867,6 +908,7 @@ void InputManager::lostFocus() {
 int InputManager::handleKeyEvent(int type, const EmscriptenKeyboardEvent * ev, void * data) {
 	InputManager * im = static_cast<InputManager *>(data);
 
+	im->setTimestamp(ev->timestamp);
 	if (ev->repeat) {
 		return true;
 	}
@@ -894,6 +936,7 @@ int InputManager::handleKeyEvent(int type, const EmscriptenKeyboardEvent * ev, v
 int InputManager::handleMouseEvent(int type, const EmscriptenMouseEvent * ev, void * data) {
 	InputManager * im = static_cast<InputManager *>(data);
 
+	im->setTimestamp(ev->timestamp);
 	im->setModifiers(ev->ctrlKey, ev->altKey, ev->shiftKey, ev->metaKey);
 
 	//std::printf("%d, %d\n", ev->targetX, ev->targetY);
@@ -920,11 +963,13 @@ int InputManager::handleMouseEvent(int type, const EmscriptenMouseEvent * ev, vo
 			return false;
 
 		case EMSCRIPTEN_EVENT_MOUSEDOWN:
+			im->pointerMove(0, Ptr::MOUSE, ev->clientX, ev->clientY, false);
 			return im->pointerDown(0, Ptr::MOUSE,
 				static_cast<EPointerButtons>(changed),
 				static_cast<EPointerButtons>(ev->buttons));
 
 		case EMSCRIPTEN_EVENT_MOUSEUP:
+			im->pointerMove(0, Ptr::MOUSE, ev->clientX, ev->clientY, false);
 			return im->pointerUp(0, Ptr::MOUSE,
 				static_cast<EPointerButtons>(changed),
 				static_cast<EPointerButtons>(ev->buttons));
@@ -944,10 +989,11 @@ int InputManager::handleMouseEvent(int type, const EmscriptenMouseEvent * ev, vo
 int InputManager::handleTouchEvent(int type, const EmscriptenTouchEvent * ev, void * data) {
 	InputManager * im = static_cast<InputManager *>(data);
 
+	im->setTimestamp(ev->timestamp);
 	im->finishMoving();
 	im->setModifiers(ev->ctrlKey, ev->altKey, ev->shiftKey, ev->metaKey);
 	bool cancel = true;
-	u8 eventsToTrigger = 0;
+	u32 eventsToTrigger = 0;
 
 	for (int i = 0; i < ev->numTouches; i++) {
 		const EmscriptenTouchPoint& tp = ev->touches[i];
@@ -1030,8 +1076,9 @@ int InputManager::handleFocusEvent(int type, const EmscriptenFocusEvent * e, voi
 int InputManager::handleWheelEvent(int type, const EmscriptenWheelEvent * ev, void * data) {
 	InputManager * im = static_cast<InputManager *>(data);
 
+	im->setTimestamp(ev->mouse.timestamp);
 	im->setModifiers(ev->mouse.ctrlKey, ev->mouse.altKey, ev->mouse.shiftKey, ev->mouse.metaKey);
-	// TODO: use the remaining part of the mouse event to update InputInfo
+	im->pointerMove(0, Ptr::MOUSE, ev->mouse.clientX, ev->mouse.clientY, false);
 
 	switch (type) {
 		case EMSCRIPTEN_EVENT_WHEEL:

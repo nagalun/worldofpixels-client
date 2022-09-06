@@ -56,7 +56,7 @@ static void checkHttpSession(void (*cb)(bool)) {
 
 Client::Client(JsApiProxy& api)
 : api(api),
-  im(EMSCRIPTEN_EVENT_TARGET_WINDOW, EMSCRIPTEN_EVENT_TARGET_WINDOW/*"#world"*/),
+  im("#world"),
   aClient(im.mkAdapter("Client", -1)),
   selfUid(0),
   tickTimer(emscripten_set_interval(Client::doTick, 1000.0 / Client::ticksPerSec, this)),

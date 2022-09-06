@@ -1,4 +1,4 @@
-FROM emscripten/emsdk:3.1.15 AS builder
+FROM emscripten/emsdk:3.1.20 AS builder
 ARG VERSION=unk
 RUN apt-get update && apt-get install -y libglm-dev inotify-tools libssl-dev libz-dev
 RUN embuilder.py build zlib libpng

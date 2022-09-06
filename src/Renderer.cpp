@@ -26,7 +26,7 @@ Renderer::Renderer(World& w)
   ctx("#world", "#loader"),
   view(1.0f),
   projection(1.0f),
-  lastWorldRenderTime(ctx.getTime() / 1000.f),
+  lastRenderTime(ctx.getTime() / 1000.f),
   pendingRenderType(R_UI | R_WORLD),
   contextFailureCount(0),
   frameNum(0) {
@@ -143,6 +143,11 @@ void Renderer::translate(float dx, float dy) {
 	setPos(getX() + dx, getY() + dy);
 }
 
+void Renderer::setMomentum(float dx, float dy) {
+	Camera::setMomentum(dx, dy);
+	queueRerender();
+}
+
 void Renderer::recalculateCursorPosition() const {
 	w.recalculateCursorPosition();
 }
@@ -172,16 +177,19 @@ void Renderer::queueRerenderSt() {
 }
 
 void Renderer::render() {
+	float now = ctx.getTime() / 1000.f;
+	float dt = now - lastRenderTime;
+
+	u8 nextRender = preRenderUpdates(now, dt);
 	u8 currentRender = pendingRenderType;
-	u8 nextRender = R_NONE;
 	pendingRenderType = R_NONE; // functions called while rendering could request re-render
 
 	if (currentRender & R_WORLD) {
-		nextRender |= renderWorld() ? R_WORLD : R_NONE;
+		nextRender |= renderWorld(now, dt) ? R_WORLD : R_NONE;
 	}
 
 	if (currentRender & R_UI) {
-		nextRender |= renderUi() ? R_UI : R_NONE;
+		nextRender |= renderUi(now, dt) ? R_UI : R_NONE;
 	}
 
 	/* wait until the render loop does nothing to pause rendering to avoid frequent start/stopping */
@@ -190,22 +198,30 @@ void Renderer::render() {
 	}
 
 	pendingRenderType |= nextRender;
+	lastRenderTime = now;
 }
 
-bool Renderer::renderUi() {
+u8 Renderer::preRenderUpdates(float now, float dt) {
+	applyMomentum(now, dt);
+
+	return R_NONE;
+}
+
+bool Renderer::renderUi(float now, float dt) {
 	w.updateUi();
 	return false;
 }
 
-bool Renderer::renderWorld() {
+bool Renderer::renderWorld(float now, float dt) {
 	using LoadState = ChunkGlState::LoadState;
 
 	auto s = ctx.getSize();
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	float now = ctx.getTime() / 1000.f;
 	++frameNum;
+
+	bool shouldKeepRendering = false;
 
 	float czoom = getZoom();
 	float hVpWidth = s.w / 2.f / czoom;
@@ -215,7 +231,6 @@ bool Renderer::renderWorld() {
 	float brx = std::floor((getX() + hVpWidth) / Chunk::size);
 	float bry = std::floor((getY() + hVpHeight) / Chunk::size);
 
-	bool shouldKeepRendering = false;
 
 	bool glstActive = false;
 	for (auto ch : chunksToUpdate) {
@@ -311,8 +326,6 @@ bool Renderer::renderWorld() {
 			}
 		}
 	}
-
-	lastWorldRenderTime = now;
 
 	return shouldKeepRendering;
 }
@@ -412,9 +425,9 @@ bool Renderer::resetGlState(bool unloadChunks) {
 
 void Renderer::delayedGlReset() {
 	if (!ctx.ok()) {
-		if (ctx.getTime() / 1000.f - lastWorldRenderTime > 1.f && !ctx.activateRenderingContext(contextFailureCount > 4)) {
+		if (ctx.getTime() / 1000.f - lastRenderTime > 1.f && !ctx.activateRenderingContext(contextFailureCount > 4)) {
 			std::printf("[Renderer] Couldn't recreate the context. (%d)\n", contextFailureCount);
-			lastWorldRenderTime = ctx.getTime() / 1000.f;
+			lastRenderTime = ctx.getTime() / 1000.f;
 			if (++contextFailureCount >= 8) {
 				std::printf("[Renderer] Giving up after 8 tries.");
 				ctx.stopRenderLoop();

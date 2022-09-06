@@ -89,7 +89,7 @@ enum EKeyModifiers {
 	M_ALL   = 255
 };
 
-enum EActionTriggers : u8 {
+enum EActionTriggers : u16 {
 	T_ONPRESS   = 1,
 	T_ONHOLD    = 2,
 	T_ONRELEASE = 4,
@@ -98,7 +98,9 @@ enum EActionTriggers : u8 {
 	T_ONWHEEL   = 16,
 	T_ONMOVE    = 32, // pointer move
 	T_ONENTER   = 64,  // new pointer entered screen
-	T_ONLEAVE   = 128  // pointer left screen
+	T_ONLEAVE   = 128,  // pointer left screen
+
+	T_OPT_ALWAYS = 256 // always receive registered events even if listening on T_ONPRESS and binding is not pressed
 };
 
 class Keybind {
@@ -109,6 +111,8 @@ protected:
 	EKeyModifiers mods;
 
 public:
+	static constexpr char const * ANY_PTR_BTN = "m";
+	static constexpr char const * ANY_KB_BTN = "k";
 	Keybind(EKeyModifiers, std::string);
 	Keybind(EKeyModifiers, const char *);
 	Keybind(EKeyModifiers, EPointerButtons button);
@@ -155,7 +159,7 @@ private:
 	EActionTriggers trg;
 
 public:
-	ImAction(InputAdapter&, std::string name, u8 triggers,
+	ImAction(InputAdapter&, std::string name, u32 triggers,
 		std::function<void(Event& e, const InputInfo&)> = nullptr);
 
 	ImAction(InputAdapter&, std::string name, // T_ONPRESS by default
@@ -225,6 +229,7 @@ public:
 	};
 
 private:
+	double timestamp;
 	double wheelDx;
 	double wheelDy;
 	mutable std::array<Pointer, 8> pointers;
@@ -237,6 +242,7 @@ public:
 	InputInfo();
 
 	EKeyModifiers getModifiers() const;
+	double getTimestamp() const;
 
 	double getWheelDx() const;
 	double getWheelDy() const;
@@ -267,6 +273,7 @@ protected:
 	void finishMoving();
 	void setModifiers(EKeyModifiers);
 	void setWheel(double, double);
+	void setTimestamp(double);
 };
 
 class InputStorage {
@@ -335,12 +342,13 @@ class InputManager : InputInfo, InputStorage, public InputAdapter {
 
 	const char * kbTargetElement;
 	const char * ptrTargetElement;
+	const char * ptrActionAreaTargetElement;
 
 	// only holds either T_ONPRESS or T_ONRELEASE
 	EActionTriggers lastTrigger;
 
 public:
-	InputManager(const char * kbTargetElement, const char * ptrTargetElement);
+	InputManager(const char * ptrActionAreaTargetElement);
 	~InputManager();
 
 	const InputInfo& getLastInputInfo() const;
@@ -360,6 +368,7 @@ public:
 	bool wheel(double dx, double dy, int type);
 
 	void setModifiers(bool ctrl, bool alt, bool shift, bool meta);
+	void setTimestamp(double);
 
 	void lostFocus();
 
