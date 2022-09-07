@@ -66,7 +66,8 @@ public:
 	static void queueUiUpdateSt();
 	static void queueRerenderSt();
 
-	void getScreenSize(int *w, int *h) const override;
+	double getScreenDpr() const override;
+	void getScreenSize(double *w, double *h) const override;
 	void setPos(float, float) override;
 	void setZoom(float) override;
 	void setZoom(float z, float ox, float oy) override;

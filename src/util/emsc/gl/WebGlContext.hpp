@@ -11,8 +11,10 @@ class WebGlContext : public GlContext {
 	std::int32_t ctxInfo;
 	const char * targetCanvas;
 	const char * targetSizeElem;
-	mutable Size sizeCache;
-	mutable Size dipSizeCache;
+	mutable Size<int> sizeCache;
+	mutable Size<double> dipSizeCache;
+	mutable Size<int> realSizeCache;
+	mutable double dprCache;
 	bool renderLoopSet;
 	bool renderPaused;
 
@@ -24,10 +26,13 @@ public:
 	WebGlContext& operator=(WebGlContext&& other);
 
 	bool resize(int w, int h);
-	GlContext::Size getSize() const;
-	GlContext::Size getDipSize() const;
+	bool resize(int drawingWidth, int drawingHeight, double elemWidth, double elemHeight);
+	GlContext::Size<int> getSize() const;
+	GlContext::Size<double> getDipSize() const;
+	GlContext::Size<int> getRealSize() const;
 	void setTitle(const char*);
 	double getTime() const;
+	double getDpr() const;
 
 	bool ok() const;
 

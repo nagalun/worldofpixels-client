@@ -2,6 +2,7 @@
 
 // camera should be the center of the viewport
 class Camera {
+protected:
 	float x;
 	float y;
 	float zoom;
@@ -18,7 +19,8 @@ public:
 	float getZoom() const;
 	void getWorldPosFromScreenPos(float sx, float sy, float * wx, float * wy) const;
 
-	virtual void getScreenSize(int * w, int * h) const = 0;
+	virtual double getScreenDpr() const = 0;
+	virtual void getScreenSize(double * w, double * h) const = 0;
 	virtual void setPos(float x, float y);
 	virtual void setZoom(float z);
 	virtual void setZoom(float z, float ox, float oy); // with non-center camera-coords origin

@@ -59,8 +59,8 @@ void Camera::getWorldPosFromScreenPos(float sx, float sy, float *wx, float *wy) 
 	float worldY = getY();
 	float screenX = sx;
 	float screenY = sy;
-	int screenW;
-	int screenH;
+	double screenW;
+	double screenH;
 	getScreenSize(&screenW, &screenH);
 	// coords origin to the center of the screen
 	screenX -= screenW / 2.f;

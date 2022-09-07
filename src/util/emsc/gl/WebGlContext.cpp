@@ -29,7 +29,9 @@ WebGlContext::WebGlContext(const char * targetCanvas, const char * targetSizeEle
   targetCanvas(targetCanvas),
   targetSizeElem(targetSizeElem),
   sizeCache{-1, -1},
-  dipSizeCache{-1, -1},
+  dipSizeCache{-1., -1.},
+  realSizeCache{-1, -1},
+  dprCache(-1.0),
   renderLoopSet(false),
   renderPaused(false) {
 	activateRenderingContext(forceWebgl1);
@@ -45,6 +47,10 @@ WebGlContext::WebGlContext(WebGlContext&& other)
   ctxInfo(std::exchange(other.ctxInfo, 0)),
   targetCanvas(std::exchange(other.targetCanvas, nullptr)),
   targetSizeElem(std::exchange(other.targetSizeElem, nullptr)),
+  sizeCache(std::exchange(other.sizeCache, {-1, -1})),
+  dipSizeCache(std::exchange(other.dipSizeCache, {-1., -1.})),
+  realSizeCache(std::exchange(other.realSizeCache, {-1, -1})),
+  dprCache(std::exchange(other.dprCache, -1)),
   renderLoopSet(other.renderLoopSet),
   renderPaused(other.renderPaused) { }
 
@@ -56,6 +62,10 @@ WebGlContext& WebGlContext::operator=(WebGlContext&& other) {
 	ctxInfo = std::exchange(other.ctxInfo, 0);
 	targetCanvas = std::exchange(other.targetCanvas, nullptr);
 	targetSizeElem = std::exchange(other.targetSizeElem, nullptr);
+	sizeCache = std::exchange(other.sizeCache, {-1, -1});
+	dipSizeCache = std::exchange(other.dipSizeCache, {-1., -1.});
+	realSizeCache = std::exchange(other.realSizeCache, {-1, -1});
+	dprCache = std::exchange(other.dprCache, -1);
 	renderLoopSet = other.renderLoopSet;
 	renderPaused = other.renderPaused;
 
@@ -63,7 +73,12 @@ WebGlContext& WebGlContext::operator=(WebGlContext&& other) {
 }
 
 bool WebGlContext::resize(int w, int h) {
-	bool ok = emscripten_set_canvas_element_size(targetCanvas, w, h) >= 0;
+	return resize(w, h, w, h);
+}
+
+bool WebGlContext::resize(int drawingWidth, int drawingHeight, double elemWidth, double elemHeight) {
+	bool ok = emscripten_set_canvas_element_size(targetCanvas, drawingWidth, drawingHeight) >= 0;
+	emscripten_set_element_css_size(targetCanvas, elemWidth, elemHeight);
 
 	sizeCache.w = -1;
 
@@ -74,7 +89,7 @@ bool WebGlContext::resize(int w, int h) {
 	return ok;
 }
 
-GlContext::Size WebGlContext::getSize() const {
+GlContext::Size<int> WebGlContext::getSize() const {
 	if (sizeCache.w < 0) {
 		int * w = &sizeCache.w;
 		int * h = &sizeCache.h;
@@ -86,19 +101,43 @@ GlContext::Size WebGlContext::getSize() const {
 }
 
 // aka. css pixels
-GlContext::Size WebGlContext::getDipSize() const {
+GlContext::Size<double> WebGlContext::getDipSize() const {
 	if (dipSizeCache.w < 0) {
-		GlContext::Size dipSize;
-		double w;
-		double h;
-		emscripten_get_element_css_size(targetSizeElem, &w, &h);
+		GlContext::Size<double> dipSize;
+		GlContext::Size<int> realSize = getRealSize();
+		double w = realSize.w;
+		double h = realSize.h;
+		double dpr = getDpr();
 
-		dipSize.w = std::ceil(w);
-		dipSize.h = std::ceil(h);
+		w /= dpr;
+		h /= dpr;
+
+		dipSize.w = w;
+		dipSize.h = h;
 		dipSizeCache = dipSize;
 	}
 
 	return dipSizeCache;
+}
+
+// aka. screen pixels
+GlContext::Size<int> WebGlContext::getRealSize() const {
+	if (realSizeCache.w < 0) {
+		GlContext::Size<int> realSize;
+		double w;
+		double h;
+		double dpr = getDpr();
+		emscripten_get_element_css_size(targetSizeElem, &w, &h);
+
+		w = std::round(w * dpr);
+		h = std::round(h * dpr);
+
+		realSize.w = w;
+		realSize.h = h;
+		realSizeCache = realSize;
+	}
+
+	return realSizeCache;
 }
 
 void WebGlContext::setTitle(const char* name) {
@@ -152,15 +191,19 @@ bool WebGlContext::activateRenderingContextAs(bool webgl1) {
 	emscripten_set_resize_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, this, true, +[] (int, const EmscriptenUiEvent * ev, void * ctx) -> EM_BOOL {
 		WebGlContext& c = *static_cast<WebGlContext *>(ctx);
 		c.dipSizeCache.w = -1;
-		auto s = c.getDipSize();
-		c.resize(s.w, s.h);
+		c.realSizeCache.w = -1;
+		c.dprCache = -1.0;
+		auto sdip = c.getDipSize();
+		auto s = c.getRealSize();
+		c.resize(s.w, s.h, sdip.w, sdip.h);
 		return false;
 	});
 
 	std::printf("[WebGlContext] Created WebGL%c rendering context\n", webgl1 ? '1' : '2');
 
-	auto s = getDipSize();
-	resize(s.w, s.h);
+	auto s = getRealSize();
+	auto sdip = getDipSize();
+	resize(s.w, s.h, sdip.w, sdip.h);
 
 	return true;
 }
@@ -259,6 +302,13 @@ double WebGlContext::getTime() const {
 	return emscripten_get_now();
 }
 
+double WebGlContext::getDpr() const {
+	if (dprCache < 0.0) {
+		dprCache = emscripten_get_device_pixel_ratio();
+	}
+
+	return dprCache;
+}
 
 
 } /* namespace gl */

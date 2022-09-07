@@ -454,11 +454,12 @@ void Renderer::doDelayedGlReset(void * r) {
 	static_cast<Renderer *>(r)->delayedGlReset();
 }
 
-void Renderer::getScreenSize(int *sw, int *sh) const {
-	// use dipSize to get screen size in css pixels
-	// TODO: test if this works correctly to calculate mouse -> world coords on different dpi
-	auto s = ctx.getDipSize();
+double Renderer::getScreenDpr() const {
+	return ctx.getDpr();
+}
+
+void Renderer::getScreenSize(double *sw, double *sh) const {
+	auto s = ctx.getRealSize();
 	*sw = s.w;
 	*sh = s.h;
 }
-

@@ -11,9 +11,10 @@ protected:
 	std::function<void(void)> resizeCb;
 
 public:
+	template<typename T = int>
 	struct Size {
-		int w;
-		int h;
+		T w;
+		T h;
 	};
 
 	GlContext() = default;
@@ -26,9 +27,10 @@ public:
 
 	virtual void setTitle(const char *) = 0;
 	virtual bool resize(int w, int h) = 0;
-	virtual Size getSize() const = 0;
-	virtual Size getDipSize() const = 0;
+	virtual Size<int> getSize() const = 0;
+	virtual Size<double> getDipSize() const = 0;
 	virtual double getTime() const = 0;
+	virtual double getDpr() const = 0;
 
 	virtual bool ok() const = 0;
 

@@ -9,6 +9,9 @@
 
 #include <emscripten/html5.h>
 
+#include <JsApiProxy.hpp>
+#include <Renderer.hpp>
+
 // maybe tool handlers should get selfcursor's mouse coords instead of using inputmanager's
 
 Keybind::Keybind(EKeyModifiers mods, std::string button)
@@ -848,6 +851,16 @@ bool InputManager::pointerUp(int id, Ptr::EType t, EPointerButtons changed, EPoi
 }
 
 void InputManager::pointerMove(int id, Ptr::EType t, int x, int y, bool fireEvent) {
+	double dpr = 1.0;
+	if (auto * r = JsApiProxy::getRenderer()) {
+		dpr = r->getScreenDpr();
+	}
+
+	// this doesn't work right because the mouse event gives us integers in css pixels,
+	// the fractional part is lost. getting precise coords is annoying, so this will do for now
+	x *= dpr;
+	y *= dpr;
+
 	//std::printf("[InputManager] MMOVE: x=%d y=%d\n", x, y);
 	InputInfo::getPointer(id).set(x, y, t);
 	if (fireEvent) {
