@@ -30,8 +30,6 @@ World::World(InputAdapter& base, std::string name, std::unique_ptr<SelfCursor::B
   toolWin(toolMan),
   posUi(this->me.getX(), this->me.getY(), r.getZoom()),
   iMoveCursor(aWorld, "Move cursor", T_ONENTER | T_ONPRESS | T_ONMOVE | T_ONWHEEL | T_ONLEAVE | T_OPT_ALWAYS),
-  iPrintCoords(aWorld, "Print Coordinates"),
-  iRoundCoords(aWorld, "Round Coordinates"),
   tickNum(0),
   drawingRestricted(restricted) {
 
@@ -41,16 +39,6 @@ World::World(InputAdapter& base, std::string name, std::unique_ptr<SelfCursor::B
 	iMoveCursor.setDefaultKeybind(Keybind::ANY_PTR_BTN);
 	iMoveCursor.setCb([this] (ImAction::Event& ev, const InputInfo& ii) {
 		recalculateCursorPosition(ii);
-	});
-
-	iPrintCoords.setDefaultKeybind("P");
-	iPrintCoords.setCb([this] (auto&, const auto&) {
-		std::printf("[World] Coords: %f, %f\n", r.getX(), r.getY());
-	});
-
-	iRoundCoords.setDefaultKeybind("O");
-	iRoundCoords.setCb([this] (auto&, const auto&) {
-		r.setPos(std::round(r.getX()), std::round(r.getY()));
 	});
 
 	std::puts("[World] Created");

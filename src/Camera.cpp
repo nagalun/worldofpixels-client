@@ -101,6 +101,7 @@ bool Camera::applyMomentum(float now, float dt) {
 	float elapsedMs = now - momentumStartTs;
 	float curExp = std::exp(-elapsedMs / timeConstantMs);
 	float lastExp = std::exp(-(elapsedMs - dt) / timeConstantMs);
+	lastExp = lastExp > 1.f ? 1.f : lastExp;
 
 	float curDx = momentumDx * curExp;
 	float curDy = momentumDy * curExp;

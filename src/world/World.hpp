@@ -48,8 +48,6 @@ private:
 	PlayerCountWidget pCntUi;
 
 	ImAction iMoveCursor;
-	ImAction iPrintCoords;
-	ImAction iRoundCoords;
 
 	u16 tickNum;
 	bool drawingRestricted;
