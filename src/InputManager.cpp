@@ -743,10 +743,12 @@ InputManager::InputManager(const char * ptrActionAreaTargetElement)
   kbTargetElement(EMSCRIPTEN_EVENT_TARGET_DOCUMENT),
   ptrTargetElement(EMSCRIPTEN_EVENT_TARGET_DOCUMENT),
   ptrActionAreaTargetElement(ptrActionAreaTargetElement),
+  disabled(false),
   lastTrigger(T_ONPRESS) {
 	emscripten_set_keydown_callback(kbTargetElement, this, false, InputManager::handleKeyEvent);
 	emscripten_set_keyup_callback(kbTargetElement, this, false, InputManager::handleKeyEvent);
-	emscripten_set_blur_callback(kbTargetElement, this, false, InputManager::handleFocusEvent);
+	emscripten_set_blur_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, this, true, InputManager::handleFocusEvent);
+	emscripten_set_focus_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, this, true, InputManager::handleFocusEvent);
 
 	emscripten_set_mousemove_callback(ptrTargetElement, this, false, InputManager::handleMouseEvent);
 	emscripten_set_mousedown_callback(ptrTargetElement, this, false, InputManager::handleMouseEvent);
@@ -767,7 +769,8 @@ InputManager::InputManager(const char * ptrActionAreaTargetElement)
 InputManager::~InputManager() {
 	emscripten_set_keydown_callback(kbTargetElement, nullptr, false, nullptr);
 	emscripten_set_keyup_callback(kbTargetElement, nullptr, false, nullptr);
-	emscripten_set_blur_callback(kbTargetElement, nullptr, false, nullptr);
+	emscripten_set_blur_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, nullptr, true, nullptr);
+	emscripten_set_focus_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, nullptr, true, nullptr);
 
 	emscripten_set_mousemove_callback(ptrTargetElement, nullptr, false, nullptr);
 	emscripten_set_mousedown_callback(ptrTargetElement, nullptr, false, nullptr);
@@ -899,6 +902,15 @@ void InputManager::setTimestamp(double ts) {
 	InputInfo::setTimestamp(ts);
 }
 
+void InputManager::setDisabled(bool state) {
+	//std::printf("dis: %d\n", state);
+	disabled = state;
+	if (disabled) {
+		InputAdapter::releaseAll(*this);
+		setModifiers(false, false, false, false);
+	}
+}
+
 void InputManager::lostFocus() {
 	std::printf("[InputManager] BLUR\n");
 	InputAdapter::releaseAll(*this);
@@ -907,6 +919,10 @@ void InputManager::lostFocus() {
 
 int InputManager::handleKeyEvent(int type, const EmscriptenKeyboardEvent * ev, void * data) {
 	InputManager * im = static_cast<InputManager *>(data);
+
+	if (im->disabled) {
+		return false;
+	}
 
 	im->setTimestamp(ev->timestamp);
 	if (ev->repeat) {
@@ -1058,16 +1074,28 @@ int InputManager::handleTouchEvent(int type, const EmscriptenTouchEvent * ev, vo
 int InputManager::handleFocusEvent(int type, const EmscriptenFocusEvent * e, void * data) {
 	InputManager * im = static_cast<InputManager *>(data);
 
+	bool isWindow = std::strcmp("#window", e->nodeName) == 0;
+	bool isKeyboardCapturingElem = std::strcmp("INPUT", e->nodeName) == 0;
+	//std::printf("%s, %s, %d, %d\n", e->nodeName, e->id, isWindow, isKeyboardCapturingElem);
+
 	// avoid dumb blur events
-	if (im->kbTargetElement == EMSCRIPTEN_EVENT_TARGET_WINDOW
-			&& std::strcmp("#window", e->nodeName) != 0) {
+	if (!isWindow && !isKeyboardCapturingElem) {
 		return false;
 	}
 
 	switch (type) {
+		case EMSCRIPTEN_EVENT_FOCUS:
+			im->setDisabled(isKeyboardCapturingElem);
+			break;
+
 		case EMSCRIPTEN_EVENT_BLUR:
-			im->lostFocus();
-			return true;
+			if (isWindow) {
+				im->setDisabled(false);
+				im->lostFocus();
+			} else {
+				im->setDisabled(!isKeyboardCapturingElem);
+			}
+			break;
 	}
 
 	return false;

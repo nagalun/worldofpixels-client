@@ -344,6 +344,8 @@ class InputManager : InputInfo, InputStorage, public InputAdapter {
 	const char * ptrTargetElement;
 	const char * ptrActionAreaTargetElement;
 
+	bool disabled;
+
 	// only holds either T_ONPRESS or T_ONRELEASE
 	EActionTriggers lastTrigger;
 
@@ -369,6 +371,7 @@ public:
 
 	void setModifiers(bool ctrl, bool alt, bool shift, bool meta);
 	void setTimestamp(double);
+	void setDisabled(bool);
 
 	void lostFocus();
 
