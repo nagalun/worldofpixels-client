@@ -163,25 +163,13 @@
 			}
 		});
 
-		function stopEvt(e) { // avoids sending the event to owop
-			if (e.target && e.target.id !== "world") {
-				e.stopImmediatePropagation();
-			}
-		}
-
 		// prevent scrolling zoom
 		document.addEventListener("wheel", function(e) {
-			stopEvt(e);
 			if (e.ctrlKey) {
 				e.preventDefault();
 				return false;
 			}
 		}, {passive: false});
-
-		document.addEventListener("mousedown", stopEvt, false);
-		document.addEventListener("touchstart", stopEvt, false);
-		document.addEventListener("touchmove", stopEvt, false);
-		document.addEventListener("touchend", stopEvt, false);
 
 		if (navigator.serviceWorker) {
 			navigator.serviceWorker.register("/sw.js")

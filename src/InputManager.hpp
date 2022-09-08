@@ -274,6 +274,7 @@ protected:
 	void setModifiers(EKeyModifiers);
 	void setWheel(double, double);
 	void setTimestamp(double);
+	void releaseAll();
 };
 
 class InputStorage {

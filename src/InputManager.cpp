@@ -473,6 +473,15 @@ void InputInfo::setTimestamp(double ts) {
 	timestamp = ts;
 }
 
+void InputInfo::releaseAll() {
+	for (InputInfo::Pointer& p : pointers) {
+		p.set(P_NONE, p.getType());
+		p.setPresent(false);
+	}
+
+	ptrListOutdated = true;
+}
+
 InputStorage::InputStorage() {
 	std::printf("[InputStorage] TODO loading\n");
 }
@@ -679,12 +688,8 @@ void InputAdapter::releaseAll(const InputInfo& ii) {
 	}
 
 	for (auto it = activeActions.begin(); it != activeActions.end();) {
-		// adapters that don't listen to onpress haven't received anything yet
-		// so no need to send cancel & release
-		if ((*it)->getTriggers() & T_ONPRESS) {
-			(**it)(T_ONCANCEL, ii);
-			(**it)(T_ONRELEASE, ii);
-		}
+		(**it)(T_ONCANCEL, ii);
+		(**it)(T_ONRELEASE, ii);
 
 		it = activeActions.erase(it);
 	}
@@ -754,17 +759,17 @@ InputManager::InputManager(const char * ptrActionAreaTargetElement)
 	emscripten_set_focus_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, this, true, InputManager::handleFocusEvent);
 
 	emscripten_set_mousemove_callback(ptrTargetElement, this, false, InputManager::handleMouseEvent);
-	emscripten_set_mousedown_callback(ptrTargetElement, this, false, InputManager::handleMouseEvent);
+	emscripten_set_mousedown_callback(ptrActionAreaTargetElement, this, false, InputManager::handleMouseEvent);
 	emscripten_set_mouseup_callback(ptrTargetElement, this, false, InputManager::handleMouseEvent);
 	emscripten_set_mouseleave_callback(ptrActionAreaTargetElement, this, true, InputManager::handleMouseEvent);
 	emscripten_set_mouseenter_callback(ptrActionAreaTargetElement, this, true, InputManager::handleMouseEvent);
 
-	emscripten_set_touchstart_callback(ptrTargetElement, this, false, InputManager::handleTouchEvent);
+	emscripten_set_touchstart_callback(ptrActionAreaTargetElement, this, false, InputManager::handleTouchEvent);
 	emscripten_set_touchend_callback(ptrTargetElement, this, false, InputManager::handleTouchEvent);
 	emscripten_set_touchmove_callback(ptrTargetElement, this, false, InputManager::handleTouchEvent);
 	emscripten_set_touchcancel_callback(ptrTargetElement, this, false, InputManager::handleTouchEvent);
 
-	emscripten_set_wheel_callback(ptrTargetElement, this, false, InputManager::handleWheelEvent);
+	emscripten_set_wheel_callback(ptrActionAreaTargetElement, this, false, InputManager::handleWheelEvent);
 
 	std::puts("[InputManager] Initialized.");
 }
@@ -776,17 +781,17 @@ InputManager::~InputManager() {
 	emscripten_set_focus_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, nullptr, true, nullptr);
 
 	emscripten_set_mousemove_callback(ptrTargetElement, nullptr, false, nullptr);
-	emscripten_set_mousedown_callback(ptrTargetElement, nullptr, false, nullptr);
+	emscripten_set_mousedown_callback(ptrActionAreaTargetElement, nullptr, false, nullptr);
 	emscripten_set_mouseup_callback(ptrTargetElement, nullptr, false, nullptr);
 	emscripten_set_mouseleave_callback(ptrActionAreaTargetElement, nullptr, true, nullptr);
 	emscripten_set_mouseenter_callback(ptrActionAreaTargetElement, nullptr, true, nullptr);
 
-	emscripten_set_touchstart_callback(ptrTargetElement, nullptr, false, nullptr);
+	emscripten_set_touchstart_callback(ptrActionAreaTargetElement, nullptr, false, nullptr);
 	emscripten_set_touchend_callback(ptrTargetElement, nullptr, false, nullptr);
 	emscripten_set_touchmove_callback(ptrTargetElement, nullptr, false, nullptr);
 	emscripten_set_touchcancel_callback(ptrTargetElement, nullptr, false, nullptr);
 
-	emscripten_set_wheel_callback(ptrTargetElement, nullptr, false, nullptr);
+	emscripten_set_wheel_callback(ptrActionAreaTargetElement, nullptr, false, nullptr);
 	std::printf("[~InputManager]\n");
 }
 
@@ -919,15 +924,15 @@ void InputManager::setDisabled(bool state) {
 	//std::printf("dis: %d\n", state);
 	disabled = state;
 	if (disabled) {
-		InputAdapter::releaseAll(*this);
-		setModifiers(false, false, false, false);
+		lostFocus();
 	}
 }
 
 void InputManager::lostFocus() {
 	std::printf("[InputManager] BLUR\n");
-	InputAdapter::releaseAll(*this);
+	InputInfo::releaseAll();
 	setModifiers(false, false, false, false);
+	InputAdapter::releaseAll(*this);
 }
 
 int InputManager::handleKeyEvent(int type, const EmscriptenKeyboardEvent * ev, void * data) {
@@ -1048,6 +1053,7 @@ int InputManager::handleTouchEvent(int type, const EmscriptenTouchEvent * ev, vo
 				im->pointerUp(tp.identifier, Ptr::TOUCH, P_MPRIMARY, P_NONE, false);
 				im->pointerLeave(tp.identifier, Ptr::TOUCH, false);
 				eventsToTrigger |= T_ONRELEASE | T_ONLEAVE;
+				cancel = false;
 				break;
 
 			case EMSCRIPTEN_EVENT_TOUCHMOVE:
