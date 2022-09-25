@@ -16,43 +16,47 @@ EM_JS(void, create_api_structure, (void), {
 	};
 
 	var uf = function unsign(fname) {
+		var fn = f(fname);
 		return function() {
-			return f(fname).apply(null, arguments) >>> 0;
+			return fn.apply(null, arguments) >>> 0;
 		};
 	};
 
 	var sf = function stringify(fname) {
+		var fn = f(fname);
 		return function() {
-			var ptr = f(fname).apply(null, arguments);
+			var ptr = fn.apply(null, arguments);
 			return ptr ? UTF8ToString(ptr) : null;
 		};
 	};
 
 	window["OWOP"] = Module.api = {
-		world: {
-			getName: sf("owop_api_get_world_name"),
-			getPixel: uf("owop_api_get_pixel"),
-			setPixel: f("owop_api_set_pixel"),
-			get name() { return this.getName(); }
+		"events": {},
+		"world": {
+			"getName": sf("owop_api_get_world_name"),
+			"getPixel": uf("owop_api_get_pixel"),
+			"setPixel": f("owop_api_set_pixel"),
+			get ["name"]() { return this["getName"](); }
 		},
-		client: {
-			reconnect: f("owop_api_reconnect"),
-			get ws() { return Module.JSWS.ws; }
+		"client": {
+			"reconnect": f("owop_api_reconnect"),
+			get ["ws"]() { return Module.JSWS.ws; }
 		},
-		chat: {},
-		player: {},
-		camera: {
-			getX: f("owop_api_get_cam_x"),
-			getY: f("owop_api_get_cam_y"),
-			setPos: f("owop_api_set_cam_pos"),
-			getZoom: f("owop_api_get_cam_zoom"),
-			setZoom: f("owop_api_set_cam_zoom"),
-			get x() { return this.getX(); },
-			set x(x) { this.setPos(x, this.getY()); return x; },
-			get y() { return this.getY(); },
-			set y(y) { this.setPos(this.getX(), y); return y; },
-			get zoom() { return this.getZoom(); },
-			set zoom(zoom) { return this.setZoom(zoom); }
+		"chat": {},
+		"player": {},
+		"camera": {
+			"getX": f("owop_api_get_cam_x"),
+			"getY": f("owop_api_get_cam_y"),
+			"setPos": f("owop_api_set_cam_pos"),
+			"getZoom": f("owop_api_get_cam_zoom"),
+			"setZoom": f("owop_api_set_cam_zoom"),
+			"setMomentum": f("owop_api_set_cam_momentum"),
+			get ["x"]() { return this["getX"](); },
+			set ["x"](x) { this["setPos"](x, this["y"]); return x; },
+			get ["y"]() { return this["getY"](); },
+			set ["y"](y) { this["setPos"](this["x"], y); return y; },
+			get ["zoom"]() { return this["getZoom"](); },
+			set ["zoom"](zoom) { return this["setZoom"](zoom); }
 		}
 	};
 });
@@ -142,6 +146,14 @@ float owop_api_set_cam_zoom(float zoom) {
 	return 0.f;
 }
 
+EMSCRIPTEN_KEEPALIVE
+void owop_api_set_cam_momentum(float dx, float dy) {
+	Camera * c = JsApiProxy::getCamera();
+	if (c) {
+		c->setMomentum(dx, dy);
+	}
+}
+
 }
 
 JsApiProxy::JsApiProxy()
@@ -150,7 +162,7 @@ JsApiProxy::JsApiProxy()
 
 #ifdef DEBUG
 	// argless EM_ASM causes warnings/errors with -Wall
-	EM_ASM({Module.api['module'] = Module}, 0);
+	EM_ASM({Module.api["module"] = Module}, 0);
 	std::printf("[JsApiProxy] DEBUG build, defining OWOP.module\n");
 #endif
 }

@@ -1,6 +1,11 @@
 #ifndef OWOP_VERSION
 #	define OWOP_VERSION unknown
 #endif
+#ifdef DEBUG
+#	define BUILD_TYPE dbg
+#else
+#	define BUILD_TYPE rel
+#endif
 
 // doesn't actually work, very annoying
 //#define _STR(x) "x"

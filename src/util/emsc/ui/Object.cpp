@@ -30,9 +30,17 @@ std::string_view Object::getSelector() const {
 	return eui_elem_selector(getId());
 }
 
+void eui::Object::getOffsetSize(int *ow, int *oh) const {
+	eui_get_elem_size(getId(), ow, oh);
+}
+
 
 void Object::addClass(std::string_view cl) {
 	eui_elem_add_class(id, cl.data(), cl.size());
+}
+
+bool Object::tglClass(std::string_view cl) {
+	return eui_elem_tgl_class(id, cl.data(), cl.size());
 }
 
 void Object::delClass(std::string_view cl) {
@@ -75,8 +83,12 @@ void Object::setAttribute(std::string_view name, std::string_view value) {
 	eui_elem_attr_set(id, name.data(), name.size(), value.data(), value.size());
 }
 
-EventHandle Object::createHandler(std::string_view name, std::function<bool(void)> cb) {
-	return EventHandle(getId(), name, std::move(cb));
+EventHandle Object::createHandler(std::string_view name, std::function<bool(void)> cb, bool passive) {
+	return EventHandle(getId(), name, std::move(cb), passive);
+}
+
+EventHandle Object::createWindowHandler(std::string_view name, std::function<bool(void)> cb, bool passive) {
+	return EventHandle(0, name, std::move(cb), passive);
 }
 
 void Object::appendTo(std::string_view selector) {

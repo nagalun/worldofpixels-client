@@ -16,10 +16,15 @@
 #include <InputManager.hpp>
 #include <Renderer.hpp>
 #include <tools/ToolManager.hpp>
+
+#include <util/emsc/ui/Object.hpp>
+#include <ui/misc/UiButton.hpp>
+#include <ui/misc/Box.hpp>
 #include <ui/ToolWindow.hpp>
 #include <ui/PositionWidget.hpp>
 #include <ui/PlayerCountWidget.hpp>
-
+#include <ui/HelpWindow.hpp>
+#include <ui/settings/SettingsWindow.hpp>
 
 class alignas(32) World {
 public:
@@ -41,11 +46,18 @@ private:
 	std::optional<User::Id> owner;
 	SelfCursor me;
 
+	/* clr picker column, palette window column */
+	Box<eui::Object, eui::Object> llcorner;
+
 	InputAdapter& aWorld;
 	ToolManager toolMan;
 	ToolWindow toolWin;
 	PositionWidget posUi;
 	PlayerCountWidget pCntUi;
+	SettingsWindow sw;
+	HelpWindow hw;
+	UiButton settingsBtn;
+	UiButton helpBtn;
 
 	ImAction iMoveCursor;
 
@@ -66,6 +78,8 @@ public:
 	bool freeMemory(bool tryHarder = false);
 
 	sz_t getMaxLoadedChunks() const;
+
+	Box<eui::Object, eui::Object>& getLlCornerUi();
 
 	Renderer& getRenderer();
 	Camera& getCamera();

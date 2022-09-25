@@ -202,9 +202,11 @@ void Renderer::render() {
 }
 
 u8 Renderer::preRenderUpdates(float now, float dt) {
-	applyMomentum(now, dt);
+	u8 nextRender = R_NONE;
 
-	return R_NONE;
+	nextRender |= applyMomentum(now, dt) ? R_WORLD : R_NONE;
+
+	return nextRender;
 }
 
 bool Renderer::renderUi(float now, float dt) {

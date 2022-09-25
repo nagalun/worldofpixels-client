@@ -22,13 +22,24 @@ void line(Coord x1, Coord y1, Coord x2, Coord y2, Fn& plot, bool skipfirst = tru
 	}
 }
 
+template<typename Fn, std::size_t... I>
+void do_seq(Fn& fn, std::index_sequence<I...>) {
+	fn(I...);
+}
+
+template<typename Fn, std::size_t I>
+void seq(Fn& fn) {
+	do_seq(fn, std::make_index_sequence<I>());
+}
+
 template <typename Tuple, std::size_t ...I, typename... Args>
 static Tuple do_cartesian_make_tuple(std::index_sequence<I...>, Args&&... args) {
+	std::size_t i; // to make the compiler shut up
 	if constexpr (sizeof... (Args) == 0) {
 		return Tuple{};
 	} else if constexpr (sizeof... (Args) == 1) {
 		// dumb
-		return Tuple{(I, std::get<0>(std::forward_as_tuple(std::forward<Args>(args)...)))...};
+		return Tuple{(i=I, std::get<0>(std::forward_as_tuple(std::forward<Args>(args)...)))...};
 	} else {
 		return Tuple{std::tuple_element_t<I, Tuple>{std::forward<Args>(args)...}...};
 	}

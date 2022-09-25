@@ -24,8 +24,10 @@ public:
 
 	std::uint32_t getId() const;
 	std::string_view getSelector() const;
+	void getOffsetSize(int * ow, int * oh) const;
 
 	void addClass(std::string_view);
+	bool tglClass(std::string_view);
 	void delClass(std::string_view);
 
 	std::string getProperty(std::string_view name) const;
@@ -35,7 +37,9 @@ public:
 	std::string getAttribute(std::string_view name) const;
 	void setAttribute(std::string_view name);
 	void setAttribute(std::string_view name, std::string_view value);
-	EventHandle createHandler(std::string_view name, std::function<bool(void)> cb);
+	EventHandle createHandler(std::string_view name, std::function<bool(void)> cb, bool passive = true);
+	/* "window" binds event to the js window object */
+	static EventHandle createWindowHandler(std::string_view name, std::function<bool(void)> cb, bool passive = true);
 
 	void appendTo(std::string_view selector);
 	void appendTo(std::uint32_t id);

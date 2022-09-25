@@ -1,11 +1,7 @@
 "use strict";
 
 var owopVersion = `OWOP_VERSION`;
-#ifdef DEBUG
-var cacheVersion = owopVersion + "-dbg";
-#else
-var cacheVersion = owopVersion;
-#endif
+var cacheVersion = `${owopVersion}-BUILD_TYPE`;
 
 var fileList =
 `OWOP_SCRIPT_PATH

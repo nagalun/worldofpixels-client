@@ -9,8 +9,10 @@ namespace eui {
 class EventHandle {
 	std::uint32_t objId;
 	std::function<bool(void)> cb;
+	bool enabled;
+	bool valid;
 
-	EventHandle(std::uint32_t objId, std::string_view evt, std::function<bool(void)>);
+	EventHandle(std::uint32_t objId, std::string_view evt, std::function<bool(void)>, bool passive);
 
 public:
 	EventHandle();
@@ -21,6 +23,7 @@ public:
 	EventHandle(const EventHandle &other) = delete;
 
 	void setCb(std::function<bool(void)>);
+	void setEnabled(bool);
 
 private:
 	static bool eventFired(void *);

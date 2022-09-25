@@ -64,12 +64,12 @@ void PaletteListWidget::setPalettes(std::vector<std::vector<RGB_u>> world, std::
 	worldPalettes.reserve(world.size());
 	userPalettes.reserve(user.size());
 
-	for (auto palette : world) {
+	for (auto& palette : world) {
 		auto& item = worldPalettes.emplace_back(clr, std::move(palette));
 		item.appendTo(worldPaletteContainer);
 	}
 
-	for (auto palette : user) {
+	for (auto& palette : user) {
 		auto& item = userPalettes.emplace_back(clr, std::move(palette));
 		item.appendTo(userPaletteContainer);
 	}

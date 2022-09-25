@@ -40,7 +40,6 @@ PaletteItem::PaletteItem(ColorProvider& clrp, std::vector<RGB_u> clrs)
 	for (RGB_u clr : clrs) {
 		auto& clrElem = colors.emplace_back(clr, [this, clr] {
 			this->clrp.setPrimaryColor(clr);
-			return true;
 		});
 
 		clrElem.appendTo(*this);

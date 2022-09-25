@@ -43,11 +43,11 @@
 
 /* ux */
 
-.owop-colors button:hover {
+button.owop-ui:hover::after, a.owop-ui:hover::after {
 	filter: brightness(1.1);
 }
 
-.owop-colors button:active {
+button.owop-ui:active::after, a.owop-ui:active::after {
 	filter: brightness(0.8);
 }
 
@@ -59,10 +59,23 @@
 		var(--tex-url-border) var(--tex-url-border-active) var(--tex-url-ui);
 }
 
+button {
+	color: inherit;
+	font: inherit;
+	text-shadow: inherit;
+}
+
 /* EUI */
 
 #eui-container {
 	user-select: none;
+}
+
+.eui-win {
+	display: grid;
+	grid-template-columns: 1fr auto;
+	grid-template-rows: auto 1fr;
+	row-gap: 5px;
 }
 
 .eui-win, .eui-wg, .eui-themed {
@@ -78,15 +91,176 @@
 	text-align: center;
 }
 
-/* TOOL WINDOW */
-
-.owop-tools {
-	top: 30px;
-	left: 4px;
-	width: min-content;
+.eui-win.moveable .eui-win-title {
+	cursor: move;
 }
 
-.owop-tools .eui-win-title {
+.eui-win-title {
+	padding: 5px;
+	border-radius: 3px;
+	background-color: #00000022;
+}
+
+.eui-win-close {
+	appearance: none;
+	border: unset;
+	padding: 5px;
+	border-radius: 3px;
+	background-color: #00000022;
+	margin-left: 5px;
+	transition: background-color 100ms;
+}
+
+.eui-win:last-of-type .eui-win-title,
+.eui-win:last-of-type .eui-win-close { /* topmost window, active */
+	background-color: #00000044;
+}
+
+.eui-win .eui-win-close:hover {
+	background-color: #CD5C5C;
+}
+
+.eui-win-close:active {
+	filter: brightness(0.8);
+}
+
+.eui-win-close::before {
+	content: 'X';
+}
+
+.eui-win-content {
+	grid-column: 1 / -1;
+	min-width: min-content;
+}
+
+
+/* UI TEXTURES */
+
+button.owop-ui {
+	padding: 4px;
+}
+
+.owop-ui::after, .tool::after {
+	content: '';
+	width: 32px;
+	height: 32px;
+	display: block;
+	margin: auto;
+	background-repeat: no-repeat;
+	background-clip: content-box;
+}
+
+.owop-ui::after {
+	background-image: var(--tex-url-ui);
+}
+
+.tool::after {
+	background-image: var(--tex-url-tools);
+	margin: -4px;
+}
+
+/* TODO: autogenerate these from theme.json */
+.owop-ui[data-i="help"]::after {
+	background-position: -256px 0px;
+}
+
+.owop-ui[data-i="gpedia"]::after {
+	background-position: -224px 0px;
+}
+
+.owop-ui[data-i="pypal"]::after {
+	background-position: -192px 0px;
+}
+
+.owop-ui[data-i="rddit"]::after {
+	background-position: -160px 0px;
+}
+
+.owop-ui[data-i="fbook"]::after {
+	background-position: -128px 0px;
+}
+
+.owop-ui[data-i="dcord"]::after {
+	background-position: -96px 0px;
+}
+
+.owop-ui[data-i="palette"]::after {
+	background-position: -64px 0px;
+}
+
+.owop-ui[data-i="clr-swap"]::after {
+	background-position: -32px 0px;
+}
+
+.owop-ui[data-i="settings"]::after {
+	background-position: 0px 0px;
+}
+
+/* TODO: autogenerate these from theme.json */
+.owop-tools .tool[data-tool="Pencil"]::after {
+	background-position: 0px 0px;
+}
+
+.owop-tools .tool[data-tool="Move"]::after {
+	background-position: -32px 0px;
+}
+
+.owop-tools .tool[data-tool="Zoom"]::after {
+	background-position: -64px 0px;
+}
+
+.owop-tools .tool[data-tool="Pipette"]::after {
+	background-position: -96px 0px;
+}
+
+/* TABBED VIEW */
+
+.tabs {
+	display: grid;
+	grid-template-rows: repeat(var(--num-tabs), auto) 1fr;
+	grid-template-columns: auto 1fr;
+}
+
+.tab {
+	display: contents;
+}
+
+.tab > label {
+	grid-column: 1 / 2;
+	padding: 5px;
+	margin: 3px;
+	border-radius: 3px;
+	background-color: #00000044;
+	cursor: pointer;
+}
+
+.tab > input[type=radio]:checked ~ label {
+	background-color: #00000088;
+	cursor: initial;
+}
+
+.tab > input[type=radio],
+.tab > input[type=radio]:not(:checked) ~ label ~ .content {
+	display: none;
+}
+
+.tab > .content {
+	grid-column: 2 / 3;
+	grid-row: 1 / -1;
+	border-left: 1px solid #00000055;
+	min-width: 200px;
+}
+
+
+/* TOOL WINDOW */
+.owop-tools {
+	width: min-content;
+	row-gap: unset;
+}
+
+.eui-win.owop-tools .eui-win-title {
+	padding: unset;
+	background-color: unset;
 	margin: auto;
 	height: 16px;
 	width: 36px;
@@ -109,48 +283,16 @@
 	border-image: var(--tex-url-border-active) 8 fill repeat;
 }
 
-.owop-tools .tool::after {
-	content: '';
-	background-image: var(--tex-url-tools);
-	background-repeat: no-repeat;
-	background-position: 32px 0px;
-	background-clip: content-box;
-	width: 32px;
-	height: 32px;
-	margin: -4px;
-	display: block;
-}
-
-.owop-tools .tool[data-tool="Pencil"]::after {
-	background-position: 0px 0px;
-}
-
-.owop-tools .tool[data-tool="Move"]::after {
-	background-position: -32px 0px;
-}
-
-.owop-tools .tool[data-tool="Zoom"]::after {
-	background-position: -64px 0px;
-}
-
-.owop-tools .tool[data-tool="Pipette"]::after {
-	background-position: -96px 0px;
-}
-
-.owop-tools .tool[data-tool="Zoom"] {
-	display: none;
-}
-
-/* only show zoom tool if user has a mouse or precise pointing device */
-@media (any-pointer:fine) {
+/* hide zoom tool if the user has a touch screen */
+@media (pointer:coarse) {
 	.owop-tools .tool[data-tool="Zoom"] {
-		display: initial;
+		display: none;
 	}
 }
 
-/* COLOR WIDGET */
+/* LOWER LEFT UI AND COLOR WIDGET */
 
-.owop-clr-ui {
+.owop-llui {
 	display: flex;
 	align-items: flex-end;
 	position: fixed;
@@ -161,6 +303,36 @@
 	box-sizing: border-box;
 }
 
+.owop-llui > div:first-child {
+	flex-shrink: 0;
+}
+
+.owop-llui > div:nth-child(2) {
+	width: 350px;
+}
+
+.owop-llui, .owop-llui > div {
+	pointer-events: none;
+}
+
+.owop-llui > div > * {
+	pointer-events: initial;
+}
+
+.owop-llui > div {
+	display: flex;
+	flex-direction: column-reverse;
+	align-items: flex-start;
+}
+
+.owop-llui > div + div {
+	margin-left: 3px;
+}
+
+.owop-llui > div > * + * {
+	margin-bottom: 3px!important;
+}
+
 .owop-colors, .owop-palettes {
 	position: initial;
 }
@@ -168,9 +340,10 @@
 .owop-colors {
 	display: flex;
 	flex-wrap: wrap;
-	width: 80px;
-	height: 80px;
+	width: 96px;
+	height: 96px;
 	flex-shrink: 0;
+	box-sizing: border-box;
 }
 
 .owop-colors > * {
@@ -179,6 +352,9 @@
 	appearance: none;
 	background-color: transparent;
 	border: 0;
+}
+
+.owop-colors > button.owop-ui {
 	padding: 0;
 }
 
@@ -223,25 +399,6 @@
 	margin: 0 -2px 0 2px;
 }
 
-.owop-colors > .palette-btn::after, .owop-colors > .swap-clr-btn::after {
-	content: '';
-	width: 32px;
-	height: 32px;
-	display: block;
-	margin: auto;
-	background-image: var(--tex-url-ui);
-	background-repeat: no-repeat;
-	background-position: center;
-}
-
-.owop-colors > .palette-btn::after {
-	background-position: -64px 0px;
-}
-
-.owop-colors > .swap-clr-btn::after {
-	background-position: -32px 0px;
-}
-
 /* click shield for color picker */
 .color-picker__dialog::before {
 	content: '';
@@ -256,9 +413,9 @@
 /* PALETTE WIDGET */
 
 .owop-palettes {
-	width: 350px;
-	min-height: 80px;
-	margin-left: 3px;
+	min-height: 96px;
+	width: 100%;
+	box-sizing: border-box;
 }
 
 .owop-palettes summary {
@@ -366,3 +523,22 @@
 	content: attr(data-num-cur-global) ' cursors globally';
 }
 
+/* HELP WINDOW */
+
+.help-links {
+	display: flex;
+	border-bottom: 1px solid #00000055;
+}
+
+.help-links > a {
+	margin: 10px;
+}
+
+.help-cont {
+	padding: 5px;
+	text-align: left;
+}
+
+.help-cont::before {
+	content: 'There\'s no help for you, yet...';
+}

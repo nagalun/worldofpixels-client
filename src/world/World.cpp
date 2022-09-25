@@ -2,6 +2,8 @@
 
 #include <array>
 #include <algorithm>
+#include <functional>
+#include <optional>
 #include <cstdio>
 #include <cmath>
 
@@ -29,6 +31,8 @@ World::World(InputAdapter& base, std::string name, std::unique_ptr<SelfCursor::B
   toolMan(*this, aWorld),
   toolWin(toolMan),
   posUi(this->me.getX(), this->me.getY(), r.getZoom()),
+  settingsBtn("settings", "Settings"),
+  helpBtn("help", "Help"),
   iMoveCursor(aWorld, "Move cursor", T_ONENTER | T_ONPRESS | T_ONMOVE | T_ONWHEEL | T_ONLEAVE | T_OPT_ALWAYS),
   tickNum(0),
   drawingRestricted(restricted) {
@@ -40,6 +44,22 @@ World::World(InputAdapter& base, std::string name, std::unique_ptr<SelfCursor::B
 	iMoveCursor.setCb([this] (ImAction::Event& ev, const InputInfo& ii) {
 		recalculateCursorPosition(ii);
 	});
+
+	llcorner.addClass("owop-llui");
+	llcorner.appendToMainContainer();
+
+	settingsBtn.setCb([this] {
+		sw.moveToCenter(true, true);
+		sw.toggle();
+	});
+
+	helpBtn.setCb([this] {
+		hw.moveToCenter(true, true);
+		hw.toggle();
+	});
+
+	settingsBtn.appendTo(llcorner.get<0>());
+	helpBtn.appendTo(llcorner.get<0>());
 
 	std::puts("[World] Created");
 
@@ -61,41 +81,56 @@ void World::tick() {
 	}
 }
 
-sz_t World::unloadChunks(sz_t targetAmount) { /* pretty bad worst case perf, optimize! */
+sz_t World::unloadChunks(sz_t targetAmount) {
 	sz_t origAmount = targetAmount;
 	bool doingWork = false;
+
+	using cit_t = decltype(chunks)::const_iterator;
 	// allocating memory may not be safe right now
-	std::array<decltype(chunks)::const_iterator, 8> toUnload;
+	std::array<cit_t, 32> toUnload;
+
+	// necessary so that partial_sort_copy gives me iterators
+	struct it_wrap : cit_t {
+		it_wrap(cit_t it) : cit_t(it) { }
+		using value_type = cit_t;
+		value_type& operator*() { return *this; }
+	};
 
 	do {
-		toUnload.fill(chunks.cend());
+		auto end = std::partial_sort_copy(
+				it_wrap{chunks.cbegin()}, it_wrap{chunks.cend()},
+				toUnload.begin(), toUnload.begin() + std::min(targetAmount, toUnload.size()),
+				[this] (const cit_t& a, const cit_t& b) {
+					bool unlA = a->second.shouldUnload();
+					bool unlB = b->second.shouldUnload();
+					bool visA = r.isChunkVisible(a->second);
+					bool visB = r.isChunkVisible(b->second);
 
-		for (auto it = chunks.cbegin(); it != chunks.cend(); ++it) {
-			if (it->second.shouldUnload() && !r.isChunkVisible(it->second)) {
-				if (toUnload[0] != chunks.cend()) {
-					float distTop = getDistanceToChunk(toUnload[0]->second);
-					float distCur = getDistanceToChunk(it->second);
-					if (distCur < distTop) {
-						continue;
+					// order of unloading: non-visible far to closest, visible far to closest
+					// non-unloadable chunks go last
+					if (unlA && !unlB) {
+						return true;
+					} else if (!unlA && unlB) {
+						return false;
+					} else if (visA && !visB) {
+						return false;
+					} else if (!visA && visB) {
+						return true;
 					}
-				}
 
-				std::move_backward(toUnload.begin(), toUnload.end() - 1, toUnload.end());
-				toUnload[0] = it;
-			}
-		}
+					float dstA = getDistanceToChunk(a->second);
+					float dstB = getDistanceToChunk(b->second);
+					return dstA > dstB;
+				});
 
-		doingWork = false;
-		for (auto it : toUnload) {
-			if (targetAmount == 0) {
+		doingWork = end == toUnload.end();
+		for (auto it = toUnload.begin(); it != end; ++it) {
+			if (!(*it)->second.shouldUnload()) {
+				doingWork = false;
 				break;
 			}
-
-			if (it != chunks.cend()) {
-				doingWork = true;
-				chunks.erase(it);
-				--targetAmount;
-			}
+			chunks.erase(*it);
+			--targetAmount;
 		}
 	} while (targetAmount != 0 && doingWork);
 
@@ -169,7 +204,11 @@ bool World::freeMemory(bool tryHarder) {
 
 sz_t World::getMaxLoadedChunks() const {
 	sz_t mv = r.getMaxVisibleChunks();
-	return std::max(std::min(mv * 8, 128ul), mv);
+	return std::min(std::max(std::min(mv * 8, 128ul), mv), Renderer::maxLoadedChunks);
+}
+
+Box<eui::Object, eui::Object>& World::getLlCornerUi() {
+	return llcorner;
 }
 
 Camera& World::getCamera() {
@@ -199,9 +238,9 @@ Chunk& World::getOrLoadChunk(Chunk::Pos x, Chunk::Pos y) {
 		unloadNonVisibleNonReadyChunks();
 
 		sz_t ml = getMaxLoadedChunks();
-		if (chunks.size() >= Renderer::maxLoadedChunks) {
+		if (chunks.size() >= ml) {
 			it.first->second.preventUnloading(true);
-			if (!unloadChunks(chunks.size() - Renderer::maxLoadedChunks + 1)) {
+			if (!unloadChunks(chunks.size() - ml + 1)) {
 				std::printf("[World] Can't keep loaded chunks (%ld) under limit (%ld)\n", chunks.size(), ml);
 			}
 

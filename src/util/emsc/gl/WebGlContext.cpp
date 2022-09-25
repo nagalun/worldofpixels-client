@@ -9,7 +9,10 @@
 #include <emscripten.h>
 #include <emscripten/html5.h>
 
-/* used to reinitialize the canvas element on context losses */
+#include <util/emsc/dom.hpp>
+
+/* used to reinitialize the canvas element on context losses and destruction */
+//extern "C" void reset_element(const char * target, std::size_t len);
 EM_JS(void, reset_element, (const char * target, std::size_t len), {
 	var targetSelector = UTF8ToString(target, len);
 	var el = document.querySelector(targetSelector);
@@ -40,6 +43,9 @@ WebGlContext::WebGlContext(const char * targetCanvas, const char * targetSizeEle
 WebGlContext::~WebGlContext() {
 	stopRenderLoop();
 	destroyRenderingContext();
+	if (targetCanvas) { // flashes white before fade in completes
+		reset_element(targetCanvas, std::strlen(targetCanvas));
+	}
 }
 
 WebGlContext::WebGlContext(WebGlContext&& other)

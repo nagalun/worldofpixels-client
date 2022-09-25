@@ -1,9 +1,12 @@
 #pragma once
 
+#include <cstdint>
 #include <util/emsc/ui/Object.hpp>
+#include <util/emsc/ui/Button.hpp>
 #include <util/emsc/ui/AutoStacking.hpp>
 #include <string_view>
 #include <variant>
+#include <optional>
 
 struct EmscriptenMouseEvent;
 
@@ -11,33 +14,41 @@ namespace eui {
 
 struct WindowOptions {
 	std::variant<std::string_view, Object> title;
-	int x = 0;
-	int y = 0;
-	unsigned int width = 200;
-	unsigned int height = 200;
-	unsigned int minWidth = 50;
-	unsigned int minHeight = 25;
+	bool moveable = true;
 	bool closeable = true;
-	bool resizable = true;
 	Object content = {};
 };
 
 class Window : public AutoStacking {
 	Object titleBar;
+	std::optional<Button> closeBtn;
 	Object content;
-	unsigned int width;
-	unsigned int height;
-	unsigned int minWidth;
-	unsigned int minHeight;
+	eui::EventHandle dragStartEvt;
+	eui::EventHandle dragEvt;
+	eui::EventHandle dragEndEvt;
+	int x;
+	int y;
+	int horizAnchor;
+	int vertAnchor;
 	int moveLastX;
 	int moveLastY;
-	bool moving;
+	bool moveable;
+	bool movingToCenter;
+	bool closeable;
+	bool closed;
 
 public:
-	Window(WindowOptions = {}, std::string_view containerSelector = "#eui-container");
+	Window(WindowOptions = {});
+	explicit Window(std::string_view title, bool moveable = true, bool closeable = true);
+	explicit Window(bool moveable, bool closeable);
+	virtual ~Window();
 
-	void move(int x, int y);
-	void resize(unsigned int width, unsigned int height);
+	void moveToCenter(bool slowMethod = false, bool hideUntilCentered = false);
+	virtual void move(int x, int y, std::int8_t horizAnchor = -1, std::int8_t vertAnchor = -1);
+	virtual bool isClosed();
+	virtual bool open();
+	virtual bool close();
+	bool toggle();
 
 	Object& getTitle();
 	void setTitle(Object titleBar);
@@ -46,16 +57,10 @@ public:
 	Object& getContent();
 	void setContent(Object content);
 
-	unsigned int getMinWidth() const;
-	unsigned int getMinHeight() const;
-	unsigned int getWidth() const;
-	unsigned int getHeight() const;
-
 private:
-	bool pointerDownTitle(int buttons);
-	bool pointerUp(int buttons);
-	void pointerMove(int x, int y);
-	static int handleMouseEvent(int type, const EmscriptenMouseEvent * ev, void * data);
+	bool pointerDownTitle();
+	bool pointerUp();
+	bool pointerMove();
 };
 
 } // namespace eui

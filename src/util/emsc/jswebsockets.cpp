@@ -45,10 +45,10 @@ EM_JS(bool, js_ws_open, (const char * url, std::size_t len, const char * proto, 
 		var data = e.data;
 		if (data.byteLength > Module.JSWS.bufSize) {
 			Module.JSWS.bufPtr = Module["_js_ws_prepare_msg_buffer"](data.byteLength);
-			Module.JSWS.bufSize = Module["HEAP32"][Module.JSWS.bufPtr / Int32Array.BYTES_PER_ELEMENT];
+			Module.JSWS.bufSize = HEAP32[Module.JSWS.bufPtr / 4];
 		}
 
-		Module["HEAPU8"].set(new Uint8Array(data), Module.JSWS.bufPtr);
+		HEAPU8.set(new Uint8Array(data), Module.JSWS.bufPtr);
 		Module["_js_ws_call_on_message"](data.byteLength);
 	};
 
@@ -74,7 +74,7 @@ EM_JS(void, js_ws_close, (std::uint16_t code), {
 });
 
 EM_JS(void, js_ws_send, (const char * buf, std::size_t len), {
-	Module.JSWS.ws.send(Module["HEAPU8"].subarray(buf, buf + len));
+	Module.JSWS.ws.send(HEAPU8.subarray(buf, buf + len));
 });
 
 EM_JS(void, js_ws_send_str, (const char * buf, std::size_t len), {

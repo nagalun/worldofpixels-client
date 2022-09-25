@@ -16,7 +16,16 @@ class Button : public Object {
 public:
 	Button(std::function<bool(void)> = nullptr);
 
+	template<typename Fn>
+	Button(Fn fn, std::enable_if_t<std::is_invocable_r_v<void, Fn>>* = nullptr);
+
 	void setCb(std::function<bool(void)>);
+
+	template<typename Fn>
+	std::enable_if_t<std::is_invocable_r_v<void, Fn>> setCb(Fn fn);
 };
 
 } /* namespace eui */
+
+#include "Button.tpp"
+

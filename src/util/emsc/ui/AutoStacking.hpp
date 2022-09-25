@@ -11,7 +11,8 @@ class AutoStacking : public eui::Object {
 public:
 	AutoStacking();
 
-	bool bringUp();
+	bool bringUp(bool force = false);
+	void setClickBringUpEnabled(bool);
 };
 
 }

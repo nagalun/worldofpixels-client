@@ -1,16 +1,14 @@
 #include "Window.hpp"
 #include <cstdio>
-#include <cstdint>
 
-#include <emscripten/html5.h>
-
+#include <util/emsc/dom.hpp>
 #include <util/misc.hpp>
 
 namespace eui {
 
-// "translate(-2147483648px,-2147483648px)"
+// "translate(-100%,-100%) translate(-2147483648px,-2147483648px)"
 // "-2147483648px" // w, h
-constexpr std::size_t bufSz = 11 * 2 + 16;
+constexpr std::size_t bufSz = 61;
 
 static Object mktitle(std::string_view title) {
 	Object t;
@@ -19,52 +17,161 @@ static Object mktitle(std::string_view title) {
 	return t;
 }
 
-Window::Window(WindowOptions wo, std::string_view containerSelector)
+Window::Window(WindowOptions wo)
 : titleBar(wo.title.index() == 0 ? mktitle(std::get<0>(wo.title)) : std::move(std::get<1>(wo.title))),
   content(std::move(wo.content)),
-  width(wo.width),
-  height(wo.height),
-  minWidth(wo.minWidth),
-  minHeight(wo.minHeight),
+  dragStartEvt(titleBar.createHandler("mousedown touchstart", std::bind(&Window::pointerDownTitle, this))),
+  dragEvt(Object::createWindowHandler("mousemove touchmove", std::bind(&Window::pointerMove, this))),
+  dragEndEvt(Object::createWindowHandler("mouseup touchend", std::bind(&Window::pointerUp, this))),
+  x(0),
+  y(0),
+  horizAnchor(-1),
+  vertAnchor(-1),
   moveLastX(0),
   moveLastY(0),
-  moving(false) {
+  moveable(wo.moveable),
+  movingToCenter(false),
+  closeable(wo.closeable),
+  closed(true) {
 	addClass("eui-win");
 
 	titleBar.addClass("eui-win-title");
 	titleBar.appendTo(*this);
 
+	if (closeable) {
+		closeBtn.emplace(std::bind(&Window::close, this));
+		closeBtn->addClass("eui-win-close");
+		closeBtn->setAttribute("title", "Close");
+		closeBtn->appendTo(*this);
+	}
+
 	content.addClass("eui-win-content");
 	content.appendTo(*this);
 
-	const char * tbarSel = titleBar.getSelector().data();
-	const char * csel = containerSelector.data();
-
-	//emscripten_set_mousedown_callback(tbarSel, this, true, Window::handleMouseEvent);
-	// there is a delay between moving the mouse and sending the event, so
-	// mouseup can end up outside the window
-	//emscripten_set_mousemove_callback(csel, this, false, Window::handleMouseEvent);
-	//emscripten_set_mouseup_callback(csel, this, false, Window::handleMouseEvent);
-
-	move(wo.x, wo.y);
-	//resize(wo.width, wo.height);
-}
-
-void Window::move(int x, int y) {
-	setProperty("style.transform", svprintf<bufSz>("translate(%ipx,%ipx)", x, y));
-}
-
-void Window::resize(unsigned int newWidth, unsigned int newHeight) {
-	if (newWidth != width) {
-		setProperty("style.width", svprintf<bufSz>("%ipx", newWidth));
-		width = newWidth;
+	if (moveable) {
+		addClass("moveable");
+	} else {
+		dragStartEvt.setEnabled(false);
 	}
 
-	if (newHeight != height) {
-		setProperty("style.height", svprintf<bufSz>("%ipx", newHeight));
-		height = newHeight;
-	}
+	dragEvt.setEnabled(false);
+	dragEndEvt.setEnabled(false);
+
+//	bringUp();
+//	moveToCenter(true, true);
 }
+
+Window::Window(std::string_view title, bool moveable, bool closeable)
+: Window(WindowOptions{title, moveable, closeable}) { } // @suppress("Symbol is not resolved")
+
+Window::Window(bool moveable, bool closeable)
+: Window("", moveable, closeable) { }
+
+Window::~Window() { }
+
+void Window::moveToCenter(bool slowMethod, bool hideUntilCentered) {
+	if (slowMethod) { // just css/js things
+		movingToCenter = true;
+		if (hideUntilCentered) {
+			setProperty("style.visibility", "hidden");
+		}
+
+		eui_wait_n_frames(2, this, [] (void * d) {
+			Window& w = *static_cast<Window*>(d);
+			w.setProperty("style.visibility", "");
+			if (w.movingToCenter) {
+				w.movingToCenter = false;
+				w.moveToCenter(false);
+			}
+
+			return false;
+		});
+
+		return;
+	}
+
+	int ww, wh, ew, eh;
+	eui_get_vp_size(&ww, &wh);
+	getOffsetSize(&ew, &eh);
+	move(ww / 2 - ew / 2, wh / 2 - eh / 2, -1, -1);
+}
+
+void Window::move(int newX, int newY, std::int8_t newHorizAnchor, std::int8_t newVertAnchor) {
+
+	if (newX == x && newY == y && horizAnchor == newHorizAnchor && vertAnchor == newVertAnchor) {
+		return;
+	}
+
+	// cancel moving to center if move is called before it finishes
+	movingToCenter = false;
+
+	if (horizAnchor != newHorizAnchor) {
+		setProperty("style.right", newHorizAnchor > 0 ? "0" : "");
+	}
+
+	if (vertAnchor != newVertAnchor) {
+		setProperty("style.bottom", newVertAnchor > 0 ? "0" : "");
+	}
+
+	setProperty("style.transform", svprintf<bufSz>("translate(%i%%,%i%%) translate(%ipx,%ipx)",
+			newHorizAnchor > 0 ? 100 : 0,
+			newVertAnchor > 0 ? 100 : 0,
+			newX, newY));
+
+	x = newX;
+	y = newY;
+	horizAnchor = newHorizAnchor;
+	vertAnchor = newVertAnchor;
+}
+
+bool Window::isClosed() {
+	return closed;
+}
+
+bool Window::open() {
+	if (closed) {
+		bringUp(true);
+		closed = false;
+		setClickBringUpEnabled(true);
+	}
+
+	return true;
+}
+
+bool Window::close() {
+	if (!closed) {
+		remove();
+		movingToCenter = false;
+		closed = true;
+		setClickBringUpEnabled(false);
+	}
+
+	return true;
+}
+
+bool Window::toggle() {
+	bool cl = isClosed();
+	if (cl) {
+		open();
+	} else {
+		close();
+	}
+
+	return cl;
+}
+
+
+//void Window::resize(unsigned int newWidth, unsigned int newHeight) {
+//	if (newWidth != width) {
+//		setProperty("style.width", svprintf<bufSz>("%ipx", newWidth));
+//		width = newWidth;
+//	}
+//
+//	if (newHeight != height) {
+//		setProperty("style.height", svprintf<bufSz>("%ipx", newHeight));
+//		height = newHeight;
+//	}
+//}
 
 Object& Window::getTitle() {
 	return titleBar;
@@ -90,60 +197,43 @@ void Window::setContent(Object nContent) {
 	content.addClass("eui-win-content");
 }
 
-unsigned int Window::getWidth() const {
-	return width;
-}
-
-unsigned int Window::getHeight() const {
-	return height;
-}
-
-unsigned int Window::getMinWidth() const {
-	return minWidth;
-}
-
-unsigned int Window::getMinHeight() const {
-	return minHeight;
-}
-
-bool Window::pointerDownTitle(int buttons) {
-	moving = true;
+bool Window::pointerDownTitle() {
+	int cx, cy;
+	eui_get_evt_pointer_coords(&cx, &cy, true);
+	moveLastX = cx;
+	moveLastY = cy;
+	dragEvt.setEnabled(true);
+	dragEndEvt.setEnabled(true);
 	return false;
 }
 
-bool Window::pointerUp(int buttons) {
-	if (moving && !(buttons & 1)) {
-		moving = false;
-	}
+bool Window::pointerUp() {
+	dragEvt.setEnabled(false);
+	dragEndEvt.setEnabled(false);
 
 	return false;
 }
 
-void Window::pointerMove(int x, int y) {
-	if (moving) {
-		int deltaX = x - moveLastX;
-		int deltaY = y - moveLastY;
-		moveLastX = x;
-		moveLastY = y;
-		move(x, y);
-	}
-}
+bool Window::pointerMove() {
+	int cx, cy, ww, wh;
+	eui_get_evt_pointer_coords(&cx, &cy, true, &ww, &wh);
 
-int Window::handleMouseEvent(int type, const EmscriptenMouseEvent *ev, void *data) {
-	Window * win = static_cast<Window *>(data);
-	std::printf("%d, %d\n", win->moving, type);
+	int deltaX = cx - moveLastX;
+	int deltaY = cy - moveLastY;
+	moveLastX = cx;
+	moveLastY = cy;
 
-	switch (type) {
-		case EMSCRIPTEN_EVENT_MOUSEMOVE:
-			win->pointerMove(ev->clientX, ev->clientY);
-			return false;
+	std::int8_t newHorizAnchor = cx > ww / 2 ? 1 : -1;
+	std::int8_t newVertAnchor = cy > wh / 2 ? 1 : -1;
 
-		case EMSCRIPTEN_EVENT_MOUSEDOWN:
-			return win->pointerDownTitle(ev->buttons);
+	int absX = horizAnchor > 0 ? ww + x : x;
+	int absY = vertAnchor > 0 ? wh + y : y;
+	absX += deltaX;
+	absY += deltaY;
+	int newX = newHorizAnchor > 0 ? absX - ww : absX;
+	int newY = newVertAnchor > 0 ? absY - wh : absY;
 
-		case EMSCRIPTEN_EVENT_MOUSEUP:
-			return win->pointerUp(ev->buttons);
-	}
+	move(newX, newY, newHorizAnchor, newVertAnchor);
 
 	return false;
 }

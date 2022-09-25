@@ -1,6 +1,6 @@
 {
   "short_name": "OWOP",
-  "name": "Our World Of Pixels",
+  "name": "Our World of Pixels",
   "description": "Draw pixels with other people in real-time on an (almost) infinite canvas!",
   "icons": [
     {
@@ -32,6 +32,24 @@
       "type": "image/png",
       "sizes": "512x512",
       "purpose": "any"
+    },
+    {
+      "src": "/img/app/m-owop-96.png",
+      "type": "image/png",
+      "sizes": "96x96",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/img/app/m-owop-2x-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/img/app/m-owop-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "maskable"
     }
   ],
   "id": "/?type=pwa",

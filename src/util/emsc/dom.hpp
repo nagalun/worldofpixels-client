@@ -7,12 +7,14 @@
 extern "C" { // C++ -> JS
 	std::uint32_t eui_create_elem(const char * tag, std::size_t len);
 	void eui_elem_add_class(std::uint32_t id, const char * name, std::size_t len);
+	bool eui_elem_tgl_class(std::uint32_t id, const char * name, std::size_t len);
 	void eui_elem_del_class(std::uint32_t id, const char * name, std::size_t len);
 	void eui_append_elem(std::uint32_t parentid, std::uint32_t id);
 	void eui_append_elem_selector(const char * parent, std::size_t len, std::uint32_t id);
 	void eui_remove_elem(std::uint32_t id);
 	void eui_destroy_elem(std::uint32_t id);
-	void eui_elem_add_handler(std::uint32_t id, const char * evt, std::size_t len, void * data, bool(*cb)(void *));
+	void eui_elem_add_handler(std::uint32_t id, const char * evt, std::size_t len, void * data, bool(*cb)(void *), bool passive);
+	void eui_elem_enable_handler(std::uint32_t id, void * data, bool(*cb)(void *), bool enabled);
 	void eui_elem_ch_handler(std::uint32_t id, void * data, bool(*cb)(void *), void * newData, bool(*newCb)(void *));
 	void eui_elem_del_handler(std::uint32_t id, void * data, bool(*cb)(void *));
 	std::size_t eui_elem_property_len(std::uint32_t id, const char * prop, std::size_t len);
@@ -23,6 +25,12 @@ extern "C" { // C++ -> JS
 	std::size_t eui_elem_attr_get(std::uint32_t id, const char * buf, std::size_t maxlen, const char * prop, std::size_t len);
 	void eui_elem_attr_set(std::uint32_t id, const char * prop, std::size_t proplen, const char * val, std::size_t vallen);
 	void eui_root_css_property_set(const char * prop, std::size_t proplen, const char * val, std::size_t vallen);
+
+	void eui_get_vp_size(int * ww, int * wh);
+	void eui_get_elem_size(std::uint32_t id, int * ew, int * eh);
+	void eui_get_evt_pointer_coords(int * x, int * y, bool clamp2Win = false, int * ww = nullptr, int * wh = nullptr);
+
+	void eui_wait_n_frames(int n, void * data, bool(*cb)(void *));
 
 	// JS -> C++
 	bool eui_call_evt_handler(void * data, bool(*cb)(void *));

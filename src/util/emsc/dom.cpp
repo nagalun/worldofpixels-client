@@ -27,6 +27,11 @@ EM_JS(void, eui_elem_add_class, (std::uint32_t id, const char * name, std::size_
 	e.classList.add(UTF8ToString(name, len));
 });
 
+EM_JS(bool, eui_elem_tgl_class, (std::uint32_t id, const char * name, std::size_t len), {
+	var e = Module.EUI.elems[id];
+	return e.classList.toggle(UTF8ToString(name, len));
+});
+
 EM_JS(void, eui_elem_del_class, (std::uint32_t id, const char * name, std::size_t len), {
 	var e = Module.EUI.elems[id];
 	e.classList.remove(UTF8ToString(name, len));
@@ -55,8 +60,8 @@ EM_JS(void, eui_destroy_elem, (std::uint32_t id), {
 	e.remove();
 });
 
-EM_JS(void, eui_elem_add_handler, (std::uint32_t id, const char * evt, std::size_t len, void * data, EvtCb cb), {
-	var e = Module.EUI.elems[id];
+EM_JS(void, eui_elem_add_handler, (std::uint32_t id, const char * evt, std::size_t len, void * data, EvtCb cb, bool passive), {
+	var e = id !== 0 ? Module.EUI.elems[id] : window;
 	var evts = Module.EUI.evts[id] = (Module.EUI.evts[id] || []);
 	var evtNames = UTF8ToString(evt, len).split(" ");
 	for (var i = 0; i < evtNames.length; i++) {
@@ -64,23 +69,34 @@ EM_JS(void, eui_elem_add_handler, (std::uint32_t id, const char * evt, std::size
 			data: data,
 			evt: evtNames[i],
 			cb: cb,
-			jscb: null
+			jscb: null,
+			enabled: true
 		};
 
 		obj.jscb = function(ev) {
+			if (!obj.enabled) { return; }
 			Module.EUI.lastEvent = ev;
 			if (Module["_eui_call_evt_handler"](obj.data, obj.cb)) {
 				ev.preventDefault();
 			}
 		};
 
-		e.addEventListener(obj.evt, obj.jscb);
+		e.addEventListener(obj.evt, obj.jscb, {passive: !!passive});
 		evts.push(obj);
 	}
 });
 
+EM_JS(void, eui_elem_enable_handler, (std::uint32_t id, void * data, EvtCb cb, bool enabled), {
+	var evts = Module.EUI.evts[id] = (Module.EUI.evts[id] || []);
+	for (var i = 0; i < evts.length; i++) {
+		var ev = evts[i];
+		if (ev.data === data && ev.cb === cb) {
+			ev.enabled = !!enabled;
+		}
+	}
+});
+
 EM_JS(void, eui_elem_ch_handler, (std::uint32_t id, void * data, EvtCb cb, void * newData, EvtCb newCb), {
-	var e = Module.EUI.elems[id];
 	var evts = Module.EUI.evts[id] = (Module.EUI.evts[id] || []);
 	for (var i = 0; i < evts.length; i++) {
 		var ev = evts[i];
@@ -92,9 +108,9 @@ EM_JS(void, eui_elem_ch_handler, (std::uint32_t id, void * data, EvtCb cb, void 
 });
 
 EM_JS(void, eui_elem_del_handler, (std::uint32_t id, void * data, EvtCb cb), {
-	var e = Module.EUI.elems[id];
-	var evts = Module.EUI.evts[id] = (Module.EUI.evts[id] || []);
-	for (var i = 0; i < evts.length; i++) {
+	var e = id !== 0 ? Module.EUI.elems[id] : window;
+	var evts = Module.EUI.evts[id];
+	for (var i = 0; evts && i < evts.length; i++) {
 		var ev = evts[i];
 		if (ev.data === data && ev.cb === cb) {
 			evts.splice(i, 1);
@@ -102,6 +118,10 @@ EM_JS(void, eui_elem_del_handler, (std::uint32_t id, void * data, EvtCb cb), {
 
 			e.removeEventListener(ev.evt, ev.jscb);
 		}
+	}
+
+	if (evts && !evts.length) {
+		delete Module.EUI.evts[id];
 	}
 });
 
@@ -177,6 +197,45 @@ EM_JS(void, eui_root_css_property_set, (const char * prop, std::size_t proplen, 
 	r.style.setProperty(UTF8ToString(prop, proplen), UTF8ToString(val, vallen));
 });
 
+
+EM_JS(void, eui_get_vp_size, (int * oww, int * owh), {
+	HEAP32[oww / 4] = window.innerWidth;
+	HEAP32[owh / 4] = window.innerHeight;
+});
+
+EM_JS(void, eui_get_elem_size, (std::uint32_t id, int * oew, int * oeh), {
+	var e = Module.EUI.elems[id];
+	HEAP32[oew / 4] = e.offsetWidth;
+	HEAP32[oeh / 4] = e.offsetHeight;
+});
+
+EM_JS(void, eui_wait_n_frames, (int n, void * data, EvtCb cb), {
+	function waitFrames(n, cb) {
+		window.requestAnimationFrame(function() {
+			return n > 1 ? waitFrames(--n, cb) : cb();
+		});
+	}
+
+	waitFrames(n, function() {
+		Module["_eui_call_evt_handler"](data, cb);
+	});
+});
+
+EM_JS(void, eui_get_evt_pointer_coords, (int * x, int * y, bool clampWin, int * oww, int * owh), {
+	var e = Module.EUI.lastEvent;
+	var cx = 'clientX' in e ? e.clientX : e.touches[0].clientX;
+	var cy = 'clientY' in e ? e.clientY : e.touches[0].clientY;
+	var ww = window.innerWidth;
+	var wh = window.innerHeight;
+	if (clampWin) {
+		cx = cx < 0 ? 0 : cx > ww ? ww : cx;
+		cy = cy < 0 ? 0 : cy > wh ? wh : cy;
+	}
+	HEAP32[x / 4] = cx;
+	HEAP32[y / 4] = cy;
+	if (oww) { HEAP32[oww / 4] = ww; }
+	if (owh) { HEAP32[owh / 4] = wh; }
+});
 
 
 EMSCRIPTEN_KEEPALIVE

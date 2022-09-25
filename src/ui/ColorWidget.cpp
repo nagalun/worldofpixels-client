@@ -16,34 +16,24 @@ ColorWidget::ColorWidget(ColorProvider& clr)
 : clr(clr),
   primaryClr(std::bind(&ColorWidget::updatePrimaryClr, this)),
   secondaryClr(std::bind(&ColorWidget::updateSecondaryClr, this)),
-  paletteBtn(std::bind(&ColorWidget::togglePaletteUi, this)),
-  swapBtn(std::bind(&ColorWidget::swapColors, this)),
-  paletteWdg(clr),
-  paletteWdgShown(true) {
-	addClass("owop-clr-ui");
+  paletteBtn("palette", "Palettes", false),
+  swapBtn("clr-swap", "Swap colors", false, std::bind(&ColorWidget::swapColors, this)) {
 
-	pickerContainer.addClass("eui-wg");
-	pickerContainer.addClass("owop-colors");
+	addClass("eui-wg");
+	addClass("owop-colors");
 
 	primaryClr.setProperty("title", "Primary color");
 	secondaryClr.setProperty("title", "Secondary color");
-	paletteBtn.setProperty("title", "Palettes");
-	swapBtn.setProperty("title", "Swap colors");
 
 	primaryClr.addClass("primary-clr");
 	secondaryClr.addClass("secondary-clr");
 	paletteBtn.addClass("palette-btn");
 	swapBtn.addClass("swap-clr-btn");
 
-	primaryClr.appendTo(pickerContainer);
-	paletteBtn.appendTo(pickerContainer);
-	swapBtn.appendTo(pickerContainer);
-	secondaryClr.appendTo(pickerContainer);
-
-	pickerContainer.appendTo(*this);
-	paletteWdg.appendTo(*this);
-
-	appendToMainContainer();
+	primaryClr.appendTo(*this);
+	paletteBtn.appendTo(*this);
+	swapBtn.appendTo(*this);
+	secondaryClr.appendTo(*this);
 }
 
 void ColorWidget::update() {
@@ -60,6 +50,10 @@ void ColorWidget::update() {
 	secondaryClr.setColor(sClr);
 }
 
+void ColorWidget::setPaletteTglFn(std::function<void(void)> cb) {
+	paletteBtn.setCb(std::move(cb));
+}
+
 void ColorWidget::updatePrimaryClr() {
 	clr.setPrimaryColor(primaryClr.getColor());
 }
@@ -70,17 +64,5 @@ void ColorWidget::updateSecondaryClr() {
 
 bool ColorWidget::swapColors() {
 	clr.swapColors();
-	return true;
-}
-
-bool ColorWidget::togglePaletteUi() {
-	if (!paletteWdgShown) {
-		paletteWdg.appendTo(*this);
-	} else {
-		paletteWdg.remove();
-	}
-
-	paletteWdgShown = !paletteWdgShown;
-
-	return true;
+	return false;
 }
