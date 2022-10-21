@@ -1,4 +1,4 @@
-#include <ui/settings/WorldSettings.hpp>
+#include "ui/settings/WorldSettings.hpp"
 
 WorldSettings::WorldSettings() {
 	tabs.appendTo(*this);

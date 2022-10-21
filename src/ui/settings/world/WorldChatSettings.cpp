@@ -1,4 +1,4 @@
-#include <ui/settings/world/WorldChatSettings.hpp>
+#include "ui/settings/world/WorldChatSettings.hpp"
 
 WorldChatSettings::WorldChatSettings() {
 	// TODO Auto-generated constructor stub

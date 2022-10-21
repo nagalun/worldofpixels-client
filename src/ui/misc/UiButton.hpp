@@ -3,7 +3,7 @@
 #include <cstddef>
 #include <functional>
 
-#include <util/emsc/ui/Button.hpp>
+#include "util/emsc/ui/Button.hpp"
 
 class UiButton : public eui::Button {
 public:
@@ -11,4 +11,4 @@ public:
 	UiButton(std::string_view type, std::string_view title = "", bool themed = true, Fn cb = nullptr);
 };
 
-#include "UiButton.tpp"
+#include "UiButton.tpp" // IWYU pragma: keep

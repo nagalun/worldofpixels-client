@@ -3,7 +3,7 @@
 #include <string_view>
 #include <initializer_list>
 
-#include <world/ChunkConstants.hpp>
+#include "world/ChunkConstants.hpp"
 
 // TODO: fix grid rendering when highp is not supported
 #define GLSL_GRID_FUNC " \

@@ -3,8 +3,8 @@
 #include <charconv>
 #include <emscripten.h>
 
-#include <util/byteswap.hpp>
-#include <util/misc.hpp>
+#include "util/byteswap.hpp"
+#include "util/misc.hpp"
 
 EM_JS(void, init_color_picker_on, (std::uint32_t boxId, std::uint32_t inputId), {
 	var box = Module.EUI.elems[boxId];

@@ -3,16 +3,16 @@
 #include <cstdio>
 #include <cmath>
 
-#include <util/BufferHelper.hpp>
-#include <util/rle.hpp>
-#include <world/World.hpp>
-#include <Camera.hpp>
+#include "util/BufferHelper.hpp"
+#include "util/rle.hpp"
+#include "world/World.hpp"
+#include "Camera.hpp"
 
-#include <util/emsc/request.hpp>
-#include <util/explints.hpp>
+#include "util/emsc/request.hpp"
+#include "util/explints.hpp"
 
 static void destroyWget(void * e) {
-	cancel_async_request(reinterpret_cast<int>(e) - 1);
+	cancel_async_request(reinterpret_cast<std::uintptr_t>(e) - 1);
 }
 
 Chunk::Chunk(Pos x, Pos y, World& w)

@@ -1,8 +1,8 @@
 #include "Window.hpp"
 #include <cstdio>
 
-#include <util/emsc/dom.hpp>
-#include <util/misc.hpp>
+#include "util/emsc/dom.hpp"
+#include "util/misc.hpp"
 
 namespace eui {
 

@@ -1,4 +1,6 @@
-#include <util/byteswap.hpp>
+#pragma once
+#include "BufferHelper.hpp"
+#include "util/byteswap.hpp"
 #include <cstring>
 
 
@@ -12,7 +14,7 @@ namespace buf {
 		switch (sizeof(Number)) {
 		case 1:
 			break;
-			
+
 		case 2:
 			integer = bswap_16(integer);
 			break;

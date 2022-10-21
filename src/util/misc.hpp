@@ -4,6 +4,8 @@
 #include <cmath>
 #include <cstdio>
 #include <string_view>
+#include <tuple>
+#include <utility>
 
 template<typename Coord, typename Fn>
 void line(Coord x1, Coord y1, Coord x2, Coord y2, Fn& plot, bool skipfirst = true) {
@@ -63,4 +65,3 @@ std::string_view svprintf(const char * fmt, Args... args) {
 
 	return std::string_view(propBuf, written);
 }
-

@@ -1,4 +1,6 @@
-#include <util/misc.hpp>
+#pragma once
+#include "Box.hpp"
+#include "util/misc.hpp"
 #include <utility>
 
 template<typename Tuple, std::size_t... I>

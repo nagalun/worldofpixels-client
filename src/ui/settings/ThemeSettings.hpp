@@ -5,10 +5,10 @@
 #include <string_view>
 #include <vector>
 
-#include <util/emsc/ui/Object.hpp>
-#include <util/emsc/ui/EventHandle.hpp>
-#include <Settings.hpp>
-#include <util/NonCopyable.hpp>
+#include "util/emsc/ui/Object.hpp"
+#include "util/emsc/ui/EventHandle.hpp"
+#include "Settings.hpp"
+#include "util/NonCopyable.hpp"
 
 class ThemeSettings : public eui::Object, NonCopyable {
 	class Theme : public eui::Object {

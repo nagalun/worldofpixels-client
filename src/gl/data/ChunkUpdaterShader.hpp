@@ -3,8 +3,8 @@
 #include <string_view>
 #include <initializer_list>
 
-#include <util/preproc.hpp>
-#include <world/ChunkConstants.hpp>
+#include "util/preproc.hpp"
+#include "world/ChunkConstants.hpp"
 
 struct ChunkUpdaterShader {
 	// vertex

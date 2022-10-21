@@ -9,8 +9,8 @@
 
 #include <emscripten/html5.h>
 
-#include <JsApiProxy.hpp>
-#include <Renderer.hpp>
+#include "JsApiProxy.hpp"
+#include "Renderer.hpp"
 
 // maybe tool handlers should get selfcursor's mouse coords instead of using inputmanager's
 
@@ -527,7 +527,7 @@ InputAdapter::~InputAdapter() {
 #ifdef DEBUG
 	std::printf("[~InputAdapter] Del %s\n", context.c_str());
 	if (actions.size() > 0) {
-		std::printf("[~InputAdapter] %lu actions still registered on adapter ", actions.size());
+		std::printf("[~InputAdapter] %zu actions still registered on adapter ", actions.size());
 		std::printf("%s!!\n", getFullContext().c_str()); // could segfault if any parent is deleted before this
 	}
 #endif
@@ -1139,4 +1139,3 @@ int InputManager::handleWheelEvent(int type, const EmscriptenWheelEvent * ev, vo
 
 	return false;
 }
-

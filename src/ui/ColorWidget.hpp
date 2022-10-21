@@ -1,13 +1,10 @@
 #pragma once
 
 #include <cstdint>
-#include <util/emsc/ui/AutoStacking.hpp>
-#include <util/emsc/ui/EventHandle.hpp>
-#include <util/NonCopyable.hpp>
 
-#include <ui/misc/UiButton.hpp>
-#include <ui/ColorPicker.hpp>
-#include <ui/PaletteListWidget.hpp>
+#include "ui/misc/UiButton.hpp"
+#include "ui/ColorPicker.hpp"
+#include "util/NonCopyable.hpp"
 
 class ColorProvider;
 
@@ -29,4 +26,3 @@ private:
 	void updateSecondaryClr();
 	bool swapColors();
 };
-

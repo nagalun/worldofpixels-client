@@ -2,8 +2,8 @@
 
 #include <cstdint>
 
-#include <util/emsc/ui/Window.hpp>
-#include <util/emsc/ui/Object.hpp>
+#include "util/emsc/ui/Window.hpp"
+#include "util/emsc/ui/Object.hpp"
 
 class HelpWindow : public eui::Window {
 	eui::Object linkCont;

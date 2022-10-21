@@ -5,8 +5,8 @@
 #include <cstdint>
 #include <functional>
 
-#include <util/stringparser.hpp>
-#include <util/emsc/ui/EventHandle.hpp>
+#include "util/stringparser.hpp"
+#include "util/emsc/ui/EventHandle.hpp"
 
 namespace eui {
 

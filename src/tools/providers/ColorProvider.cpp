@@ -2,11 +2,12 @@
 
 #include <utility>
 
-#include <ui/ColorWidget.hpp>
-#include <InputManager.hpp>
-#include <world/World.hpp>
-#include <tools/ToolManager.hpp>
-#include <util/NonCopyable.hpp>
+#include "ui/ColorWidget.hpp"
+#include "InputManager.hpp"
+#include "world/World.hpp"
+#include "tools/ToolManager.hpp"
+#include "util/NonCopyable.hpp"
+#include "ui/PaletteListWidget.hpp"
 
 struct ColorProvider::LocalContext : NonCopyable {
 	ColorWidget cw;

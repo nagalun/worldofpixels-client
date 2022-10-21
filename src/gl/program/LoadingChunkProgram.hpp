@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-#include <gl/program/ChunkProgram.hpp>
+#include "gl/program/ChunkProgram.hpp"
 
 class LoadingChunkProgram : public ChunkProgram {
 	std::int32_t uTime;

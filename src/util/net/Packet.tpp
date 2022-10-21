@@ -1,3 +1,5 @@
+#pragma once
+#include "Packet.hpp"
 #include <type_traits>
 #include <array>
 #include <string>
@@ -7,9 +9,9 @@
 #include <exception>
 #include <tuple>
 #include <assert.h>
-#include <util/BufferHelper.hpp>
-#include <util/templateutils.hpp>
-#include <util/varints.hpp>
+#include "util/BufferHelper.hpp"
+#include "util/templateutils.hpp"
+#include "util/varints.hpp"
 #include <cstdio>
 //#include <iostream>
 

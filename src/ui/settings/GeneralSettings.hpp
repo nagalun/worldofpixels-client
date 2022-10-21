@@ -3,10 +3,10 @@
 #include <cstdint>
 #include <string_view>
 
-#include <util/emsc/ui/Object.hpp>
-#include <util/emsc/ui/EventHandle.hpp>
-#include <ui/misc/Option.hpp>
-#include <Settings.hpp>
+#include "util/emsc/ui/Object.hpp"
+#include "util/emsc/ui/EventHandle.hpp"
+#include "ui/misc/Option.hpp"
+#include "Settings.hpp"
 
 class GeneralSettings : public eui::Object {
 	using S = Settings;

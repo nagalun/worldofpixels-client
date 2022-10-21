@@ -3,11 +3,10 @@
 #include <cstdio>
 #include <cmath>
 
-#include <Camera.hpp>
-#include <InputManager.hpp>
-#include <world/World.hpp>
-#include <tools/ToolManager.hpp>
-#include <tools/providers/ColorProvider.hpp>
+#include "InputManager.hpp"
+#include "world/World.hpp"
+#include "tools/ToolManager.hpp"
+#include "tools/providers/ColorProvider.hpp"
 
 struct PipetteTool::Keybinds {
 	ImAction iSelectTool;
@@ -80,4 +79,3 @@ bool PipetteTool::isEnabled() {
 std::uint8_t PipetteTool::getNetId() const {
 	return 1;
 }
-

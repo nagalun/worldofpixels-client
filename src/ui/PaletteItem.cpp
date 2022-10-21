@@ -2,9 +2,9 @@
 
 #include <string_view>
 
-#include <tools/providers/ColorProvider.hpp>
-#include <util/byteswap.hpp>
-#include <util/misc.hpp>
+#include "tools/providers/ColorProvider.hpp"
+#include "util/byteswap.hpp"
+#include "util/misc.hpp"
 
 // "'#89ABCDEF'" "-2147483647" "100.000000%"
 constexpr std::size_t bufSz = 11;

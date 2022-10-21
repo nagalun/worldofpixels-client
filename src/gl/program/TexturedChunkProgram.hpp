@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-#include <gl/program/ChunkProgram.hpp>
+#include "gl/program/ChunkProgram.hpp"
 
 class TexturedChunkProgram : public ChunkProgram {
 	std::int32_t uPxTex;

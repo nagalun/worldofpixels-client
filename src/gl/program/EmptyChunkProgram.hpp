@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-#include <gl/program/ChunkProgram.hpp>
+#include "gl/program/ChunkProgram.hpp"
 
 class EmptyChunkProgram : public ChunkProgram {
 public:

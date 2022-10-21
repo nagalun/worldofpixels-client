@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <tuple>
 
-#include <util/emsc/ui/Object.hpp>
+#include "util/emsc/ui/Object.hpp"
 
 template<typename... Content>
 class Box : public eui::Object {
@@ -23,4 +23,4 @@ public:
 	const auto& get() const;
 };
 
-#include "Box.tpp"
+#include "Box.tpp" // IWYU pragma: keep

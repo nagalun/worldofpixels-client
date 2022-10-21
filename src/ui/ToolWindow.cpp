@@ -1,7 +1,7 @@
 #include "ToolWindow.hpp"
 
-#include <tools/ToolManager.hpp>
-#include <util/emsc/audio.hpp>
+#include "tools/ToolManager.hpp"
+#include "util/emsc/audio.hpp"
 
 ToolWindow::ToolWindow(ToolManager& tm)
 : Window(true, false),

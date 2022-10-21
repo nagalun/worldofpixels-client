@@ -5,14 +5,14 @@
 
 #include <emscripten.h>
 #include <emscripten/html5.h>
-#include <util/Bucket.hpp>
-#include <util/emsc/audio.hpp>
-#include <util/emsc/jswebsockets.hpp>
-#include <util/emsc/request.hpp>
+#include "util/Bucket.hpp"
+#include "util/emsc/audio.hpp"
+#include "util/emsc/jswebsockets.hpp"
+#include "util/emsc/request.hpp"
 
-#include <JsApiProxy.hpp>
-#include <PacketDefinitions.hpp>
-#include <world/World.hpp>
+#include "JsApiProxy.hpp"
+#include "PacketDefinitions.hpp"
+#include "world/World.hpp"
 
 #if __has_feature(address_sanitizer)
 #	include <sanitizer/lsan_interface.h>
@@ -164,7 +164,7 @@ void Client::registerPacketTypes() {
 		setStatus("Joining world...");
 
 		std::printf(
-			"AuthOk: Uid=%lX Username=%s TotalRep=%i RankId=%u RankName=%s SuperUser=%u CanSelfManage=%u\n", _selfUid,
+			"AuthOk: Uid=%llX Username=%s TotalRep=%i RankId=%u RankName=%s SuperUser=%u CanSelfManage=%u\n", _selfUid,
 			username.c_str(), totRep, rid, rankName.c_str(), isSuperUser, canSelfManage
 		);
 
@@ -226,7 +226,7 @@ void Client::registerPacketTypes() {
 		[this](std::string worldName, std::string motd, u32 bgClr, bool restricted, std::optional<User::Id> owner) {
 			std::printf("WorldData: Name=%s BgClr=%X Restricted=%u Owner=", worldName.c_str(), bgClr, restricted);
 			if (owner) {
-				std::printf("%lX Motd=", *owner);
+				std::printf("%llX Motd=", *owner);
 			} else {
 				std::printf("(none) Motd=");
 			}

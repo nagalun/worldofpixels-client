@@ -1,7 +1,7 @@
 #include "PlayerCountWidget.hpp"
 
-#include <util/misc.hpp>
-#include <Renderer.hpp>
+#include "util/misc.hpp"
+#include "Renderer.hpp"
 
 // "-2147483647"
 constexpr std::size_t bufSz = 11;

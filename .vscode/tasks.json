@@ -1,0 +1,19 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "build",
+			"type": "shell",
+			"command": "docker exec owop_cli make -j`nproc` \"${input:buildTarget}\" && docker exec owop_cli bash -c 'echo r > /tmp/reloader'"
+		}
+	],
+	"inputs": [
+		{
+			"id": "buildTarget",
+			"type": "pickString",
+			"description": "Build Target",
+			"options": ["clean", "all", "dbg", "udbg", "rel"],
+			"default": "all"
+		}
+	]
+}

@@ -5,10 +5,10 @@
 
 #include <emscripten.h>
 
-#include <util/explints.hpp>
+#include "util/explints.hpp"
 
-#include <Client.hpp>
-#include <world/World.hpp>
+#include "Client.hpp"
+#include "world/World.hpp"
 
 EM_JS(void, create_api_structure, (void), {
 	var f = function(fname) {

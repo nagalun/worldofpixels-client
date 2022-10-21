@@ -1,6 +1,6 @@
-#include <ui/settings/GeneralSettings.hpp>
+#include "ui/settings/GeneralSettings.hpp"
 
-#include <util/emsc/audio.hpp>
+#include "util/emsc/audio.hpp"
 
 GeneralSettings::GeneralSettings()
 : hdrAppearance("h1"),

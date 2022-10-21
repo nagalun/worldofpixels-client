@@ -6,7 +6,7 @@
 #include <cstdlib>
 #include <cmath>
 
-#include <util/explints.hpp>
+#include "util/explints.hpp"
 
 #include <GLES2/gl2.h>
 #include <GLES2/gl2ext.h>
@@ -16,11 +16,10 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/string_cast.hpp>
 
-#include <Client.hpp>
-#include <JsApiProxy.hpp>
-#include <world/World.hpp>
-#include <gl/data/ChunkShader.hpp>
-#include <Settings.hpp>
+#include "Client.hpp"
+#include "JsApiProxy.hpp"
+#include "world/World.hpp"
+#include "Settings.hpp"
 
 Renderer::Renderer(World& w)
 : w(w),

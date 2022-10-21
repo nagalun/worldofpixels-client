@@ -2,12 +2,12 @@
 
 #include <cstdio>
 
-#include <tools/providers/ColorProvider.hpp>
-#include <util/misc.hpp>
-#include <util/color.hpp>
-#include <util/byteswap.hpp>
-#include <util/explints.hpp>
-#include <util/emsc/dom.hpp>
+#include "tools/providers/ColorProvider.hpp"
+#include "util/misc.hpp"
+#include "util/color.hpp"
+#include "util/byteswap.hpp"
+#include "util/explints.hpp"
+#include "util/emsc/dom.hpp"
 
 // "'#89ABCDEF'"
 constexpr std::size_t bufSz = 11;

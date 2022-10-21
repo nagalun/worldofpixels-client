@@ -1,4 +1,4 @@
-#include <ui/settings/SocialSettings.hpp>
+#include "ui/settings/SocialSettings.hpp"
 
 SocialSettings::SocialSettings() {
 	// TODO Auto-generated constructor stub

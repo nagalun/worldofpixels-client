@@ -1,4 +1,6 @@
-#include <util/misc.hpp>
+#pragma once
+#include "TabbedView.hpp"
+#include "util/misc.hpp"
 
 template<typename Content>
 template<typename... CArgs>

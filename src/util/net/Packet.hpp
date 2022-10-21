@@ -1,6 +1,6 @@
 #pragma once
 
-#include <util/explints.hpp>
+#include "util/explints.hpp"
 #include <tuple>
 #include <memory>
 
@@ -29,4 +29,4 @@ struct fromBufFromLambdaArgs<ReturnType(ClassType::*)(Args...) const> {
 	}
 };
 
-#include <util/net/Packet.tpp>
+#include "util/net/Packet.tpp" // IWYU pragma: keep

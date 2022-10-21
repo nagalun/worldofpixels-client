@@ -4,8 +4,8 @@
 #include <memory>
 #include <tuple>
 
-#include <util/color.hpp>
-#include <util/NonCopyable.hpp>
+#include "util/color.hpp"
+#include "util/NonCopyable.hpp"
 
 class ToolManager;
 class InputAdapter;

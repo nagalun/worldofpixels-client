@@ -4,11 +4,11 @@
 #include <cmath>
 #include <chrono>
 
-#include <InputManager.hpp>
-#include <tools/ToolManager.hpp>
-#include <world/World.hpp>
-#include <world/SelfCursor.hpp>
-#include <Camera.hpp>
+#include "InputManager.hpp"
+#include "tools/ToolManager.hpp"
+#include "world/World.hpp"
+#include "world/SelfCursor.hpp"
+#include "Camera.hpp"
 
 #include <glm/geometric.hpp>
 #include <glm/vec2.hpp>

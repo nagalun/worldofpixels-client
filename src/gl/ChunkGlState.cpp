@@ -2,8 +2,7 @@
 
 #include <cstdio>
 
-#include <util/gl/Framebuffer.hpp>
-#include <Renderer.hpp>
+#include "util/gl/Framebuffer.hpp"
 
 #define GL_GLEXT_PROTOTYPES
 #include <GLES2/gl2.h>

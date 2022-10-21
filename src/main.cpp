@@ -9,8 +9,8 @@
 #include <exception>
 #include <new>
 
-#include <util/preproc.hpp>
-#include <JsApiProxy.hpp>
+#include "util/preproc.hpp"
+#include "JsApiProxy.hpp"
 
 #ifndef OWOP_VERSION
 #	define OWOP_VERSION unknown

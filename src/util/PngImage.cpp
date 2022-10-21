@@ -336,11 +336,11 @@ void PngImage::writeFileOnMem(std::vector<u8>& out) {
 }
 
 void PngImage::nearestDownscale(u32 division) {
-	float newW = w / division;
-	float newH = h / division;
+	u32 newW = w / division;
+	u32 newH = h / division;
 	PngImage newData(newW, newH);
-	for (float y = 0; y < newH; y++) {
-		for (float x = 0; x < newW; x++) {
+	for (u32 y = 0; y < newH; y++) {
+		for (u32 x = 0; x < newW; x++) {
 			newData.setPixel(x, y, getPixel(x / newW * w, y / newH * h));
 		}
 	}
@@ -355,4 +355,3 @@ void PngImage::freeMem() {
 	w = 0;
 	h = 0;
 }
-

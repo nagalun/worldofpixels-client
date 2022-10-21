@@ -3,8 +3,8 @@
 #include <functional>
 #include <cstdint>
 
-#include <util/gl/GlContext.hpp>
-#include <Settings.hpp>
+#include "util/gl/GlContext.hpp"
+#include "Settings.hpp"
 
 struct EmscriptenUiEvent;
 

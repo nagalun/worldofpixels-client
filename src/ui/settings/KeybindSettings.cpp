@@ -1,4 +1,4 @@
-#include <ui/settings/KeybindSettings.hpp>
+#include "ui/settings/KeybindSettings.hpp"
 
 KeybindSettings::KeybindSettings() {
 	// TODO Auto-generated constructor stub

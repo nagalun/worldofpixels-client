@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <type_traits>
 #include <tuple>
-#include <util/emsc/ui/Object.hpp>
+#include "util/emsc/ui/Object.hpp"
 
 namespace detail {
 // "tgrp-2147483647"
@@ -32,4 +32,4 @@ public:
 	TabbedView(CArgs&&...);
 };
 
-#include "TabbedView.tpp"
+#include "TabbedView.tpp" // IWYU pragma: keep

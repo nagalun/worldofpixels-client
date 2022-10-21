@@ -1,6 +1,6 @@
 #pragma once
 
-#include <util/explints.hpp>
+#include "util/explints.hpp"
 #include <memory>
 
 namespace rle {
@@ -17,4 +17,4 @@ bool decompress(u8* in, sz_t inSize, T* output, sz_t outMaxItems);
 
 }
 
-#include <util/rle.tpp>
+#include "util/rle.tpp" // IWYU pragma: keep

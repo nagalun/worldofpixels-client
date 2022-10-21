@@ -1,3 +1,5 @@
+#pragma once
+#include "ToolManager.hpp"
 #include <type_traits>
 
 template<typename Fn>

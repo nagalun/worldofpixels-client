@@ -3,9 +3,9 @@
 #include <cstdint>
 #include <functional>
 
-#include <util/emsc/ui/Object.hpp>
-#include <util/emsc/ui/EventHandle.hpp>
-#include <util/color.hpp>
+#include "util/emsc/ui/Object.hpp"
+#include "util/emsc/ui/EventHandle.hpp"
+#include "util/color.hpp"
 
 class ColorPicker : public eui::Object {
 	eui::Object input;

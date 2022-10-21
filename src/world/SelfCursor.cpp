@@ -2,7 +2,7 @@
 
 #include <memory>
 
-#include <world/World.hpp>
+#include "world/World.hpp"
 
 SelfCursor::SelfCursor(User& u, Id id, WorldPos x, WorldPos y, Step s, Tid t, World& w, Bucket paint, Bucket chat, bool canChat, bool canPaint)
 : Cursor(u, id, x, y, s, t),

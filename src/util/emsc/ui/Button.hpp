@@ -27,5 +27,4 @@ public:
 
 } /* namespace eui */
 
-#include "Button.tpp"
-
+#include "Button.tpp" // IWYU pragma: keep

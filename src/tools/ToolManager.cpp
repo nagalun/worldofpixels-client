@@ -2,8 +2,8 @@
 
 #include <utility>
 
-#include <util/misc.hpp>
-#include <InputManager.hpp>
+#include "util/misc.hpp"
+#include "InputManager.hpp"
 
 ToolManager::ToolManager(World& w, InputAdapter& ia)
 : selectedTool(nullptr),

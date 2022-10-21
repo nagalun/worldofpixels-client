@@ -1,6 +1,6 @@
 #include "Tool.hpp"
 
-#include <tools/ToolManager.hpp>
+#include "tools/ToolManager.hpp"
 
 Tool::Tool(ToolManager& tm)
 : tm(tm) { }

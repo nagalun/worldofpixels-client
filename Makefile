@@ -79,7 +79,7 @@ LDFLAGS  += -fno-exceptions -fno-rtti
 CPPFLAGS += -D GLM_FORCE_ARCH_UNKNOWN -D GLM_FORCE_PRECISION_MEDIUMP_FLOAT
 CPPFLAGS += -I ./lib/glm/
 
-CPPFLAGS += -I ./src/ -iquote ./src/
+CPPFLAGS += -iquote ./src/
 
 # Libs to use
 LDFLAGS  += -lGL

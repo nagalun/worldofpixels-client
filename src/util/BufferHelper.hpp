@@ -20,4 +20,4 @@ namespace buf {
 	Number readBE(const std::uint8_t *) noexcept;
 };
 
-#include <util/BufferHelper.tpp>
+#include "util/BufferHelper.tpp" // IWYU pragma: keep

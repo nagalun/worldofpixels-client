@@ -4,15 +4,14 @@
 #include <tuple>
 #include <functional>
 
-#include <tools/Tool.hpp>
+#include "tools/Tool.hpp"
 
-#include <tools/providers/ColorProvider.hpp>
-#include <tools/providers/EditHistoryProvider.hpp>
+#include "tools/providers/ColorProvider.hpp"
 
-#include <tools/impl/PencilTool.hpp>
-#include <tools/impl/MoveTool.hpp>
-#include <tools/impl/ZoomTool.hpp>
-#include <tools/impl/PipetteTool.hpp>
+#include "tools/impl/PencilTool.hpp"
+#include "tools/impl/MoveTool.hpp"
+#include "tools/impl/ZoomTool.hpp"
+#include "tools/impl/PipetteTool.hpp"
 
 class World;
 class InputAdapter;
@@ -53,4 +52,4 @@ public:
 	void setOnSelectionChanged(std::function<void(Tool* old, Tool* cur)>);
 };
 
-#include "ToolManager.tpp"
+#include "ToolManager.tpp" // IWYU pragma: keep

@@ -2,14 +2,14 @@
 
 #include <cstdio>
 
-#include <util/misc.hpp>
-#include <InputManager.hpp>
+#include "util/misc.hpp"
+#include "InputManager.hpp"
 
-#include <tools/ToolManager.hpp>
-#include <tools/providers/ColorProvider.hpp>
+#include "tools/ToolManager.hpp"
+#include "tools/providers/ColorProvider.hpp"
 
-#include <world/World.hpp>
-#include <world/SelfCursor.hpp>
+#include "world/World.hpp"
+#include "world/SelfCursor.hpp"
 
 struct PencilTool::LocalContext {
 	ImAction iSelectTool;

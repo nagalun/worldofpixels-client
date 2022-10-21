@@ -1,6 +1,6 @@
 #pragma once
 
-#include <util/explints.hpp>
+#include "util/explints.hpp"
 #include <unordered_map>
 #include <functional>
 
@@ -18,4 +18,4 @@ public:
 	void on(Func);
 };
 
-#include <util/net/PacketReader.tpp>
+#include "util/net/PacketReader.tpp" // IWYU pragma: keep

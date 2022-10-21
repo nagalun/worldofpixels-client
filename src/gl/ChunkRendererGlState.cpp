@@ -1,5 +1,5 @@
-#include <gl/ChunkRendererGlState.hpp>
-#include <gl/data/ChunkShader.hpp>
+#include "gl/ChunkRendererGlState.hpp"
+#include "gl/data/ChunkShader.hpp"
 #include <GLES2/gl2.h>
 
 ChunkRendererGlState::ChunkRendererGlState()

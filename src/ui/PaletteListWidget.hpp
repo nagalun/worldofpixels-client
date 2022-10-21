@@ -3,10 +3,10 @@
 #include <cstdint>
 #include <vector>
 
-#include <util/emsc/ui/Object.hpp>
-#include <util/color.hpp>
+#include "util/emsc/ui/Object.hpp"
+#include "util/color.hpp"
 
-#include <ui/PaletteItem.hpp>
+#include "ui/PaletteItem.hpp"
 
 class ColorProvider;
 

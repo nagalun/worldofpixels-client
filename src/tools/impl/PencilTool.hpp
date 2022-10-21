@@ -4,7 +4,7 @@
 #include <memory>
 #include <tuple>
 
-#include <tools/Tool.hpp>
+#include "tools/Tool.hpp"
 
 class ToolManager;
 class InputAdapter;

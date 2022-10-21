@@ -1,8 +1,7 @@
 #include "ChunkUpdaterGlState.hpp"
 
-#include <util/explints.hpp>
-#include <gl/ChunkGlState.hpp>
-#include <gl/data/ChunkUpdaterShader.hpp>
+#include "util/explints.hpp"
+#include "gl/data/ChunkUpdaterShader.hpp"
 
 #define GL_GLEXT_PROTOTYPES
 #include <GLES2/gl2.h>

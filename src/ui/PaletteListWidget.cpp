@@ -1,7 +1,7 @@
 #include "PaletteListWidget.hpp"
 
-#include <util/color.hpp>
-#include <util/misc.hpp>
+#include "util/color.hpp"
+#include "util/misc.hpp"
 
 // "-2147483647"
 constexpr std::size_t bufSz = 11;

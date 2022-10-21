@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-#include <util/gl/Program.hpp>
+#include "util/gl/Program.hpp"
 
 #include <glm/vec2.hpp>
 #include <glm/ext/matrix_float4x4.hpp>

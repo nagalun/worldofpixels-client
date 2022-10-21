@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-#include <util/gl/Program.hpp>
+#include "util/gl/Program.hpp"
 
 class ChunkUpdaterProgram : public gl::Program {
 public:

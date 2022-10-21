@@ -1,7 +1,7 @@
 #pragma once
 
 #include <cstdint>
-#include <util/emsc/ui/Object.hpp>
+#include "util/emsc/ui/Object.hpp"
 
 class PlayerCountWidget : public eui::Object {
 	enum : std::uint8_t {

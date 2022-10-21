@@ -1,3 +1,5 @@
+#pragma once
+#include "UiButton.hpp"
 
 template<typename Fn>
 UiButton::UiButton(std::string_view type, std::string_view title, bool themed, Fn cb)

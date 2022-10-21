@@ -1,8 +1,8 @@
 #include "ChunkProgram.hpp"
 
-#include <gl/data/ChunkShader.hpp>
+#include "gl/data/ChunkShader.hpp"
 
-#include <world/Chunk.hpp>
+#include "world/Chunk.hpp"
 #include <glm/ext/matrix_float4x4.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <GLES2/gl2.h>

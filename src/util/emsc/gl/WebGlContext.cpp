@@ -9,8 +9,7 @@
 #include <emscripten.h>
 #include <emscripten/html5.h>
 
-#include <util/emsc/dom.hpp>
-#include <Settings.hpp>
+#include "Settings.hpp"
 
 /* used to reinitialize the canvas element on context losses and destruction */
 //extern "C" void reset_element(const char * target, std::size_t len);

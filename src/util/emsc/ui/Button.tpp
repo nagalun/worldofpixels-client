@@ -1,3 +1,5 @@
+#pragma once
+#include "Button.hpp"
 #include <type_traits>
 
 template<typename Fn>

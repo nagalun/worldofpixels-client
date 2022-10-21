@@ -1,3 +1,5 @@
+#pragma once
+#include "PacketReader.hpp"
 #include <tuple>
 
 template<typename Packet, typename Func>
