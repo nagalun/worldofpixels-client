@@ -1,6 +1,7 @@
 #include "request.hpp"
 
 #include <string>
+#include <emscripten.h>
 
 EM_JS(void, cancel_async_request, (int hdl), {
 	var http = wget.wgetRequests[hdl];

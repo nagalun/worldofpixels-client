@@ -41,6 +41,8 @@ public:
 	Window(WindowOptions = {});
 	explicit Window(std::string_view title, bool moveable = true, bool closeable = true);
 	explicit Window(bool moveable, bool closeable);
+	Window(Window&&) noexcept;
+	const Window& operator=(Window&&) noexcept;
 	virtual ~Window();
 
 	void moveToCenter(bool slowMethod = false, bool hideUntilCentered = false);

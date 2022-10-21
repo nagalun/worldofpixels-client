@@ -4,6 +4,9 @@
 #include <cstdint>
 
 #include <util/gl/GlContext.hpp>
+#include <Settings.hpp>
+
+struct EmscriptenUiEvent;
 
 namespace gl {
 
@@ -17,6 +20,9 @@ class WebGlContext : public GlContext {
 	mutable double dprCache;
 	bool renderLoopSet;
 	bool renderPaused;
+
+	// this shouldn't be here
+	decltype(Settings::nativeRes)::SlotKey sk;
 
 public:
 	WebGlContext(const char * targetCanvas = "#canvas", const char * targetSizeElem = "#canvas", bool forceWebgl1 = false);
@@ -46,6 +52,7 @@ public:
 	void giveUp();
 
 	static int emEvent(int eventType, const void *, void * r);
+	static int onEvtResize(int, const EmscriptenUiEvent *, void * ctx);
 
 private:
 	bool activateRenderingContextAs(bool webgl1);

@@ -37,7 +37,7 @@ endif
 # also builds owop.wasm
 TARGET = $(OUT_DIR)/js/owop-$(TREE_STATE).js
 
-OPT_REL += -O3 -ffast-math
+OPT_REL += -O3 -ffast-math -flto
 # for post-compile emscripten stuff
 LD_REL  += -s GL_TRACK_ERRORS=0 --closure 1 $(OPT_REL)
 
@@ -71,24 +71,31 @@ CPPFLAGS += $(EM_CONF_CC_LD)
 LDFLAGS  += $(EM_CONF_CC_LD) $(EM_CONF_LD)
 
 
-CPPFLAGS += -std=c++17 -fno-exceptions -Wall -Wshadow -Weffc++ -Wextra -pedantic-errors -Wno-unused-parameter -MMD -MP
-LDFLAGS  += -fno-exceptions
+CPPFLAGS += -std=c++17 -fno-exceptions -fno-rtti -MMD -MP
+CPPFLAGS += -Wall -Wshadow -Weffc++ -Wextra -pedantic-errors -Wno-unused-parameter
+LDFLAGS  += -fno-exceptions -fno-rtti
 
 # GLM config
 CPPFLAGS += -D GLM_FORCE_ARCH_UNKNOWN -D GLM_FORCE_PRECISION_MEDIUMP_FLOAT
 CPPFLAGS += -I ./lib/glm/
 
-CPPFLAGS += -I ./src/
+CPPFLAGS += -I ./src/ -iquote ./src/
 
 # Libs to use
 LDFLAGS  += -lGL
 
 
-.PHONY: all dbg rel static clean .FORCE
+.PHONY: all dbg udbg rel static clean .FORCE
 
 .FORCE:
 
 all: dbg
+
+udbg: DEFS += -D OWOP_VERSION='$(TREE_STATE)' -D DEBUG=1
+udbg: CPPFLAGS += $(OPT_DBG) $(DEFS) -fsanitize=address,undefined
+udbg: LDFLAGS += $(LD_DBG) -fsanitize=address,undefined -s INITIAL_MEMORY=128MB -sERROR_ON_UNDEFINED_SYMBOLS=0
+udbg: PPFLAGS += $(DEFS)
+udbg: static $(TARGET)
 
 dbg: DEFS += -D OWOP_VERSION='$(TREE_STATE)' -D DEBUG=1
 dbg: CPPFLAGS += $(OPT_DBG) $(DEFS)

@@ -20,6 +20,7 @@
 #include <JsApiProxy.hpp>
 #include <world/World.hpp>
 #include <gl/data/ChunkShader.hpp>
+#include <Settings.hpp>
 
 Renderer::Renderer(World& w)
 : w(w),
@@ -224,6 +225,7 @@ bool Renderer::renderWorld(float now, float dt) {
 	++frameNum;
 
 	bool shouldKeepRendering = false;
+	bool showGrid = Settings::get().showGrid;
 
 	float czoom = getZoom();
 	float hVpWidth = s.w / 2.f / czoom;
@@ -281,6 +283,7 @@ bool Renderer::renderWorld(float now, float dt) {
 				case LoadState::TEXTURED:
 					if (progInUse != LoadState::TEXTURED) {
 						tcp.use();
+						tcp.setUShowGrid(showGrid);
 						tcp.setUZoom(getZoom());
 						tcp.setUMats(projection, view);
 						progInUse = LoadState::TEXTURED;
@@ -298,6 +301,7 @@ bool Renderer::renderWorld(float now, float dt) {
 				case LoadState::EMPTY:
 					if (progInUse != LoadState::EMPTY) {
 						ecp.use();
+						ecp.setUShowGrid(showGrid);
 						ecp.setUZoom(getZoom());
 						ecp.setUMats(projection, view);
 						progInUse = LoadState::EMPTY;
@@ -312,6 +316,7 @@ bool Renderer::renderWorld(float now, float dt) {
 				case LoadState::LOADING:
 					if (progInUse != LoadState::LOADING) {
 						lcp.use();
+						lcp.setUShowGrid(showGrid);
 						lcp.setUZoom(getZoom());
 						lcp.setUMats(projection, view);
 						lcp.setUTime(now);
@@ -401,6 +406,10 @@ bool Renderer::setupRenderingCallbacks() {
 
 	ctx.onResize([this] {
 		resizeRenderingContext();
+	});
+
+	onShowGridCh = Settings::get().showGrid.connect([this] (auto) {
+		queueRerender();
 	});
 
 	return true;

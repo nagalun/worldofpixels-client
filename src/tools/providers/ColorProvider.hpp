@@ -5,11 +5,12 @@
 #include <tuple>
 
 #include <util/color.hpp>
+#include <util/NonCopyable.hpp>
 
 class ToolManager;
 class InputAdapter;
 
-class ColorProvider {
+class ColorProvider : NonCopyable {
 	struct LocalContext;
 	std::unique_ptr<LocalContext> lctx;
 

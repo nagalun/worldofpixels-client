@@ -10,6 +10,7 @@
 #include <emscripten/html5.h>
 
 #include <util/emsc/dom.hpp>
+#include <Settings.hpp>
 
 /* used to reinitialize the canvas element on context losses and destruction */
 //extern "C" void reset_element(const char * target, std::size_t len);
@@ -41,8 +42,11 @@ WebGlContext::WebGlContext(const char * targetCanvas, const char * targetSizeEle
 }
 
 WebGlContext::~WebGlContext() {
-	stopRenderLoop();
-	destroyRenderingContext();
+	if (ctxInfo > 0) {
+		stopRenderLoop();
+		destroyRenderingContext();
+	}
+
 	if (targetCanvas) { // flashes white before fade in completes
 		reset_element(targetCanvas, std::strlen(targetCanvas));
 	}
@@ -58,7 +62,16 @@ WebGlContext::WebGlContext(WebGlContext&& other)
   realSizeCache(std::exchange(other.realSizeCache, {-1, -1})),
   dprCache(std::exchange(other.dprCache, -1)),
   renderLoopSet(other.renderLoopSet),
-  renderPaused(other.renderPaused) { }
+  renderPaused(other.renderPaused) {
+	if (ctxInfo > 0) {
+		emscripten_set_webglcontextlost_callback(targetCanvas, this, true, emEvent);
+		emscripten_set_webglcontextrestored_callback(targetCanvas, this, true, emEvent);
+		emscripten_set_resize_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, this, true, onEvtResize);
+		sk.setCb([this] (auto) {
+			onEvtResize(0, nullptr, this);
+		});
+	}
+}
 
 WebGlContext& WebGlContext::operator=(WebGlContext&& other) {
 	destroyRenderingContext();
@@ -75,6 +88,15 @@ WebGlContext& WebGlContext::operator=(WebGlContext&& other) {
 	renderLoopSet = other.renderLoopSet;
 	renderPaused = other.renderPaused;
 
+	if (ctxInfo > 0) {
+		emscripten_set_webglcontextlost_callback(targetCanvas, this, true, emEvent);
+		emscripten_set_webglcontextrestored_callback(targetCanvas, this, true, emEvent);
+		emscripten_set_resize_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, this, true, onEvtResize);
+		sk.setCb([this] (auto) {
+			onEvtResize(0, nullptr, this);
+		});
+	}
+
 	return *this;
 }
 
@@ -88,7 +110,7 @@ bool WebGlContext::resize(int drawingWidth, int drawingHeight, double elemWidth,
 
 	sizeCache.w = -1;
 
-	if (resizeCb) {
+	if (ctxInfo != 0 && resizeCb) {
 		resizeCb();
 	}
 
@@ -154,8 +176,7 @@ bool WebGlContext::activateRenderingContext(bool forceWebgl1) {
 	if ((forceWebgl1 || !activateRenderingContextAs(false))
 			&& !activateRenderingContextAs(true)) {
 		// WebGL not supported...?
-		std::fprintf(stderr,
-				"[WebGlContext] Couldn't create context. Bad GPU drivers?\n");
+		std::fprintf(stderr, "[WebGlContext] Couldn't create context. Bad GPU drivers?\n");
 		return false;
 	}
 
@@ -173,6 +194,10 @@ bool WebGlContext::activateRenderingContextAs(bool webgl1) {
 	attr.antialias = false;
 	attr.majorVersion = webgl1 ? 1 : 2;
 
+	auto s = getRealSize();
+	auto sdip = getDipSize();
+	resize(s.w, s.h, sdip.w, sdip.h);
+
 	ctxInfo = emscripten_webgl_create_context(targetCanvas, &attr);
 	if (ctxInfo <= 0) {
 		std::fprintf(stderr, "[WebGlContext] WebGL%c context creation failed: %i\n", webgl1 ? '1' : '2', ctxInfo);
@@ -180,9 +205,11 @@ bool WebGlContext::activateRenderingContextAs(bool webgl1) {
 	}
 
 	int ok = 0;
-	ok |= emscripten_webgl_enable_ANGLE_instanced_arrays(ctxInfo) == EM_TRUE;
-	ok |= (emscripten_webgl_enable_WEBGL_multi_draw(ctxInfo) == EM_TRUE) << 1;
-	ok |= (emscripten_webgl_enable_OES_vertex_array_object(ctxInfo) == EM_TRUE) << 2;
+	if (webgl1) {
+		ok |= emscripten_webgl_enable_ANGLE_instanced_arrays(ctxInfo) == EM_TRUE;
+		//ok |= (emscripten_webgl_enable_WEBGL_multi_draw(ctxInfo) == EM_TRUE) << 1;
+		ok |= (emscripten_webgl_enable_OES_vertex_array_object(ctxInfo) == EM_TRUE) << 1;
+	}
 
 	std::printf("[WebGlContext] CtxInfo: %d, extensions: %d\n", ctxInfo, ok);
 
@@ -194,22 +221,12 @@ bool WebGlContext::activateRenderingContextAs(bool webgl1) {
 
 	emscripten_set_webglcontextlost_callback(targetCanvas, this, true, emEvent);
 	emscripten_set_webglcontextrestored_callback(targetCanvas, this, true, emEvent);
-	emscripten_set_resize_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, this, true, +[] (int, const EmscriptenUiEvent * ev, void * ctx) -> EM_BOOL {
-		WebGlContext& c = *static_cast<WebGlContext *>(ctx);
-		c.dipSizeCache.w = -1;
-		c.realSizeCache.w = -1;
-		c.dprCache = -1.0;
-		auto sdip = c.getDipSize();
-		auto s = c.getRealSize();
-		c.resize(s.w, s.h, sdip.w, sdip.h);
-		return false;
+	emscripten_set_resize_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, this, true, onEvtResize);
+	sk = Settings::get().nativeRes.connect([this] (auto) {
+		onEvtResize(0, nullptr, this);
 	});
 
 	std::printf("[WebGlContext] Created WebGL%c rendering context\n", webgl1 ? '1' : '2');
-
-	auto s = getRealSize();
-	auto sdip = getDipSize();
-	resize(s.w, s.h, sdip.w, sdip.h);
 
 	return true;
 }
@@ -224,6 +241,7 @@ void WebGlContext::destroyRenderingContext() {
 		emscripten_set_webglcontextlost_callback(targetCanvas, nullptr, true, nullptr);
 		emscripten_set_webglcontextrestored_callback(targetCanvas, nullptr, true, nullptr);
 		emscripten_set_resize_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, nullptr, true, nullptr);
+		sk.disconnect();
 
 		if (EMSCRIPTEN_RESULT err = emscripten_webgl_destroy_context(ctxInfo)) {
 			std::fprintf(stderr, "[WebGlContext] Context destruction failed: %i\n", err);
@@ -274,6 +292,17 @@ int WebGlContext::emEvent(int eventType, const void *, void * r) {
 	return false;
 }
 
+EM_BOOL WebGlContext::onEvtResize(int, const EmscriptenUiEvent *, void * ctx) {
+	WebGlContext& c = *static_cast<WebGlContext *>(ctx);
+	c.dipSizeCache.w = -1;
+	c.realSizeCache.w = -1;
+	c.dprCache = -1.0;
+	auto sdip = c.getDipSize();
+	auto s = c.getRealSize();
+	c.resize(s.w, s.h, sdip.w, sdip.h);
+	return false;
+}
+
 bool WebGlContext::ok() const {
 	return ctxInfo > 0;
 }
@@ -309,6 +338,10 @@ double WebGlContext::getTime() const {
 }
 
 double WebGlContext::getDpr() const {
+	if (!Settings::get().nativeRes) {
+		return 1.0;
+	}
+
 	if (dprCache < 0.0) {
 		dprCache = emscripten_get_device_pixel_ratio();
 	}

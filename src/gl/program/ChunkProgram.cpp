@@ -11,11 +11,21 @@ ChunkProgram::ChunkProgram(std::string_view fshdr)
 : gl::Program(ChunkShader::vertex, fshdr, ChunkShader::attribs),
   uMat(findUniform("mat")),
   uZoom(findUniform("zoom")),
+  uShowGrid(findUniform("showGrid")),
   uChunkSize(findUniform("chunkSize")),
   uOffset(findUniform("chunkOffset")),
-  lastZoom(0.f) {
+  lastZoom(0.f),
+  lastShowGrid(false) {
 	use();
+	setUShowGrid(true);
 	setUChunkSize(Chunk::size);
+}
+
+void ChunkProgram::setUShowGrid(bool show) {
+	if (lastShowGrid != show) {
+		glUniform1i(uShowGrid, show);
+		lastShowGrid = show;
+	}
 }
 
 void ChunkProgram::setUChunkSize(float chunkSize) {

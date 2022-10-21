@@ -4,14 +4,17 @@
 #include <string_view>
 #include <vector>
 
+#include <util/NonCopyable.hpp>
+
 class ToolManager;
 
-class Tool {
+class Tool : NonCopyable {
 protected:
 	ToolManager& tm;
 
 public:
 	Tool(ToolManager&);
+
 	virtual ~Tool();
 
 	virtual std::string_view getName() const = 0;

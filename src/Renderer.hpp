@@ -7,8 +7,10 @@
 
 #include <glm/ext/matrix_float4x4.hpp>
 
+#include <Settings.hpp>
 #include <util/emsc/gl/WebGlContext.hpp>
 #include <util/explints.hpp>
+#include <util/NonCopyable.hpp>
 
 #include <Camera.hpp>
 #include <world/Chunk.hpp>
@@ -18,7 +20,7 @@
 
 class World;
 
-class Renderer : public Camera {
+class Renderer : public Camera, NonCopyable {
 public:
 	static constexpr sz_t vramMaxLimit = 512 * 1000 * 1000; // 512 MB
 	static constexpr sz_t maxLoadedChunks = vramMaxLimit / (
@@ -38,6 +40,7 @@ private:
 	std::optional<ChunkUpdaterGlState> cUpdaterGl;
 	glm::mat4 view; // view matrix
 	glm::mat4 projection;
+	decltype(Settings::showGrid)::SlotKey onShowGridCh;
 	float lastRenderTime;
 	u8 pendingRenderType;
 	u8 contextFailureCount;
@@ -47,10 +50,6 @@ private:
 
 public:
 	Renderer(World&);
-
-	Renderer(const Renderer &) = delete;
-	Renderer(Renderer&&) = delete;
-
 	~Renderer();
 
 	sz_t getMaxVisibleChunks() const;

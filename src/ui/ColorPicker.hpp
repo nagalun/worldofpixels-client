@@ -15,6 +15,8 @@ class ColorPicker : public eui::Object {
 
 public:
 	ColorPicker(std::function<void(RGB_u)> cb);
+	ColorPicker(ColorPicker&&) noexcept;
+	const ColorPicker& operator=(ColorPicker&&) noexcept;
 
 	void setColor(RGB_u);
 	RGB_u getColor() const;

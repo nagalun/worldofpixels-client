@@ -61,3 +61,13 @@ PaletteItem::PaletteItem(ColorProvider& clrp, std::vector<RGB_u> clrs)
 	setProperty("style.--w-perc", svprintf<bufSz>("%f%%", wPerc));
 }
 
+PaletteItem::PaletteItem(PaletteItem&& o) noexcept
+: eui::Object(std::move(o)),
+  clrp(o.clrp),
+  colors(std::move(o.colors)) {
+	for (auto& clr : colors) {
+		clr.setCb([this, clr{clr.getColor()}] {
+			this->clrp.setPrimaryColor(clr);
+		});
+	}
+}

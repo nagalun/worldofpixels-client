@@ -16,6 +16,12 @@
 #	define OWOP_VERSION unknown
 #endif
 
+#if __has_feature(address_sanitizer)
+extern "C" const char *__asan_default_options() {
+	return "leak_check_at_exit=false:quarantine_size_mb=32:allocator_may_return_null=true";
+}
+#endif
+
 static std::unique_ptr<Client> cl;
 
 int main(int argc, char * argv[]) {
@@ -29,10 +35,10 @@ int main(int argc, char * argv[]) {
 		return nullptr;
 	});
 
-	std::atexit([] {
-		std::printf("[main] std::atexit\n");
-		cl = nullptr;
-	});
+//	std::atexit([] {
+//		std::printf("[main] std::atexit\n");
+//		cl = nullptr;
+//	});
 
 	std::set_new_handler([] {
 		std::puts("OOM detected");

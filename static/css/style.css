@@ -1,4 +1,4 @@
-:root[data-theme="default"] {
+[data-theme="default"] {
 	--tex-url-tools: url(/img/ui/default/tools.png);
 	--tex-url-tools-text: url(/img/ui/default/tools_text.png);
 	--tex-url-border: url(/img/ui/default/border.png);
@@ -6,7 +6,7 @@
 	--tex-url-ui: url(/img/ui/default/ui.png);
 }
 
-:root[data-theme="easter"] {
+[data-theme="easter"] {
 	--tex-url-tools: url(/img/ui/easter/tools.png);
 	--tex-url-tools-text: url(/img/ui/easter/tools_text.png);
 	--tex-url-border: url(/img/ui/easter/border.png);
@@ -14,7 +14,7 @@
 	--tex-url-ui: url(/img/ui/easter/ui.png);
 }
 
-:root[data-theme="halloween"] {
+[data-theme="halloween"] {
 	--tex-url-tools: url(/img/ui/halloween/tools.png);
 	--tex-url-tools-text: url(/img/ui/halloween/tools_text.png);
 	--tex-url-border: url(/img/ui/halloween/border.png);
@@ -22,7 +22,7 @@
 	--tex-url-ui: url(/img/ui/halloween/ui.png);
 }
 
-:root[data-theme="newyear"] {
+[data-theme="newyear"] {
 	--tex-url-tools: url(/img/ui/newyear/tools.png);
 	--tex-url-tools-text: url(/img/ui/newyear/tools_text.png);
 	--tex-url-border: url(/img/ui/newyear/border.png);
@@ -63,6 +63,20 @@ button {
 	color: inherit;
 	font: inherit;
 	text-shadow: inherit;
+}
+
+.l-opt > input, .l-opt > input + label {
+	vertical-align: middle;
+}
+
+.l-opt {
+	margin: 3px 0;
+}
+
+h1 {
+	font-size: 32px;
+	margin: 0;
+	font-weight: normal;
 }
 
 /* EUI */
@@ -226,6 +240,7 @@ button.owop-ui {
 }
 
 .tab > label {
+	text-align: center;
 	grid-column: 1 / 2;
 	padding: 5px;
 	margin: 3px;
@@ -245,10 +260,12 @@ button.owop-ui {
 }
 
 .tab > .content {
+	text-align: left;
 	grid-column: 2 / 3;
 	grid-row: 1 / -1;
 	border-left: 1px solid #00000055;
 	min-width: 200px;
+	padding-left: 3px;
 }
 
 
@@ -542,3 +559,75 @@ button.owop-ui {
 .help-cont::before {
 	content: 'There\'s no help for you, yet...';
 }
+
+/* SETTINGS WINDOW */
+
+.owop-win-settings h1 {
+	border-bottom: 1px solid #00000044;
+	margin-bottom: 3px;
+	margin-left: -1px;
+}
+
+.item-theme {
+	width: 100%;
+	min-height: 48px;
+	box-sizing: border-box;
+	display: flex;
+	position: relative;
+}
+
+.item-theme.active::after {
+	content: 'Selected';
+	position: absolute;
+	bottom: 0;
+	right: 0;
+	background: #00000044;
+	padding: 3px;
+	border-radius: 3px;
+}
+
+.item-theme:not(.active) {
+	cursor: pointer;
+}
+
+.item-theme + .item-theme {
+	margin-top: 3px;
+}
+
+.item-theme-pv {
+	width: 64px;
+	height: 64px;
+	position: relative;
+	border: 8px transparent solid;
+	border-image: var(--tex-url-border-active) 8 fill repeat;
+}
+
+.info-theme-name {
+	border-bottom: 1px solid #FFFFFF44;
+}
+
+.item-theme-info {
+	margin: 0 8px;
+}
+
+.item-theme-pv::before {
+	content: '';
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 50%;
+	background: var(--tex-url-tools);
+}
+
+.item-theme-pv::after {
+	content: '';
+	position: absolute;
+	bottom: 0;
+	left: 0;
+	width: 100%;
+	height: 50%;
+	background: var(--tex-url-tools);
+	background-position: -64px 0; /* should depend on icon size */
+}
+

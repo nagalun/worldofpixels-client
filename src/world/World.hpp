@@ -17,6 +17,7 @@
 #include <Renderer.hpp>
 #include <tools/ToolManager.hpp>
 
+#include <util/NonCopyable.hpp>
 #include <util/emsc/ui/Object.hpp>
 #include <ui/misc/UiButton.hpp>
 #include <ui/misc/Box.hpp>
@@ -26,7 +27,7 @@
 #include <ui/HelpWindow.hpp>
 #include <ui/settings/SettingsWindow.hpp>
 
-class alignas(32) World {
+class World : NonCopyable {
 public:
 	// this is absolute pixel pos
 	using Pos = i32;

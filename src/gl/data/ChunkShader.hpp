@@ -75,6 +75,7 @@ void main() {
 	precision mediump float;
 #endif
 
+uniform bool showGrid;
 uniform float chunkSize;
 uniform float zoom;
 uniform sampler2D pxTex;
@@ -111,10 +112,12 @@ vec4 smoothTexture2D(sampler2D tex, vec2 texCoord) {
 
 void main() {
 	vec4 texClr = smoothTexture2D(pxTex, vTexCoordV);
-	float grid = gridMult();
-	float alpha = 1.0 - grid * (1.0 - texClr.a);
-	texClr.rgb *= texClr.a * grid / alpha;
-	texClr.a = alpha;
+	if (showGrid) {
+		float grid = gridMult();
+		float alpha = 1.0 - grid * (1.0 - texClr.a);
+		texClr.rgb *= texClr.a * grid / alpha;
+		texClr.a = alpha;
+	}
 	gl_FragColor = texClr;
 })"}; // skipping grid color: (0.0 * grid / alpha) +
 
@@ -126,6 +129,7 @@ void main() {
 	precision mediump float;
 #endif
 
+uniform bool showGrid;
 uniform float chunkSize;
 uniform float zoom;
 
@@ -135,7 +139,7 @@ varying vec2 vPosV;
 )" GLSL_GRID_FUNC R"(
 
 void main() {
-	gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0 - gridMult());
+	gl_FragColor = vec4(0.0, 0.0, 0.0, showGrid ? 1.0 - gridMult() : 1.0);
 })"};
 
 	static constexpr std::string_view loadingFragment{
@@ -148,6 +152,7 @@ void main() {
 
 uniform float time;
 
+uniform bool showGrid;
 uniform float chunkSize;
 uniform float zoom;
 

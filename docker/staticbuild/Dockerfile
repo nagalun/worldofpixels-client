@@ -1,7 +1,9 @@
-FROM emscripten/emsdk:3.1.20 AS builder
-ARG VERSION=unk
-RUN apt-get update && apt-get install -y libglm-dev inotify-tools libssl-dev libz-dev
+FROM emscripten/emsdk:3.1.23 AS builder
+RUN apt-get update && apt-get install -y libglm-dev inotify-tools libssl-dev libz-dev nlohmann-json3-dev
+RUN mkdir -p /project && chown emscripten:emscripten /project
+USER emscripten
 RUN embuilder.py build zlib libpng
+ARG VERSION=unk
 WORKDIR /project
 COPY . .
 RUN make VERSION=${VERSION} DISABLE_AUTO_REFRESH=1 -j $(nproc) -l $(nproc) ${MAKEOPTS:-all}

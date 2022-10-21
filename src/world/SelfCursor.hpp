@@ -7,7 +7,7 @@
 class World;
 class User;
 
-class alignas(32) SelfCursor : public Cursor {
+class SelfCursor : public Cursor {
 public:
 	class Builder;
 

@@ -5,6 +5,10 @@
 #include <vector>
 #include <utility>
 
+#ifndef DEBUG
+#define DEBUG 0
+#endif
+
 namespace gl {
 
 Program::Program(std::string_view vs, std::string_view fs,
@@ -70,22 +74,26 @@ std::uint32_t Program::build(std::string_view vs, std::string_view fs,
 	GLint result = 0;
 	bool ok = true;
 	for (GLuint sh : {vtx, fmt}) {
+		glGetShaderiv(sh, GL_COMPILE_STATUS, &result);
+		ok = result == GL_TRUE;
+
+		if (!DEBUG && ok) { // always check for glsl warnings on debug builds
+			continue;
+		}
+
 		glGetShaderiv(sh, GL_INFO_LOG_LENGTH, &result);
 		if (result > 1) {
 			std::vector<GLchar> msg(result);
 			glGetShaderInfoLog(sh, result, nullptr, msg.data());
 			std::fputs(msg.data(), stderr);
 		}
-
-		glGetShaderiv(sh, GL_COMPILE_STATUS, &result);
-		if (result != GL_TRUE) {
-			std::fprintf(stderr, "[gl::Program] Failed to compile shader\n");
-			glDeleteShader(sh);
-			ok = false;
-		}
 	}
 
 	if (!ok) {
+		glDeleteShader(vtx);
+		glDeleteShader(fmt);
+		glDeleteProgram(prog);
+		std::fprintf(stderr, "[gl::Program] Failed to compile shader(s)\n");
 		return 0;
 	}
 
@@ -98,20 +106,22 @@ std::uint32_t Program::build(std::string_view vs, std::string_view fs,
 	}
 
 	glLinkProgram(prog);
+	glGetProgramiv(prog, GL_LINK_STATUS, &result);
+	ok = result == GL_TRUE;
 
-	glGetProgramiv(prog, GL_INFO_LOG_LENGTH, &result);
-	if (result > 1) { /* Sometimes the driver returns a char for no reason, so ignore that */
-		std::vector<GLchar> msg(result);
-		glGetProgramInfoLog(prog, result, nullptr, msg.data());
-		std::printf("P %i\n", result);
-		std::fputs(msg.data(), stderr);
+	if (DEBUG || !ok) {
+		glGetProgramiv(prog, GL_INFO_LOG_LENGTH, &result);
+		if (result > 1) { /* Sometimes the driver returns a char for no reason, so ignore that */
+			std::vector<GLchar> msg(result);
+			glGetProgramInfoLog(prog, result, nullptr, msg.data());
+			std::fputs(msg.data(), stderr);
+		}
 	}
 
-	glGetProgramiv(prog, GL_LINK_STATUS, &result);
 	glDetachShader(prog, vtx);
 	glDetachShader(prog, fmt);
 
-	if (result != GL_TRUE) {
+	if (!ok) {
 		std::fprintf(stderr, "[gl::Program] Failed to link GL program\n");
 		glDeleteProgram(prog);
 		prog = 0;

@@ -27,5 +27,6 @@ private:
 
 public:
 	PaletteItem(ColorProvider&, std::vector<RGB_u>);
+	PaletteItem(PaletteItem&&) noexcept;
 };
 

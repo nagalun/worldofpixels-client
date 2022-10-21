@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <util/emsc/ui/AutoStacking.hpp>
 #include <util/emsc/ui/EventHandle.hpp>
+#include <util/NonCopyable.hpp>
 
 #include <ui/misc/UiButton.hpp>
 #include <ui/ColorPicker.hpp>
@@ -10,7 +11,7 @@
 
 class ColorProvider;
 
-class ColorWidget : public eui::Object {
+class ColorWidget : public eui::Object, NonCopyable {
 	ColorProvider& clr;
 	ColorPicker primaryClr;
 	ColorPicker secondaryClr;

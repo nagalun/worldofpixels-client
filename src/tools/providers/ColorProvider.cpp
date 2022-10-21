@@ -6,8 +6,9 @@
 #include <InputManager.hpp>
 #include <world/World.hpp>
 #include <tools/ToolManager.hpp>
+#include <util/NonCopyable.hpp>
 
-struct ColorProvider::LocalContext {
+struct ColorProvider::LocalContext : NonCopyable {
 	ColorWidget cw;
 	PaletteListWidget paletteWdg;
 	ImAction iSwapColors;
@@ -21,7 +22,6 @@ struct ColorProvider::LocalContext {
 		cw.setPaletteTglFn([this] {
 			paletteWdg.tglClass("hide");
 		});
-
 		auto& llui = tm.getWorld().getLlCornerUi();
 		auto& fstCol = llui.template get<0>();
 		auto& sndCol = llui.template get<1>();

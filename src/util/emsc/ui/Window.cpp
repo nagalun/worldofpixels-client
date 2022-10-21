@@ -67,6 +67,61 @@ Window::Window(std::string_view title, bool moveable, bool closeable)
 Window::Window(bool moveable, bool closeable)
 : Window("", moveable, closeable) { }
 
+Window::Window(Window&& o) noexcept
+: AutoStacking(std::move(o)),
+  titleBar(std::move(o.titleBar)),
+  closeBtn(std::move(o.closeBtn)),
+  content(std::move(o.content)),
+  dragStartEvt(std::move(o.dragStartEvt)),
+  dragEvt(std::move(o.dragEvt)),
+  dragEndEvt(std::move(o.dragEndEvt)),
+  x(std::move(o.x)),
+  y(std::move(o.y)),
+  horizAnchor(std::move(o.horizAnchor)),
+  vertAnchor(std::move(o.vertAnchor)),
+  moveLastX(std::move(o.moveLastX)),
+  moveLastY(std::move(o.moveLastY)),
+  moveable(std::move(o.moveable)),
+  movingToCenter(std::move(o.movingToCenter)),
+  closeable(std::move(o.closeable)),
+  closed(std::move(o.closed)) {
+	dragStartEvt.setCb(std::bind(&Window::pointerDownTitle, this));
+	dragEvt.setCb(std::bind(&Window::pointerMove, this));
+	dragEndEvt.setCb(std::bind(&Window::pointerUp, this));
+	if (closeBtn.has_value()) {
+		closeBtn->setCb(std::bind(&Window::close, this));
+	}
+}
+
+const Window& Window::operator =(Window&& o) noexcept {
+	AutoStacking::operator =(std::move(o));
+	titleBar = std::move(o.titleBar);
+	closeBtn = std::move(o.closeBtn);
+	content = std::move(o.content);
+	dragStartEvt = std::move(o.dragStartEvt);
+	dragEvt = std::move(o.dragEvt);
+	dragEndEvt = std::move(o.dragEndEvt);
+	x = std::move(o.x);
+	y = std::move(o.y);
+	horizAnchor = std::move(o.horizAnchor);
+	vertAnchor = std::move(o.vertAnchor);
+	moveLastX = std::move(o.moveLastX);
+	moveLastY = std::move(o.moveLastY);
+	moveable = std::move(o.moveable);
+	movingToCenter = std::move(o.movingToCenter);
+	closeable = std::move(o.closeable);
+	closed = std::move(o.closed);
+
+	dragStartEvt.setCb(std::bind(&Window::pointerDownTitle, this));
+	dragEvt.setCb(std::bind(&Window::pointerMove, this));
+	dragEndEvt.setCb(std::bind(&Window::pointerUp, this));
+	if (closeBtn.has_value()) {
+		closeBtn->setCb(std::bind(&Window::close, this));
+	}
+
+	return *this;
+}
+
 Window::~Window() { }
 
 void Window::moveToCenter(bool slowMethod, bool hideUntilCentered) {

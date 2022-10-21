@@ -26,6 +26,24 @@ ColorPicker::ColorPicker(std::function<void(RGB_u)> cb)
 	addClass("owop-clr-picker");
 }
 
+ColorPicker::ColorPicker(ColorPicker&& o) noexcept
+: eui::Object(std::move(o)),
+  cb(std::move(o.cb)),
+  onColorChange(std::move(o.onColorChange)),
+  color(o.color) {
+	onColorChange.setCb(std::bind(&ColorPicker::colorChanged, this));
+}
+
+const ColorPicker& ColorPicker::operator =(ColorPicker&& o) noexcept {
+	eui::Object::operator=(std::move(o));
+	cb = std::move(o.cb);
+	onColorChange = std::move(o.onColorChange);
+	color = o.color;
+	onColorChange.setCb(std::bind(&ColorPicker::colorChanged, this));
+	return *this;
+}
+
+
 void ColorPicker::setColor(RGB_u nclr) {
 	if (nclr.rgb == color.rgb) {
 		return;

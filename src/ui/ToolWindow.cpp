@@ -25,7 +25,6 @@ ToolWindow::ToolWindow(ToolManager& tm)
 	move(3, 30);
 }
 
-
 void ToolWindow::buildWindow() {
 	auto& cont = Window::getContent();
 	Tool * selectedTool = tm.getSelectedTool();

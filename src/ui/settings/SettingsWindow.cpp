@@ -3,5 +3,6 @@
 SettingsWindow::SettingsWindow() {
 	tabs.appendTo(getContent());
 	setTitle("Settings");
+	addClass("owop-win-settings");
 }
 

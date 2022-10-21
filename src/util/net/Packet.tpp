@@ -13,10 +13,6 @@
 #include <cstdio>
 //#include <iostream>
 
-#ifdef DEBUG
-#include <typeindex>
-#endif
-
 //#include <utils.hpp>
 
 #define STR_HELPER(x) #x
@@ -58,11 +54,6 @@ namespace pktdetail {
 //////////////////////////////
 // Forward declarations
 //////////////////////////////
-
-#ifdef DEBUG
-sz_t getSize(const std::type_index& ti);
-sz_t writeToBuf(u8 *& b, const std::type_index& ti, sz_t remaining);
-#endif
 
 template<typename... Ts>
 sz_t getSize(const std::tuple<Ts...>& t);

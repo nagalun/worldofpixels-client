@@ -10,6 +10,8 @@ class AutoStacking : public eui::Object {
 
 public:
 	AutoStacking();
+	AutoStacking(AutoStacking&&) noexcept;
+	const AutoStacking& operator=(AutoStacking&&) noexcept;
 
 	bool bringUp(bool force = false);
 	void setClickBringUpEnabled(bool);

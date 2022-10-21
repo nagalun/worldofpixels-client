@@ -151,6 +151,14 @@ EM_JS(std::size_t, eui_elem_property_get, (std::uint32_t id, const char * buf, s
 	return written >= maxlen ? maxlen : written;
 });
 
+EM_JS(bool, eui_elem_property_get_bool, (std::uint32_t id, const char * prop, std::size_t len), {
+	var e = Module.EUI.elems[id];
+	var sprop = UTF8ToString(prop, len).split(".");
+	var obj = e;
+	while (sprop.length > 1) obj = obj[sprop.shift()];
+	return !!obj[sprop[0]];
+});
+
 EM_JS(void, eui_elem_property_set, (std::uint32_t id, const char * prop, std::size_t proplen, const char * val, std::size_t vallen), {
 	var e = Module.EUI.elems[id];
 	var sprop = UTF8ToString(prop, proplen).split(".");
@@ -192,11 +200,25 @@ EM_JS(void, eui_elem_attr_set, (std::uint32_t id, const char * prop, std::size_t
 	e.setAttribute(sprop, UTF8ToString(val, vallen));
 });
 
+EM_JS(void, eui_elem_attr_del, (std::uint32_t id, const char * prop, std::size_t proplen), {
+	var e = Module.EUI.elems[id];
+	e.removeAttribute(UTF8ToString(prop, proplen));
+});
+
 EM_JS(void, eui_root_css_property_set, (const char * prop, std::size_t proplen, const char * val, std::size_t vallen), {
 	var r = document.querySelector(":root");
 	r.style.setProperty(UTF8ToString(prop, proplen), UTF8ToString(val, vallen));
 });
 
+EM_JS(void, eui_elem_ss_del_rule, (std::uint32_t id, std::size_t idx), {
+	var e = Module.EUI.elems[id];
+	e.sheet.deleteRule(idx);
+});
+
+EM_JS(void, eui_elem_ss_ins_rule,(std::uint32_t id, const char * rule, std::size_t rulelen, std::size_t idx), {
+	var e = Module.EUI.elems[id];
+	e.sheet.insertRule(UTF8ToString(rule, rulelen), idx);
+});
 
 EM_JS(void, eui_get_vp_size, (int * oww, int * owh), {
 	HEAP32[oww / 4] = window.innerWidth;

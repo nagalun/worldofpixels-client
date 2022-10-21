@@ -15,7 +15,7 @@ HelpWindow::HelpWindow()
 	ilsv icons{"dcord"sv, "fbook"sv, "rddit"sv, "pypal"sv, "gpedia"sv};
 	ilsv titles{"Discord Server"sv, "Facebook"sv, "Subreddit"sv, "Donate through PayPal"sv, "Gamepedia"sv};
 	ilsv links{
-		"http://owop.me/discord"sv,
+		"https://owop.me/discord"sv,
 		"https://www.facebook.com/OurWorldOfPixels/"sv,
 		"https://reddit.com/r/OurWorldOfPixels"sv,
 		"https://www.paypal.me/InfraRaven"sv,
@@ -37,5 +37,7 @@ HelpWindow::HelpWindow()
 	helpCont.addClass("help-cont");
 	linkCont.appendTo(getContent());
 	helpCont.appendTo(getContent());
+
+	addClass("owop-win-help");
 }
 

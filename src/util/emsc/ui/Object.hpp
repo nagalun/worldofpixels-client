@@ -1,24 +1,26 @@
 #pragma once
 
-#include <util/NonCopyable.hpp>
 #include <string>
 #include <string_view>
 #include <cstdint>
 #include <functional>
 
+#include <util/stringparser.hpp>
 #include <util/emsc/ui/EventHandle.hpp>
 
 namespace eui {
 
-class Object : public NonCopyable {
+class Object {
 	std::uint32_t id;
 
 public:
 	Object(); // creates a div by default
 	Object(std::string_view tag);
 
-	Object(Object&&);
-	Object& operator=(Object&&);
+	Object(Object&&) noexcept;
+	Object& operator=(Object&&) noexcept;
+	Object(const Object&) = delete;
+	Object& operator=(const Object&) = delete;
 
 	~Object();
 
@@ -30,11 +32,18 @@ public:
 	bool tglClass(std::string_view);
 	void delClass(std::string_view);
 
+	template<typename T>
+	auto getPropertyAs(std::string_view name) const {
+		auto s = getProperty(name);
+		return fromString<T>(s);
+	}
 	std::string getProperty(std::string_view name) const;
+	bool getPropertyBool(std::string_view name) const;
 	void setProperty(std::string_view name);
 	void setProperty(std::string_view name, std::string_view value);
 	void setPropertyBool(std::string_view name, bool value);
 	std::string getAttribute(std::string_view name) const;
+	void delAttribute(std::string_view name);
 	void setAttribute(std::string_view name);
 	void setAttribute(std::string_view name, std::string_view value);
 	EventHandle createHandler(std::string_view name, std::function<bool(void)> cb, bool passive = true);
@@ -45,6 +54,7 @@ public:
 	void appendTo(std::uint32_t id);
 	void appendTo(const Object&);
 	void appendToMainContainer();
+	void appendToHead();
 
 	void remove();
 

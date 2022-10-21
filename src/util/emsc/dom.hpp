@@ -19,12 +19,17 @@ extern "C" { // C++ -> JS
 	void eui_elem_del_handler(std::uint32_t id, void * data, bool(*cb)(void *));
 	std::size_t eui_elem_property_len(std::uint32_t id, const char * prop, std::size_t len);
 	std::size_t eui_elem_property_get(std::uint32_t id, const char * buf, std::size_t maxlen, const char * prop, std::size_t len);
+	bool eui_elem_property_get_bool(std::uint32_t id, const char * prop, std::size_t len);
 	void eui_elem_property_set(std::uint32_t id, const char * prop, std::size_t proplen, const char * val, std::size_t vallen);
 	void eui_elem_property_set_bool(std::uint32_t id, const char * prop, std::size_t proplen, bool val);
 	std::size_t eui_elem_attr_len(std::uint32_t id, const char * prop, std::size_t len);
 	std::size_t eui_elem_attr_get(std::uint32_t id, const char * buf, std::size_t maxlen, const char * prop, std::size_t len);
 	void eui_elem_attr_set(std::uint32_t id, const char * prop, std::size_t proplen, const char * val, std::size_t vallen);
+	void eui_elem_attr_del(std::uint32_t id, const char * prop, std::size_t proplen);
 	void eui_root_css_property_set(const char * prop, std::size_t proplen, const char * val, std::size_t vallen);
+
+	void eui_elem_ss_del_rule(std::uint32_t id, std::size_t idx);
+	void eui_elem_ss_ins_rule(std::uint32_t id, const char * rule, std::size_t rulelen, std::size_t idx);
 
 	void eui_get_vp_size(int * ww, int * wh);
 	void eui_get_elem_size(std::uint32_t id, int * ew, int * eh);

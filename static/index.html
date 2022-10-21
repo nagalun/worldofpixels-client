@@ -38,17 +38,21 @@
 			color-scheme: light only;
 		}
 
-		#world {
+		#world, #loader.ok, #game-data {
+			pointer-events: none;
+		}
+
+		#world, #input {
 			user-select: none;
 		}
 
-		#world, #eui-container, #loader {
+		#world, #eui-container, #loader, #input {
 			position: fixed;
 			top: 0;
 			left: 0;
 		}
 
-		#loader {
+		#loader, #input {
 			width: 100vw;
 			height: 100vh;
 		}
@@ -81,7 +85,6 @@
 		#loader.ok, #game-data {
 			opacity: 0;
 			visibility: hidden;
-			pointer-events: none;
 		}
 
 		#game-data {
@@ -134,9 +137,9 @@
 
 		window.addEventListener("load", function() {
 			var st = document.getElementById("status");
-			var wo = document.getElementById("world");
+			var inp = document.getElementById("input");
 			st.innerHTML = "Loading OWOP...";
-			wo.oncontextmenu = function() { return false; };
+			inp.oncontextmenu = function() { return false; };
 
 			var lastSlash = location.href.lastIndexOf("/") + 1;
 			var worldName = location.href.slice(lastSlash).toLowerCase() || "main";
@@ -196,6 +199,7 @@
 </head>
 <body>
 	<canvas id="world"></canvas>
+	<div id="input"></div>
 	<div id="eui-container"></div>
 
 	<div id="loader">

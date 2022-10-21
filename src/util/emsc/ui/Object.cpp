@@ -10,10 +10,10 @@ Object::Object()
 Object::Object(std::string_view tag)
 : id(eui_create_elem(tag.data(), tag.size())) { }
 
-Object::Object(Object&& m)
+Object::Object(Object&& m) noexcept
 : id(std::exchange(m.id, 0)) { }
 
-Object& Object::operator =(Object&& m) {
+Object& Object::operator =(Object&& m) noexcept {
 	id = std::exchange(m.id, 0);
 	return *this;
 }
@@ -55,6 +55,10 @@ std::string Object::getProperty(std::string_view name) const {
 	return buf;
 }
 
+bool Object::getPropertyBool(std::string_view name) const {
+	return eui_elem_property_get_bool(id, name.data(), name.size());
+}
+
 void Object::setProperty(std::string_view name) {
 	setProperty(name, name);
 }
@@ -73,6 +77,10 @@ std::string Object::getAttribute(std::string_view name) const {
 	eui_elem_attr_get(id, buf.data(), buf.size() + 1, name.data(), name.size());
 
 	return buf;
+}
+
+void Object::delAttribute(std::string_view name) {
+	eui_elem_attr_del(id, name.data(), name.size());
 }
 
 void Object::setAttribute(std::string_view name) {
@@ -107,6 +115,10 @@ void Object::appendToMainContainer() {
 	appendTo("#eui-container");
 }
 
+void Object::appendToHead() {
+	appendTo("head");
+}
+
 void Object::remove() {
 	eui_remove_elem(id);
 }
@@ -116,4 +128,3 @@ void Object::destroy() {
 		eui_destroy_elem(id);
 	}
 }
-
