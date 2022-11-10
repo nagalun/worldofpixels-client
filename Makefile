@@ -71,13 +71,13 @@ CPPFLAGS += $(EM_CONF_CC_LD)
 LDFLAGS  += $(EM_CONF_CC_LD) $(EM_CONF_LD)
 
 
-CPPFLAGS += -std=c++17 -fno-exceptions -fno-rtti -MMD -MP
+CPPFLAGS += -std=c++20 -fno-exceptions -fno-rtti -MMD -MP
 CPPFLAGS += -Wall -Wshadow -Weffc++ -Wextra -pedantic-errors -Wno-unused-parameter
 LDFLAGS  += -fno-exceptions -fno-rtti
 
 # GLM config
 CPPFLAGS += -D GLM_FORCE_ARCH_UNKNOWN -D GLM_FORCE_PRECISION_MEDIUMP_FLOAT
-CPPFLAGS += -I ./lib/glm/
+CPPFLAGS += -I ./lib/
 
 CPPFLAGS += -iquote ./src/
 
@@ -119,6 +119,7 @@ static: $(OUT_DIR) $(STATIC_DIR)/preprocessor/static_files.txt $(STATIC_OUT_FILE
 
 $(STATIC_DIR)/preprocessor/static_files.txt: $(filter-out $(call rwildcard, $(STATIC_DIR)/preprocessor, *),$(call rwildcard, $(STATIC_DIR)/, *))
 	find $(STATIC_DIR)/ -type f -not -path '*/preprocessor/*' -printf '/%P\n' > $(STATIC_DIR)/preprocessor/static_files.txt
+	find $(STATIC_DIR)/theme/ -mindepth 1 -maxdepth 1 -type d -printf '"%P",' | sed 's/^/\[/;s/,$$/\]\n/' > $(STATIC_DIR)/theme/builtin.json
 
 $(OUT_DIR)/%: $(STATIC_DIR)/%
 	@mkdir -p $(dir $(OBJ_DIR)/$<) $(dir $(<:$(STATIC_DIR)/%=$(OUT_DIR)/%))
@@ -136,6 +137,6 @@ $(OUT_DIR) $(patsubst %/,%,$(sort $(dir $(OBJ_FILES)))):
 	@mkdir -p $@
 
 clean:
-	- $(RM) -r $(OBJ_DIR) ./$(OUT_DIR)/*
+	- $(RM) -r $(OBJ_DIR) ./$(OUT_DIR)/* $(STATIC_DIR)/preprocessor/static_files.txt $(STATIC_DIR)/theme/builtin.json
 
 -include $(DEP_FILES) $(STATIC_DEP_FILES)

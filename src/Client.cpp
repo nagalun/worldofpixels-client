@@ -99,13 +99,13 @@ Client::Client(JsApiProxy& api)
 	});
 #endif
 
-	onAudioEnableCh = Settings::get().enableAudio.connect([](auto b) { setAudioEnabled(b); });
+	skAudioEnableCh = Settings::get().enableAudio.connect([](auto b) { setAudioEnabled(b); });
 
-	onJoinVolCh = Settings::get().joinSfxVol.connect([](auto v) { setVolumeAudioId("a-join", v); });
+	skJoinVolCh = Settings::get().joinSfxVol.connect([](auto v) { setVolumeAudioId("a-join", v); });
 
-	onButtonVolCh = Settings::get().buttonSfxVol.connect([](auto v) { setVolumeAudioId("a-btn", v); });
+	skButtonVolCh = Settings::get().buttonSfxVol.connect([](auto v) { setVolumeAudioId("a-btn", v); });
 
-	onPaintVolCh = Settings::get().paintSfxVol.connect([](auto v) { setVolumeAudioId("a-pixel", v); });
+	skPaintVolCh = Settings::get().paintSfxVol.connect([](auto v) { setVolumeAudioId("a-pixel", v); });
 }
 
 Client::~Client() {

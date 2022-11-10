@@ -37,10 +37,10 @@ private:
 	long tickTimer;
 	EConnectError lastError;
 
-	decltype(Settings::enableAudio)::SlotKey onAudioEnableCh;
-	decltype(Settings::joinSfxVol)::SlotKey onJoinVolCh;
-	decltype(Settings::buttonSfxVol)::SlotKey onButtonVolCh;
-	decltype(Settings::paintSfxVol)::SlotKey onPaintVolCh;
+	decltype(Settings::enableAudio)::SlotKey skAudioEnableCh;
+	decltype(Settings::joinSfxVol)::SlotKey skJoinVolCh;
+	decltype(Settings::buttonSfxVol)::SlotKey skButtonVolCh;
+	decltype(Settings::paintSfxVol)::SlotKey skPaintVolCh;
 
 public:
 	Client(JsApiProxy&);

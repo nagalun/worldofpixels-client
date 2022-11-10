@@ -6,10 +6,6 @@
 
 namespace eui {
 
-// "translate(-100%,-100%) translate(-2147483648px,-2147483648px)"
-// "-2147483648px" // w, h
-constexpr std::size_t bufSz = 61;
-
 static Object mktitle(std::string_view title) {
 	Object t;
 	t.setProperty("textContent", title);
@@ -168,7 +164,7 @@ void Window::move(int newX, int newY, std::int8_t newHorizAnchor, std::int8_t ne
 		setProperty("style.bottom", newVertAnchor > 0 ? "0" : "");
 	}
 
-	setProperty("style.transform", svprintf<bufSz>("translate(%i%%,%i%%) translate(%ipx,%ipx)",
+	setProperty("style.transform", svprintf("translate(%i%%,%i%%) translate(%ipx,%ipx)",
 			newHorizAnchor > 0 ? 100 : 0,
 			newVertAnchor > 0 ? 100 : 0,
 			newX, newY));
@@ -218,12 +214,12 @@ bool Window::toggle() {
 
 //void Window::resize(unsigned int newWidth, unsigned int newHeight) {
 //	if (newWidth != width) {
-//		setProperty("style.width", svprintf<bufSz>("%ipx", newWidth));
+//		setProperty("style.width", svprintf("%ipx", newWidth));
 //		width = newWidth;
 //	}
 //
 //	if (newHeight != height) {
-//		setProperty("style.height", svprintf<bufSz>("%ipx", newHeight));
+//		setProperty("style.height", svprintf("%ipx", newHeight));
 //		height = newHeight;
 //	}
 //}

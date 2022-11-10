@@ -2,6 +2,7 @@
 
 #include "explints.hpp"
 
+#include <string_view>
 
 union RGB_u {
 	struct {
@@ -12,3 +13,5 @@ union RGB_u {
 	} c;
 	u32 rgb;
 };
+
+RGB_u read_css_hex_color(std::string_view);

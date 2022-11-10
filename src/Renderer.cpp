@@ -407,7 +407,7 @@ bool Renderer::setupRenderingCallbacks() {
 		resizeRenderingContext();
 	});
 
-	onShowGridCh = Settings::get().showGrid.connect([this] (auto) {
+	skShowGridCh = Settings::get().showGrid.connect([this] (auto) {
 		queueRerender();
 	});
 

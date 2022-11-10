@@ -57,20 +57,20 @@ MoveTool::MoveTool(std::tuple<ToolManager&, InputAdapter&> params)
 		tm.selectTool<MoveTool>();
 	});
 
-	kb->iCamUp.setCb([&] (auto&, const auto&) {
-		c.translate(0.f, -3.f / (c.getZoom() / 16.f));
+	kb->iCamUp.setCb([&] (auto&, const auto& ii) {
+		c.setMomentum(c.getDx(), -10.f / (c.getZoom() / 16.f));
 	});
 
-	kb->iCamDown.setCb([&] (auto&, const auto&) {
-		c.translate(0.f, 3.f / (c.getZoom() / 16.f));
+	kb->iCamDown.setCb([&] (auto&, const auto& ii) {
+		c.setMomentum(c.getDx(), 10.f / (c.getZoom() / 16.f));
 	});
 
-	kb->iCamLeft.setCb([&] (auto&, const auto&) {
-		c.translate(-3.f / (c.getZoom() / 16.f), 0.f);
+	kb->iCamLeft.setCb([&] (auto&, const auto& ii) {
+		c.setMomentum(-10.f / (c.getZoom() / 16.f), c.getDy());
 	});
 
 	kb->iCamRight.setCb([&] (auto&, const auto&) {
-		c.translate(3.f / (c.getZoom() / 16.f), 0.f);
+		c.setMomentum(10.f / (c.getZoom() / 16.f), c.getDy());
 	});
 
 	kb->iCamPanWh.setCb([&] (auto& ev, const auto& ii) {
@@ -176,4 +176,3 @@ bool MoveTool::isEnabled() {
 std::uint8_t MoveTool::getNetId() const {
 	return 1;
 }
-

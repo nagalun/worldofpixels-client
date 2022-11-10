@@ -6,8 +6,6 @@
 #include "util/emsc/ui/Object.hpp"
 
 namespace detail {
-// "tgrp-2147483647"
-constexpr std::size_t tgBufSz = 15;
 
 template<typename Content>
 struct Tab : public eui::Object {

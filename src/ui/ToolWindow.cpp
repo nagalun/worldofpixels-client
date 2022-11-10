@@ -2,6 +2,9 @@
 
 #include "tools/ToolManager.hpp"
 #include "util/emsc/audio.hpp"
+#include "util/emsc/dom.hpp"
+#include "util/stringparser.hpp"
+#include <string_view>
 
 ToolWindow::ToolWindow(ToolManager& tm)
 : Window(true, false),
@@ -18,8 +21,11 @@ ToolWindow::ToolWindow(ToolManager& tm)
 				toolBtns[i].addClass("active");
 			}
 		});
+
+		updatePointerCursor();
 	});
 
+	updatePointerCursor();
 	buildWindow();
 	bringUp();
 	move(3, 30);
@@ -47,4 +53,14 @@ void ToolWindow::buildWindow() {
 
 		btn.appendTo(cont);
 	});
+}
+
+void ToolWindow::updatePointerCursor() {
+	Tool * t = tm.getSelectedTool();
+	std::string_view k{"data-tool"};
+	std::string_view v = t ? t->getName() : "";
+	std::string_view kSt{"data-tool-st"};
+	std::string_view vSt = t ? toString(t->getToolVisualState()) : "";
+	eui_root_attr_set(k.data(), k.size(), v.data(), v.size());
+	eui_root_attr_set(kSt.data(), kSt.size(), vSt.data(), vSt.size());
 }

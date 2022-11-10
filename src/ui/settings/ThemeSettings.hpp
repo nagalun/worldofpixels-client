@@ -5,32 +5,35 @@
 #include <string_view>
 #include <vector>
 
+#include "util/Signal.hpp"
 #include "util/emsc/ui/Object.hpp"
 #include "util/emsc/ui/EventHandle.hpp"
 #include "Settings.hpp"
 #include "util/NonCopyable.hpp"
 
-class ThemeSettings : public eui::Object, NonCopyable {
-	class Theme : public eui::Object {
-	public:
-		const std::string_view theme;
+class ThemeManager;
+using TmTheme = struct Theme; // ThemeManager's theme struct
 
-	private:
+class ThemeSettings : public eui::Object, NonCopyable {
+	struct Theme : public eui::Object {
+		std::string theme;
+
 		eui::Object preview;
 		eui::Object infoBox;
 		eui::Object infoName;
 		eui::Object infoDesc;
 		eui::EventHandle onSelect;
 
-	public:
-		Theme(std::string_view);
+		Theme(std::string_view, TmTheme*);
 		Theme(Theme&&) noexcept;
 
 		bool select();
 	};
 
 	std::vector<Theme> themeList;
-	decltype(Settings::selectedTheme)::SlotKey onSelectedThemeCh;
+	decltype(Settings::selectedTheme)::SlotKey skSelectedThemeCh;
+	Signal<void(ThemeManager&)>::SlotKey skThemeListCh;
+	Signal<void(TmTheme&)>::SlotKey skThemeLoad;
 
 public:
 	ThemeSettings();
@@ -38,5 +41,7 @@ public:
 	std::string_view getTabName() const;
 
 private:
+	void buildThemeList();
+	void fillThemeInfo(TmTheme&);
 	void updateActive(const std::string& newTheme);
 };

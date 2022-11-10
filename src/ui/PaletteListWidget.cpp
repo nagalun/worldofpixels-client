@@ -3,9 +3,6 @@
 #include "util/color.hpp"
 #include "util/misc.hpp"
 
-// "-2147483647"
-constexpr std::size_t bufSz = 11;
-
 PaletteListWidget::PaletteListWidget(ColorProvider& clr)
 : clr(clr),
   worldPaletteContainer("details"),
@@ -74,6 +71,6 @@ void PaletteListWidget::setPalettes(std::vector<std::vector<RGB_u>> world, std::
 		item.appendTo(userPaletteContainer);
 	}
 
-	worldPaletteSummary.setAttribute("data-count", svprintf<bufSz>("%d", worldPalettes.size()));
-	userPaletteSummary.setAttribute("data-count", svprintf<bufSz>("%d", userPalettes.size()));
+	worldPaletteSummary.setAttribute("data-count", svprintf("%d", worldPalettes.size()));
+	userPaletteSummary.setAttribute("data-count", svprintf("%d", userPalettes.size()));
 }

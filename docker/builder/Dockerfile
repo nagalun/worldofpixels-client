@@ -1,5 +1,5 @@
 FROM emscripten/emsdk:3.1.23
-RUN apt-get update && apt-get install -y libglm-dev inotify-tools libssl-dev libz-dev nlohmann-json3-dev
+RUN apt-get update && apt-get install -y libglm-dev inotify-tools libssl-dev libz-dev
 RUN mkdir -p /wsockifier && chown emscripten:emscripten /wsockifier
 USER emscripten
 RUN embuilder.py build zlib libpng

@@ -52,16 +52,24 @@ static Tuple cartesian_make_tuple(Args&&... args) {
     return do_cartesian_make_tuple<Tuple>(std::make_index_sequence<std::tuple_size_v<Tuple>>(), std::forward<Args>(args)...);
 }
 
-template<std::size_t bufSz, typename... Args>
-std::string_view svprintf(const char * fmt, Args... args) {
-	static char propBuf[bufSz + 1] = {0}; // + 1 for null
-	int written = std::snprintf(propBuf, sizeof(propBuf), fmt, args...);
+std::pair<char*, std::size_t> get_char_buf(std::size_t min_size);
 
-	if (written < 0) {
-		written = 0;
-	} else if ((std::uint32_t)written > sizeof(propBuf)) {
-		written = sizeof(propBuf);
+template<typename... Args>
+std::string_view svprintf(const char * fmt, Args... args) {
+	auto [buf, sz] = get_char_buf(64);
+	int written;
+	while (true) {
+		written = std::snprintf(buf, sz, fmt, args...);
+
+		if (written < 0) {
+			written = 0;
+		} else if ((std::uint32_t)written > sz) {
+			std::tie(buf, sz) = get_char_buf(written);
+			continue;
+		}
+
+		break;
 	}
 
-	return std::string_view(propBuf, written);
+	return std::string_view(buf, written);
 }

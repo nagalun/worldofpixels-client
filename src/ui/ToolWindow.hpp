@@ -18,5 +18,5 @@ public:
 	const ToolWindow& operator=(ToolWindow&&) noexcept;
 
 	void buildWindow();
+	void updatePointerCursor();
 };
-

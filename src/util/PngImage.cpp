@@ -1,4 +1,6 @@
 #include <algorithm>
+#include <cstring>
+#include <memory>
 #include <stdexcept>
 #include <exception>
 #include <tuple>
@@ -8,6 +10,7 @@
 
 #include <png.h>
 #include "PngImage.hpp"
+#include "util/color.hpp"
 
 // inspiration from: https://gist.github.com/DanielGibson/e0828acfc90f619198cb
 
@@ -174,7 +177,7 @@ static void encodePng(size_t pngWidth, size_t pngHeight, u8 chans, const u8* dat
 	}
 
 	png_set_IHDR(pngPtr, infoPtr, pngWidth, pngHeight, 8,
-			PNG_COLOR_TYPE_RGB,
+			chans == 4 ? PNG_COLOR_TYPE_RGB_ALPHA : PNG_COLOR_TYPE_RGB,
 			PNG_INTERLACE_NONE,
 			PNG_COMPRESSION_TYPE_DEFAULT,
 			PNG_FILTER_TYPE_DEFAULT);
@@ -236,14 +239,6 @@ u8 * PngImage::getData() {
 	return data.get();
 }
 
-void PngImage::applyTransform(std::function<RGB_u(u32 x, u32 y)> func) {
-	for (u32 y = 0; y < h; y++) {
-		for (u32 x = 0; x < w; x++) {
-			setPixel(x, y, func(x, y));
-		}
-	}
-}
-
 RGB_u PngImage::getPixel(u32 x, u32 y) const {
 	u8 * d = data.get();
 	u8 c = getChannels();
@@ -275,6 +270,10 @@ void PngImage::setPixel(u32 x, u32 y, RGB_u clr, bool blending) {
 		return;
 	}
 
+	if (sA == 0 && *dA == 0) {
+		return;
+	}
+
 	float sRf = sR / 255.f;
 	float sGf = sG / 255.f;
 	float sBf = sB / 255.f;
@@ -303,12 +302,77 @@ void PngImage::fill(RGB_u clr) {
 	}
 }
 
+void PngImage::paste(u32 dstX, u32 dstY, const PngImage& src, bool blending, u32 srcX, u32 srcY) {
+	paste(dstX, dstY, src, blending, srcX, srcY, src.getWidth(), src.getHeight());
+}
+
+void PngImage::paste(u32 dstX, u32 dstY, const PngImage& src, bool blending, u32 srcX, u32 srcY, u32 srcW, u32 srcH) {
+	if (dstX >= w || dstY >= h || srcX >= src.getWidth() || srcY >= src.getHeight()) {
+		return;
+	}
+
+	u32 endX = dstX + srcW;
+	u32 endY = dstY + srcH;
+	u32 endSX = srcX + srcW;
+	u32 endSY = srcY + srcH;
+	endX = endX > w ? w : endX;
+	endY = endY > h ? h : endY;
+	endSX = endSX > src.getWidth() ? src.getWidth() : endSX;
+	endSY = endSY > src.getHeight() ? src.getHeight() : endSY;
+	for (u32 y = dstY, sy = srcY; y < endY && sy < endSY; y++, sy++) {
+		for (u32 x = dstX, sx = srcX; x < endX && sx < endSX; x++, sx++) {
+			setPixel(x, y, src.getPixel(sx, sy), blending);
+		}
+	}
+}
+
+void PngImage::move(i32 offX, i32 offY) {
+	if (offX == 0 && offY == 0) {
+		return;
+	}
+
+	PngImage tmp(clone());
+	applyTransform([&, this](u32 x, u32 y) -> RGB_u {
+		i32 newX = static_cast<i32>(x) - offX;
+		i32 newY = static_cast<i32>(y) - offY;
+		RGB_u clr =
+			newX < 0 || u32(newX) >= w || newY < 0 || u32(newY) >= h ? RGB_u{.rgb = 0} : tmp.getPixel(newX, newY);
+		return clr;
+	});
+}
+
+bool PngImage::isFullyTransparent() const {
+	if (getChannels() != 4) { return false; }
+
+	u8 * d = data.get();
+	for (std::size_t i = 0; i < w * h * 4; i += 4) {
+		if (d[i + 3] != 0) {
+			return false;
+		}
+	}
+
+	return true;
+}
+
 void PngImage::setChunkReader(const std::string& s, std::function<bool(u8*, sz_t)> f) {
 	chunkReaders[s] = std::move(f);
 }
 
 void PngImage::setChunkWriter(const std::string& s, std::function<std::pair<std::unique_ptr<u8[]>, sz_t>()> f) {
 	chunkWriters[s] = std::move(f);
+}
+
+PngImage PngImage::clone() const {
+	PngImage c;
+	c.w = w;
+	c.h = h;
+	c.chans = chans;
+	if (data) {
+		c.data = std::make_unique<u8[]>(w * h * chans);
+		std::memcpy(c.data.get(), data.get(), w * h * chans);
+	}
+
+	return c;
 }
 
 void PngImage::allocate(u32 newWidth, u32 newHeight, RGB_u bg, u8 newChans) {

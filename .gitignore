@@ -3,5 +3,6 @@ profile
 tests
 owop.wasm.map
 static/preprocessor/static_files.txt
-static/img/ui/*
-!static/img/ui/default
+static/theme/builtin.json
+static/theme/*
+!static/theme/default

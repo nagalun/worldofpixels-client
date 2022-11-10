@@ -3,13 +3,13 @@
 #include <type_traits>
 #include <utility>
 
-template <typename T, std::size_t dataSize = sizeof(void*)> class SmallLambda;
-template <typename R, typename... Args, std::size_t dataSize>
-class SmallLambda<R(Args...), dataSize> {
-	using Data = char[dataSize];
+template <typename T, std::size_t DataSize = sizeof(void*), std::size_t Align = alignof(void*)> class SmallLambda;
+template <typename R, typename... Args, std::size_t DataSize, std::size_t Align>
+class SmallLambda<R(Args...), DataSize, Align> {
+	using Data = char[DataSize];
 	using FnPtr = R(*)(Data*, Args...);
 	FnPtr fn;
-	Data data;
+	alignas(Align) Data data;
 
 public:
 	template<typename T>
@@ -44,4 +44,3 @@ private:
 		return t(std::forward<Args>(args)...);
 	}
 };
-

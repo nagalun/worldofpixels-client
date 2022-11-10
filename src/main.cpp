@@ -9,6 +9,7 @@
 #include <exception>
 #include <new>
 
+#include "ThemeManager.hpp"
 #include "util/preproc.hpp"
 #include "JsApiProxy.hpp"
 
@@ -25,8 +26,6 @@ extern "C" const char *__asan_default_options() {
 static std::unique_ptr<Client> cl;
 
 int main(int argc, char * argv[]) {
-	JsApiProxy& api = JsApiProxy::getInstance();
-
 	std::printf("[main] Compiled on " __DATE__ " @ " __TIME__ "\n");
 	std::printf("[main] Version: " TOSTRING(OWOP_VERSION) "\n");
 
@@ -35,17 +34,15 @@ int main(int argc, char * argv[]) {
 		return nullptr;
 	});
 
-//	std::atexit([] {
-//		std::printf("[main] std::atexit\n");
-//		cl = nullptr;
-//	});
-
 	std::set_new_handler([] {
 		std::puts("OOM detected");
 		if (!cl->freeMemory()) {
 			std::terminate();
 		}
 	});
+
+	JsApiProxy& api = JsApiProxy::getInstance();
+	ThemeManager& tm = ThemeManager::get();
 
 	cl = std::make_unique<Client>(api);
 

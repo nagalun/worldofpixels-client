@@ -9,9 +9,6 @@
 #include "util/explints.hpp"
 #include "util/emsc/dom.hpp"
 
-// "'#89ABCDEF'"
-constexpr std::size_t bufSz = 11;
-
 ColorWidget::ColorWidget(ColorProvider& clr)
 : clr(clr),
   primaryClr(std::bind(&ColorWidget::updatePrimaryClr, this)),
@@ -43,8 +40,8 @@ void ColorWidget::update() {
 	u32 cssPriClr = bswap_32(pClr.rgb);
 	u32 cssSecClr = bswap_32(sClr.rgb);
 
-	eui_root_css_property_set("--clr-pri", svprintf<bufSz>("#%08X", cssPriClr));
-	eui_root_css_property_set("--clr-sec", svprintf<bufSz>("#%08X", cssSecClr));
+	eui_root_css_property_set("--clr-pri", svprintf("#%08X", cssPriClr));
+	eui_root_css_property_set("--clr-sec", svprintf("#%08X", cssSecClr));
 
 	primaryClr.setColor(pClr);
 	secondaryClr.setColor(sClr);

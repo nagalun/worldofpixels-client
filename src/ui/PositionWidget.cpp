@@ -4,9 +4,6 @@
 #include "world/World.hpp"
 #include "Renderer.hpp"
 
-// "-2147483647" "32.000000"
-constexpr std::size_t bufSz = 11;
-
 PositionWidget::PositionWidget(World::Pos x, World::Pos y, float zoom)
 : painted(0),
   shownMouseX(x - 1),
@@ -55,27 +52,27 @@ void PositionWidget::setPos(World::Pos mx, World::Pos my, World::Pos camx, World
 
 void PositionWidget::paint() {
 	if (!(painted & P_MX)) {
-		setAttribute("data-cur-x", svprintf<bufSz>("%d", shownMouseX));
+		setAttribute("data-cur-x", svprintf("%d", shownMouseX));
 		painted |= P_MX;
 	}
 
 	if (!(painted & P_MY)) {
-		setAttribute("data-cur-y", svprintf<bufSz>("%d", shownMouseY));
+		setAttribute("data-cur-y", svprintf("%d", shownMouseY));
 		painted |= P_MY;
 	}
 
 	if (!(painted & P_CX)) {
-		setAttribute("data-cam-x", svprintf<bufSz>("%d", shownCameraX));
+		setAttribute("data-cam-x", svprintf("%d", shownCameraX));
 		painted |= P_CX;
 	}
 
 	if (!(painted & P_CY)) {
-		setAttribute("data-cam-y", svprintf<bufSz>("%d", shownCameraY));
+		setAttribute("data-cam-y", svprintf("%d", shownCameraY));
 		painted |= P_CY;
 	}
 
 	if (!(painted & P_ZOOM)) {
-		auto zstr = svprintf<bufSz>("%.2f", shownZoom);
+		auto zstr = svprintf("%.2f", shownZoom);
 		if (zstr.compare(zstr.size() - 3, std::string_view::npos, ".00") == 0) {
 			zstr.remove_suffix(3);
 		}

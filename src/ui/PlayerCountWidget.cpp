@@ -3,9 +3,6 @@
 #include "util/misc.hpp"
 #include "Renderer.hpp"
 
-// "-2147483647"
-constexpr std::size_t bufSz = 11;
-
 PlayerCountWidget::PlayerCountWidget()
 : painted(0),
   shownWorldCursorCount(0),
@@ -36,10 +33,10 @@ void PlayerCountWidget::setCounts(std::uint32_t worldCursorCount, std::uint32_t 
 
 void PlayerCountWidget::paint() {
 	if (!(painted & P_WCNT)) {
-		setAttribute("data-num-cur-world", svprintf<bufSz>("%d", shownWorldCursorCount));
+		setAttribute("data-num-cur-world", svprintf("%d", shownWorldCursorCount));
 	}
 
 	if (!(painted & P_GCNT)) {
-		setAttribute("data-num-cur-global", svprintf<bufSz>("%d", shownGlobalCursorCount));
+		setAttribute("data-num-cur-global", svprintf("%d", shownGlobalCursorCount));
 	}
 }

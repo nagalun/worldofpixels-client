@@ -7,6 +7,10 @@ Tool::Tool(ToolManager& tm)
 
 Tool::~Tool() { }
 
+std::uint8_t Tool::getToolVisualState() const {
+	return 0;
+}
+
 const std::vector<std::uint8_t>& Tool::getNetState() const {
 	static const std::vector<std::uint8_t> empty;
 	return empty;

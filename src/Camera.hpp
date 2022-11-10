@@ -16,6 +16,8 @@ public:
 
 	float getX() const;
 	float getY() const;
+	float getDx() const;
+	float getDy() const;
 	float getZoom() const;
 	void getWorldPosFromScreenPos(float sx, float sy, float * wx, float * wy) const;
 

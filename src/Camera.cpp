@@ -1,8 +1,11 @@
 #include "Camera.hpp"
 
+#include <emscripten.h>
 #include <cmath>
 #include <cstdio>
 #include <chrono>
+
+static const float timeConstantMs = 230.f;// -(1000.0f / 60.0f) / std::log(0.93f);
 
 Camera::Camera()
 : x(0.f),
@@ -24,6 +27,20 @@ float Camera::getY() const {
 	float integ;
 	float fract = std::modf(y, &integ);
 	return integ + std::round(fract * zoom) / zoom;
+}
+
+float Camera::getDx() const {
+	float elapsedMs = emscripten_get_now() - momentumStartTs;
+	float curExp = std::exp(-elapsedMs / timeConstantMs);
+	float curDx = momentumDx * curExp;
+	return curDx;
+}
+
+float Camera::getDy() const {
+	float elapsedMs = emscripten_get_now() - momentumStartTs;
+	float curExp = std::exp(-elapsedMs / timeConstantMs);
+	float curDy = momentumDy * curExp;
+	return curDy;
 }
 
 float Camera::getZoom() const {
@@ -89,8 +106,6 @@ void Camera::setMomentum(float dx, float dy) {
 }
 
 bool Camera::applyMomentum(float now, float dt) {
-	const float timeConstantMs = 230.f;// -(1000.0f / 60.0f) / std::log(0.93f);
-
 	if (momentumDx == 0.f && momentumDy == 0.f) {
 		return false;
 	}

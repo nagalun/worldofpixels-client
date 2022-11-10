@@ -18,6 +18,7 @@ public:
 	virtual ~Tool();
 
 	virtual std::string_view getName() const = 0;
+	virtual std::uint8_t getToolVisualState() const;
 	virtual bool isEnabled() = 0;
 
 	// note: an empty network state must be valid, server may not send state in some circumstances

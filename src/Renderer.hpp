@@ -39,7 +39,7 @@ private:
 	std::optional<ChunkUpdaterGlState> cUpdaterGl;
 	glm::mat4 view; // view matrix
 	glm::mat4 projection;
-	decltype(Settings::showGrid)::SlotKey onShowGridCh;
+	decltype(Settings::showGrid)::SlotKey skShowGridCh;
 	float lastRenderTime;
 	u8 pendingRenderType;
 	u8 contextFailureCount;

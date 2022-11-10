@@ -6,9 +6,6 @@
 #include "util/byteswap.hpp"
 #include "util/misc.hpp"
 
-// "'#89ABCDEF'" "-2147483647" "100.000000%"
-constexpr std::size_t bufSz = 11;
-
 template<typename Fn>
 PaletteItem::Color::Color(RGB_u color, Fn onSelect)
 : Button(std::move(onSelect)),
@@ -18,9 +15,9 @@ PaletteItem::Color::Color(RGB_u color, Fn onSelect)
 	u32 cssClr = bswap_32(color.rgb);
 	std::string_view cssStr;
 	if (color.c.a == 255) {
-		cssStr = svprintf<bufSz>("#%06X", cssClr >> 8);
+		cssStr = svprintf("#%06X", cssClr >> 8);
 	} else {
-		cssStr = svprintf<bufSz>("#%08X", cssClr);
+		cssStr = svprintf("#%08X", cssClr);
 	}
 
 	setAttribute("title", cssStr);
@@ -57,8 +54,8 @@ PaletteItem::PaletteItem(ColorProvider& clrp, std::vector<RGB_u> clrs)
 	float wPerc = 100.f / nclrs * numCols;
 
 	setAttribute("data-name", "Test palette");
-	setAttribute("data-clr-count", svprintf<bufSz>("%d", colors.size()));
-	setProperty("style.--w-perc", svprintf<bufSz>("%f%%", wPerc));
+	setAttribute("data-clr-count", svprintf("%d", colors.size()));
+	setProperty("style.--w-perc", svprintf("%f%%", wPerc));
 }
 
 PaletteItem::PaletteItem(PaletteItem&& o) noexcept

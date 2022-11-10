@@ -15,9 +15,6 @@
 #include "util/explints.hpp"
 #include "util/misc.hpp"
 
-// "'#89ABCDEF'"
-constexpr std::size_t bufSz = 11;
-
 World::World(InputAdapter& base, std::string name, std::unique_ptr<SelfCursor::Builder> me,
 		RGB_u bgClr, bool restricted, std::optional<User::Id> owner)
 : name(std::move(name)),
@@ -37,7 +34,7 @@ World::World(InputAdapter& base, std::string name, std::unique_ptr<SelfCursor::B
   drawingRestricted(restricted) {
 
 	u32 cssBgClr = bswap_32(bgClr.rgb);
-	eui_root_css_property_set("--bg-clr", svprintf<bufSz>("#%08X", cssBgClr));
+	eui_root_css_property_set("--bg-clr", svprintf("#%08X", cssBgClr));
 
 	iMoveCursor.setDefaultKeybind(Keybind::ANY_PTR_BTN);
 	iMoveCursor.setCb([this] (ImAction::Event& ev, const InputInfo& ii) {

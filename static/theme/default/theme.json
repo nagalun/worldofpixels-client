@@ -19,7 +19,7 @@
 			"enable": true,
 			"allow_growing_tex": false,
 			"color": "#0000007F",
-			"blur": 3,
+			"blur": 1,
 			"offset_x": 1,
 			"offset_y": 1
 		},

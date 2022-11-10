@@ -81,7 +81,7 @@ EM_JS(void, eui_elem_add_handler, (std::uint32_t id, const char * evt, std::size
 			}
 		};
 
-		e.addEventListener(obj.evt, obj.jscb, {passive: !!passive});
+		e.addEventListener(obj.evt, obj.jscb, {"passive": !!passive});
 		evts.push(obj);
 	}
 });
@@ -140,7 +140,7 @@ EM_JS(std::size_t, eui_elem_property_len, (std::uint32_t id, const char * prop, 
 	return sprop[0] in obj ? obj[sprop[0]].toString().length : 0;
 });
 
-EM_JS(std::size_t, eui_elem_property_get, (std::uint32_t id, const char * buf, std::size_t maxlen, const char * prop, std::size_t len), {
+EM_JS(std::size_t, eui_elem_property_get, (std::uint32_t id, char * buf, std::size_t maxlen, const char * prop, std::size_t len), {
 	var e = Module.EUI.elems[id];
 	var sprop = UTF8ToString(prop, len).split(".");
 	var obj = e;
@@ -185,7 +185,7 @@ EM_JS(std::size_t, eui_elem_attr_len, (std::uint32_t id, const char * prop, std:
 	return (e.getAttribute(sprop) || "").length;
 });
 
-EM_JS(std::size_t, eui_elem_attr_get, (std::uint32_t id, const char * buf, std::size_t maxlen, const char * prop, std::size_t len), {
+EM_JS(std::size_t, eui_elem_attr_get, (std::uint32_t id, char * buf, std::size_t maxlen, const char * prop, std::size_t len), {
 	var e = Module.EUI.elems[id];
 	var sprop = UTF8ToString(prop, len);
 	var val = e.getAttribute(sprop) || "";
@@ -210,14 +210,32 @@ EM_JS(void, eui_root_css_property_set, (const char * prop, std::size_t proplen, 
 	r.style.setProperty(UTF8ToString(prop, proplen), UTF8ToString(val, vallen));
 });
 
+EM_JS(void, eui_root_attr_set, (const char * prop, std::size_t proplen, const char * val, std::size_t vallen), {
+	var r = document.querySelector(":root");
+	r.setAttribute(UTF8ToString(prop, proplen), UTF8ToString(val, vallen));
+});
+
 EM_JS(void, eui_elem_ss_del_rule, (std::uint32_t id, std::size_t idx), {
 	var e = Module.EUI.elems[id];
 	e.sheet.deleteRule(idx);
 });
 
-EM_JS(void, eui_elem_ss_ins_rule,(std::uint32_t id, const char * rule, std::size_t rulelen, std::size_t idx), {
+EM_JS(void, eui_elem_ss_del_rules, (std::uint32_t id), {
+	var e = Module.EUI.elems[id];
+	if (e.sheet) {
+		var n = e.sheet.cssRules.length;
+		while (n) { e.sheet.deleteRule(--n); }
+	}
+});
+
+EM_JS(void, eui_elem_ss_ins_rule, (std::uint32_t id, const char * rule, std::size_t rulelen, std::size_t idx), {
 	var e = Module.EUI.elems[id];
 	e.sheet.insertRule(UTF8ToString(rule, rulelen), idx);
+});
+
+EM_JS(void, eui_elem_ss_ins_rule_back, (std::uint32_t id, const char * rule, std::size_t rulelen), {
+	var e = Module.EUI.elems[id];
+	e.sheet.insertRule(UTF8ToString(rule, rulelen), e.sheet.cssRules.length);
 });
 
 EM_JS(void, eui_get_vp_size, (int * oww, int * owh), {
@@ -241,6 +259,23 @@ EM_JS(void, eui_wait_n_frames, (int n, void * data, EvtCb cb), {
 	waitFrames(n, function() {
 		Module["_eui_call_evt_handler"](data, cb);
 	});
+});
+
+// "blob:" (5) + origin + "/00000000-0000-0000-0000-000000000000" (37) + 1 nul
+EM_JS(std::size_t, eui_blob_url_len, (void), {
+	return location.origin.length + 43;
+});
+
+EM_JS(std::size_t, eui_blob_url_from_buf, (const std::uint8_t * buf, std::size_t len, const char * mime, std::size_t mimelen, char * urlbuf, std::size_t maxlen), {
+	var b = new Blob([HEAPU8.subarray(buf, buf + len)], {"type": UTF8ToString(mime, mimelen)});
+	var url = URL.createObjectURL(b);
+	stringToUTF8(url, urlbuf, maxlen);
+	var written = lengthBytesUTF8(url); // stringToUTF8 could return the bytes written...
+	return written >= maxlen ? maxlen : written;
+});
+
+EM_JS(void, eui_blob_url_revoke, (const char * url, std::size_t len), {
+	URL.revokeObjectURL(UTF8ToString(url, urllen));
 });
 
 EM_JS(void, eui_get_evt_pointer_coords, (int * x, int * y, bool clampWin, int * oww, int * owh), {

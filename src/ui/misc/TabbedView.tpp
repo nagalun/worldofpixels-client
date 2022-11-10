@@ -13,7 +13,7 @@ detail::Tab<Content>::Tab(std::uint32_t tabGroupId, CArgs&&... cargs)
 	idSel.remove_prefix(1); // remove # from the beginning
 
 	radio.setAttribute("type", "radio");
-	radio.setAttribute("name", svprintf<tgBufSz>("tgrp-%d", tabGroupId));
+	radio.setAttribute("name", svprintf("tgrp-%d", tabGroupId));
 	label.setAttribute("for", idSel);
 	label.setAttribute("tabindex", "0"); // isn't helpful
 	content.addClass("content");
@@ -32,7 +32,7 @@ TabbedView<TabContents...>::TabbedView(CArgs&&... contentArgs)
 : eui::Object("div"),
   tabs(cartesian_make_tuple<decltype(tabs)>(getId(), std::forward<CArgs>(contentArgs)...)) {
 
-	setProperty("style.--num-tabs", svprintf<detail::tgBufSz>("%d", std::tuple_size_v<decltype(tabs)>));
+	setProperty("style.--num-tabs", svprintf("%d", std::tuple_size_v<decltype(tabs)>));
 	addClass("tabs");
 
 	if constexpr (std::tuple_size_v<decltype(tabs)> != 0) {

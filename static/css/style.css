@@ -1,33 +1,9 @@
-[data-theme="default"] {
-	--tex-url-tools: url(/img/ui/default/tools.png);
-	--tex-url-tools-text: url(/img/ui/default/tools_text.png);
-	--tex-url-border: url(/img/ui/default/border.png);
-	--tex-url-border-active: url(/img/ui/default/border_active.png);
-	--tex-url-ui: url(/img/ui/default/ui.png);
-}
-
-[data-theme="easter"] {
-	--tex-url-tools: url(/img/ui/easter/tools.png);
-	--tex-url-tools-text: url(/img/ui/easter/tools_text.png);
-	--tex-url-border: url(/img/ui/easter/border.png);
-	--tex-url-border-active: url(/img/ui/easter/border_active.png);
-	--tex-url-ui: url(/img/ui/easter/ui.png);
-}
-
-[data-theme="halloween"] {
-	--tex-url-tools: url(/img/ui/halloween/tools.png);
-	--tex-url-tools-text: url(/img/ui/halloween/tools_text.png);
-	--tex-url-border: url(/img/ui/halloween/border.png);
-	--tex-url-border-active: url(/img/ui/halloween/border_active.png);
-	--tex-url-ui: url(/img/ui/halloween/ui.png);
-}
-
-[data-theme="newyear"] {
-	--tex-url-tools: url(/img/ui/newyear/tools.png);
-	--tex-url-tools-text: url(/img/ui/newyear/tools_text.png);
-	--tex-url-border: url(/img/ui/newyear/border.png);
-	--tex-url-border-active: url(/img/ui/newyear/border_active.png);
-	--tex-url-ui: url(/img/ui/newyear/ui.png);
+[data-theme] {
+    --tex-url-tools: url(/img/uiskel/ui.png);
+    --tex-url-tools-text: url(/img/uiskel/tools_text.png);
+    --tex-url-border: url(/img/uiskel/border.png);
+    --tex-url-border-active: url(/img/uiskel/border_active.png);
+    --tex-url-ui: url(/img/uiskel/ui.png);
 }
 
 ::before, ::after {
@@ -173,60 +149,6 @@ button.owop-ui {
 	margin: -4px;
 }
 
-/* TODO: autogenerate these from theme.json */
-.owop-ui[data-i="help"]::after {
-	background-position: -256px 0px;
-}
-
-.owop-ui[data-i="gpedia"]::after {
-	background-position: -224px 0px;
-}
-
-.owop-ui[data-i="pypal"]::after {
-	background-position: -192px 0px;
-}
-
-.owop-ui[data-i="rddit"]::after {
-	background-position: -160px 0px;
-}
-
-.owop-ui[data-i="fbook"]::after {
-	background-position: -128px 0px;
-}
-
-.owop-ui[data-i="dcord"]::after {
-	background-position: -96px 0px;
-}
-
-.owop-ui[data-i="palette"]::after {
-	background-position: -64px 0px;
-}
-
-.owop-ui[data-i="clr-swap"]::after {
-	background-position: -32px 0px;
-}
-
-.owop-ui[data-i="settings"]::after {
-	background-position: 0px 0px;
-}
-
-/* TODO: autogenerate these from theme.json */
-.owop-tools .tool[data-tool="Pencil"]::after {
-	background-position: 0px 0px;
-}
-
-.owop-tools .tool[data-tool="Move"]::after {
-	background-position: -32px 0px;
-}
-
-.owop-tools .tool[data-tool="Zoom"]::after {
-	background-position: -64px 0px;
-}
-
-.owop-tools .tool[data-tool="Pipette"]::after {
-	background-position: -96px 0px;
-}
-
 /* TABBED VIEW */
 
 .tabs {
@@ -271,8 +193,11 @@ button.owop-ui {
 
 /* TOOL WINDOW */
 .owop-tools {
-	width: min-content;
 	row-gap: unset;
+}
+
+.owop-tools .eui-win-content {
+	width: min-content;
 }
 
 .eui-win.owop-tools .eui-win-title {
@@ -347,7 +272,7 @@ button.owop-ui {
 }
 
 .owop-llui > div > * + * {
-	margin-bottom: 3px!important;
+	margin-bottom: 3px;
 }
 
 .owop-colors, .owop-palettes {
@@ -630,4 +555,3 @@ button.owop-ui {
 	background: var(--tex-url-tools);
 	background-position: -64px 0; /* should depend on icon size */
 }
-
