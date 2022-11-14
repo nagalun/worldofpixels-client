@@ -21,6 +21,7 @@ public:
 	void operator=(T&& callable) {
 		static_assert(sizeof(T) <= sizeof(data), "Object too big");
 		static_assert(std::is_trivially_copyable_v<T>, "Functor is not trivially copyable");
+		static_assert(Align % alignof(T) == 0, "Improper storage alignment for functor");
 		fn = &SmallLambda::call<T>;
 		new (reinterpret_cast<T*>(&data[0])) T(std::forward<T>(callable));
 	}

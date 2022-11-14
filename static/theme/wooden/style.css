@@ -1,0 +1,81 @@
+.owop-llui button.eui-themed.owop-ui::after {
+	margin: -3px;
+}
+
+.eui-win {
+	box-shadow: 0px 0px 5px #000;
+	border-image-outset: 1px;
+	border-width: 11px;
+	border-image: url(window_out.png) 11 fill repeat;
+	border-image-outset: 1px;
+	row-gap: 0;
+	background-color: #aba389;
+	background-clip: border-box;
+}
+
+.eui-win-content {
+	margin: 0 -5px -5px -5px;
+	border: 5px transparent solid;
+	border-width: 5px;
+	border-image: url(window_in.png) 5 fill repeat;
+	background-color: #7e635c;
+	background-clip: border-box;
+}
+
+.eui-win-title {
+	padding: 0;
+}
+
+.eui-win-title {
+	color: #CCC;
+}
+
+.eui-win:last-of-type .eui-win-title {
+	color: #FFF;
+}
+
+.eui-win-title,
+.eui-win:last-of-type .eui-win-title {
+	margin: -5px 0 0 -5px;
+	background-color: unset;
+	text-shadow: 1px 1px #4d313b;
+}
+
+.owop-tools.eui-win .eui-win-title,
+.owop-tools.eui-win:last-of-type .eui-win-title {
+	text-align: center;
+	margin: auto;
+	margin-top: -9px;
+	padding-bottom: 9px;
+}
+
+.eui-win-close {
+	padding: 0 5px;
+	margin: -5px -5px 5px 0;
+}
+
+.tool::after {
+	margin: -6px;
+}
+
+.owop-tools .tool {
+	border: 8px transparent solid;
+	border-image: var(--tex-url-border-active) 8 fill repeat;
+}
+
+.owop-tools .tool:hover {
+	filter: brightness(1.1);
+}
+
+.owop-tools .tool:active {
+	filter: brightness(0.8);
+	border-image: url(button_pressed.png) 8 fill repeat;
+}
+
+.owop-tools .tool.active {
+	border-image: url(tool_active.png) 8 fill repeat;
+}
+
+.tool.active::after {
+	background-image: url(tools_popout.png);
+}

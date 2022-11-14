@@ -20,12 +20,10 @@
 
 void Theme::setEnabled(bool s) {
 	if (s && !enabled) {
-		// generatedStyle.appendToHead();
 		if (extraCss.has_value()) {
 			extraCss->setDisabled(false);
 		}
 	} else if (!s && enabled) {
-		// generatedStyle.remove();
 		if (extraCss.has_value()) {
 			extraCss->setDisabled(true);
 		}
@@ -45,8 +43,10 @@ Async<bool> Theme::generateStyle() {
 	--tex-url-border: url("/theme/%1$s/border.png");
 	--tex-url-border-active: url("/theme/%1$s/border_active.png");
 	--tex-url-ui: url("/theme/%1$s/ui.png");
+	--tex-isz-tools: %2$dpx;
+	--tex-isz-ui: %3$dpx;
 })",
-		keyName.c_str()
+		keyName.c_str(), toolSize, iconSize
 	));
 
 	for (const auto& icon : icons) {
@@ -65,7 +65,7 @@ Async<bool> Theme::generateStyle() {
 [data-theme="%s"] .tool[data-tool="%s"]::after {
 	background-position: %dpx %dpx;
 })",
-			keyName.c_str(), tool.name.c_str(), -tool.column * iconSize, 0
+			keyName.c_str(), tool.name.c_str(), -tool.column * toolSize, 0
 		));
 	}
 
@@ -82,17 +82,17 @@ Async<bool> Theme::generateStyle() {
 			iToolset.readFileOnMem(reinterpret_cast<std::uint8_t*>(data.get()), len);
 		}
 
-		std::uint32_t nrows = iToolset.getHeight() / iconSize;
+		std::uint32_t nrows = iToolset.getHeight() / toolSize;
 
-		PngImage iTool(iconSize, iconSize, {.rgb = 0});
-		PngImage iToolTmp(iconSize, iconSize, {.rgb = 0});
+		PngImage iTool(toolSize, toolSize, {.rgb = 0});
+		PngImage iToolTmp(toolSize, toolSize, {.rgb = 0});
 		std::vector<std::uint8_t> fileBuf;
 
 		for (std::uint32_t t = 0; t < tools.size(); t++) {
 			auto& tool = tools[t];
 			std::uint32_t col = tool.column;
 			for (std::uint32_t row = tool.firstAsUiOnly ? 1 : 0; row < nrows; row++) {
-				iTool.paste(0, 0, iToolset, false, col * iconSize, row * iconSize, iconSize, iconSize);
+				iTool.paste(0, 0, iToolset, false, col * toolSize, row * toolSize, toolSize, toolSize);
 				if (iTool.isFullyTransparent()) {
 					// stop on the first blank tool row
 					break;
@@ -115,10 +115,10 @@ Async<bool> Theme::generateStyle() {
 						shadowBlur
 					);
 					// now overlay the tool on top
-					iTool.paste(0, 0, iToolset, true, col * iconSize, row * iconSize, iconSize, iconSize);
+					iTool.paste(0, 0, iToolset, true, col * toolSize, row * toolSize, toolSize, toolSize);
 					// paste the resulting shadowed tool on the toolset, to use as atlas for rendering later
 					// if shadows are not enabled it'd be the same so no need to do it always
-					iToolset.paste(col * iconSize, row * iconSize, iTool, false);
+					iToolset.paste(col * toolSize, row * toolSize, iTool, false);
 				}
 
 				fileBuf.clear();
@@ -145,6 +145,8 @@ Async<bool> Theme::generateStyle() {
 		toolAtlasUrl = eui::BlobUrl::fromBuf(fileBuf.data(), fileBuf.size(), "image/png");
 	}
 
+	// TODO: enable depending on user choice
+	loadExtraCss();
 	generatedStyle.setDisabled(false);
 	co_return true;
 }
@@ -155,9 +157,8 @@ void Theme::loadExtraCss() {
 	}
 
 	extraCss.emplace(svprintf("/theme/%s/style.css", keyName.data()));
-	if (enabled) {
-		extraCss->appendToHead();
-	}
+	extraCss->setDisabled(!enabled);
+	extraCss->appendToHead();
 }
 
 ThemeManager::ThemeManager()
@@ -224,6 +225,8 @@ Async<> ThemeManager::loadThemeList() {
 Async<> ThemeManager::loadBuiltinThemeList() {
 	auto [data, len, err] = co_await async_request("/theme/builtin.json");
 
+	availableThemes.emplace_back("default");
+
 	auto j(nlohmann::json::parse(data.get(), data.get() + len, nullptr, false));
 	if (!j.is_discarded() && j.is_array()) {
 		for (const auto& v : j) {
@@ -231,13 +234,13 @@ Async<> ThemeManager::loadBuiltinThemeList() {
 				continue;
 			}
 
-			availableThemes.emplace_back(v.get<std::string>());
+			auto str = v.get<std::string>();
+			if (str != "default") {
+				availableThemes.emplace_back(str);
+			}
 		}
 	}
 
-	if (availableThemes.empty()) {
-		availableThemes.emplace_back("default");
-	}
 }
 
 Async<> ThemeManager::loadUserThemeList() {
@@ -294,6 +297,7 @@ Async<Theme*> ThemeManager::getOrLoadTheme(std::string_view keyName) {
 			.name{j.value<std::string>("theme_name", "Unknown")},
 			.description{j.value<std::string>("theme_desc", "A cool theme.")},
 			.iconSize = j.value<std::uint16_t>("icon_size_px", 32),
+			.toolSize = j.value<std::uint16_t>("tool_size_px", j.value<std::uint16_t>("icon_size_px", 32)),
 			.hasCss = j.value<bool>("has_css", false),
 			.toolShadows = shadow.value<bool>("enable", true)
 		                       ? (shadow.value<bool>("allow_growing_tex", false) ? ST::RESIZING_RENDER : ST::RENDER)

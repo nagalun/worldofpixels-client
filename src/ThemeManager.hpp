@@ -43,6 +43,7 @@ struct Theme {
 	std::string name;
 	std::string description;
 	std::uint16_t iconSize;
+	std::uint16_t toolSize;
 	bool hasCss;
 	ShadowType toolShadows;
 	std::uint8_t shadowBlur;

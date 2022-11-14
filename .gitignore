@@ -6,3 +6,4 @@ static/preprocessor/static_files.txt
 static/theme/builtin.json
 static/theme/*
 !static/theme/default
+!static/theme/wooden

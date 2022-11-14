@@ -1,0 +1,38 @@
+{
+	"theme_name": "Wooden",
+	"theme_desc": "The classic OWOP theme.",
+	"icon_size_px": 40,
+	"tool_size_px": 36,
+	"has_css": true,
+	"ui": [[
+		"settings",
+		"clr-swap",
+		"palette",
+		"dcord",
+		"fbook",
+		"rddit",
+		"pypal",
+		"gpedia",
+		"help",
+		"cursor"
+	]],
+	"tools": {
+		"shadow_opts": {
+			"enable": true,
+			"allow_growing_tex": false,
+			"color": "#0000007F",
+			"blur": 2,
+			"offset_x": 2,
+			"offset_y": 2
+		},
+		"definitions": [
+			{"name": "Pencil", "hotspot": [7, 2]},
+			{"name": "Move", "hotspot": [18, 18]},
+			{"name": "Zoom", "hotspot": [22, 13]},
+			{"name": "Pipette", "hotspot": [3, 32]},
+			{"name": "Fill", "hotspot": [7, 34]},
+			{"name": "Export", "hotspot": [0, 3]},
+			{"name": "Ruler", "hotspot": [0, 3]}
+		]
+	}
+}
