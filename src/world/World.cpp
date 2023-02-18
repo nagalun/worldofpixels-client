@@ -260,10 +260,10 @@ Renderer& World::getRenderer() {
 }
 
 const char * World::getChunkUrl(Chunk::Pos x, Chunk::Pos y) {
-	// /api/worlds/<name>/view/<x>/<y>
 	// i32 = -2147483648 (11 chars)
-	static char urlBuf[12 + World::maxNameLength + 6 + 11 + 1 + 11 + 1] = {0};
-	std::sprintf(urlBuf, "/api/worlds/%s/view/%i/%i", name.c_str(), x, y);
+	constexpr const char fmt[] = "/api/worlds/view?n=%s&x=%i&y=%i";
+	static char urlBuf[sizeof(fmt) + World::maxNameLength + 11 + 11] = {0};
+	std::sprintf(urlBuf, fmt, name.c_str(), x, y);
 	return urlBuf;
 }
 

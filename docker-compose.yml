@@ -16,6 +16,8 @@ services:
       - DB_PASSWORD=owop
       - API_HOST=localhost:8092
       - AUTOBUILD=${AUTOBUILD:-1}
+    cap_add:
+      - SYS_PTRACE
   owop_cli:
     build: ${SVC_OWOP_CLI:-.}/docker/builder
     user: ${UID:-1000}:${GID:-1000}
@@ -38,6 +40,7 @@ services:
       - dev_uvias
     volumes:
       - ${SVC_OWOP_CLI:-.}/src:/var/www/projectsrc:ro
+      - ${SVC_OWOP_SRV:-.}/world_data:/var/www/world_data:ro
       - ${SVC_OWOP_CLI:-.}/out:/var/www/ourworldofpixels.com:ro
       - ${SVC_OWOP_CLI:-.}/config/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:

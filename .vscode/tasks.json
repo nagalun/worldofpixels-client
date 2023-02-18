@@ -13,6 +13,19 @@
 				"showReuseMessage": true,
 				"clear": true
 			}
+		},
+		{
+			"label": "build-server",
+			"type": "shell",
+			"command": "docker exec -t owop_srv make -j`nproc` \"${input:buildTarget}\"",
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared",
+				"showReuseMessage": true,
+				"clear": true
+			}
 		}
 	],
 	"inputs": [
@@ -20,7 +33,7 @@
 			"id": "buildTarget",
 			"type": "pickString",
 			"description": "Build Target",
-			"options": ["clean", "all", "dbg", "udbg", "rel"],
+			"options": ["clean", "clean-all", "all", "dbg", "udbg", "rel"],
 			"default": "all"
 		}
 	]

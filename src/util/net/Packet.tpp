@@ -8,11 +8,11 @@
 #include <stdexcept>
 #include <exception>
 #include <tuple>
-#include <assert.h>
+#include <cassert>
+#include <cstdio>
 #include "util/BufferHelper.hpp"
 #include "util/templateutils.hpp"
 #include "util/varints.hpp"
-#include <cstdio>
 //#include <iostream>
 
 //#include <utils.hpp>
