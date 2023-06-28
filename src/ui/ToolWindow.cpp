@@ -1,31 +1,39 @@
 #include "ToolWindow.hpp"
 
+#include "tools/Tool.hpp"
 #include "tools/ToolManager.hpp"
 #include "util/emsc/audio.hpp"
 #include "util/emsc/dom.hpp"
 #include "util/stringparser.hpp"
+#include "util/misc.hpp"
 #include <string_view>
 
-ToolWindow::ToolWindow(ToolManager& tm)
+ToolWindow::ToolWindow(ToolManager& _tm)
 : Window(true, false),
-  tm(tm) {
+  tm(_tm) {
 	addClass("owop-tools");
 
-	tm.setOnSelectionChanged([this] (Tool * oldTool, Tool * newTool) {
-		this->tm.forEachTool([&] (int i, Tool& t) {
-			if (oldTool && *oldTool == t) {
-				toolBtns[i].delClass("active");
+	toolChSk = tm.onLocalStateChanged.connect([this] (ToolStates& ts, Tool* updatedTool) {
+		Tool* newTool = tm.getSelectedTool();
+		tm.forEachTool([&] (int i, Tool& t) {
+			auto& btn = toolBtns[i];
+			if (!newTool || *newTool != t) {
+				btn.delClass("active");
 			}
 
 			if (newTool && *newTool == t) {
-				toolBtns[i].addClass("active");
+				btn.addClass("active");
 			}
+
+			btn.setProperty("dataset.tool", t.getToolVisualName(ts));
+			std::uint16_t vs = t.getToolVisualState(ts);
+			btn.setProperty("dataset.toolSt", svprintf("%d", vs));
 		});
 
-		updatePointerCursor();
+		updatePointerCursor(ts, newTool);
 	});
 
-	updatePointerCursor();
+	updatePointerCursor(tm.getLocalState(), tm.getSelectedTool());
 	buildWindow();
 	bringUp();
 	move(3, 30);
@@ -34,6 +42,7 @@ ToolWindow::ToolWindow(ToolManager& tm)
 void ToolWindow::buildWindow() {
 	auto& cont = Window::getContent();
 	Tool * selectedTool = tm.getSelectedTool();
+	ToolStates& ts = tm.getLocalState();
 
 	toolBtns.clear();
 	tm.forEachTool([&] (int i, Tool& t) {
@@ -49,18 +58,19 @@ void ToolWindow::buildWindow() {
 		}
 
 		btn.setProperty("title", t.getName());
-		btn.setProperty("dataset.tool", t.getName());
+		btn.setProperty("dataset.tool", t.getToolVisualName(ts));
+		std::uint16_t vs = t.getToolVisualState(ts);
+		btn.setProperty("dataset.toolSt", svprintf("%d", vs));
 
 		btn.appendTo(cont);
 	});
 }
 
-void ToolWindow::updatePointerCursor() {
-	Tool * t = tm.getSelectedTool();
+void ToolWindow::updatePointerCursor(ToolStates& ts, Tool * t) {
 	std::string_view k{"data-tool"};
-	std::string_view v = t ? t->getName() : "";
+	std::string_view v = t ? t->getToolVisualName(ts) : "";
 	std::string_view kSt{"data-tool-st"};
-	std::string_view vSt = t ? toString(t->getToolVisualState()) : "";
+	std::string_view vSt = t ? toString(t->getToolVisualState(ts)) : "";
 	eui_root_attr_set(k.data(), k.size(), v.data(), v.size());
 	eui_root_attr_set(kSt.data(), kSt.size(), vSt.data(), vSt.size());
 }

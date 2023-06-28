@@ -12,6 +12,7 @@
 
 #include "JsApiProxy.hpp"
 #include "PacketDefinitions.hpp"
+#include "util/misc.hpp"
 #include "world/World.hpp"
 
 #if __has_feature(address_sanitizer)
@@ -138,6 +139,15 @@ void Client::close() {
 	js_ws_close(4000);
 }
 
+void Client::send(std::unique_ptr<u8[]> buf, std::size_t len) {
+	js_ws_send(reinterpret_cast<char*>(buf.get()), len);
+}
+
+void Client::send(std::tuple<std::unique_ptr<u8[]>, std::size_t> pkt) {
+	auto& [buf, len] = pkt;
+	send(std::move(buf), len);
+}
+
 bool Client::freeMemory() {
 	if (world && (world->freeMemory() || world->freeMemory(true))) {
 		return true;
@@ -152,15 +162,13 @@ void Client::setStatus(std::string_view s) {
 }
 
 void Client::registerPacketTypes() {
-	pr.on<AuthProgress>([](std::string currentProcessor) {
-		setStatus("Authenticating... (" + currentProcessor + ")");
-		std::printf("AuthProgress: %s\n", currentProcessor.c_str());
-	});
+	// pr.on<CAuthProgress>([](std::string currentProcessor) {
+	// 	setStatus("Authenticating... (" + currentProcessor + ")");
+	// 	std::printf("AuthProgress: %s\n", currentProcessor.c_str());
+	// });
 
-	pr.on<AuthOk>([this](
-					  User::Id _selfUid, std::string username, User::Rep totRep, UviasRank::Id rid,
-					  std::string rankName, bool isSuperUser, bool canSelfManage
-				  ) {
+	pr.on<CAuthOk>([this](net::UviasUser usr) {
+		auto [_selfUid, username, totRep, rid, rankName, isSuperUser, canSelfManage] = usr;
 		setStatus("Joining world...");
 
 		std::printf(
@@ -175,54 +183,75 @@ void Client::registerPacketTypes() {
 		);
 	});
 
-	pr.on<AuthError>([this](std::string processor) {
-		setStatus("Auth error: " + processor);
-		std::printf("AuthError: %s\n", processor.c_str());
+	// pr.on<CAuthError>([this](std::string processor) {
+	// 	setStatus("Auth error: " + processor);
+	// 	std::printf("AuthError: %s\n", processor.c_str());
 
-		if (processor == "SessionChecker") {
-			lastError = CE_SESSION;
-		} else if (processor == "BanChecker") {
-			lastError = CE_BAN;
-		} else if (processor == "WorldChecker") {
-			lastError = CE_WORLD;
-		} else if (processor == "HeaderChecker") {
-			lastError = CE_HEADER;
-		} else if (processor == "ProxyChecker") {
-			lastError = CE_PROXY;
-		} else if (processor == "CaptchaChecker") {
-			lastError = CE_CAPTCHA;
-		} else {
-			lastError = CE_NONE;
-		}
-	});
+	// 	if (processor == "SessionChecker") {
+	// 		lastError = CE_SESSION;
+	// 	} else if (processor == "BanChecker") {
+	// 		lastError = CE_BAN;
+	// 	} else if (processor == "WorldChecker") {
+	// 		lastError = CE_WORLD;
+	// 	} else if (processor == "HeaderChecker") {
+	// 		lastError = CE_HEADER;
+	// 	} else if (processor == "ProxyChecker") {
+	// 		lastError = CE_PROXY;
+	// 	} else if (processor == "CaptchaChecker") {
+	// 		lastError = CE_CAPTCHA;
+	// 	} else {
+	// 		lastError = CE_NONE;
+	// 	}
+	// });
 
-	pr.on<CursorData>([this](net::Cursor selfCur, net::Bucket paint, net::Bucket chat, bool canChat, bool canPaint) {
-		auto [cid, x, y, step, tid] = selfCur;
-		auto [prate, pper, pallowance] = paint;
+	pr.on<CPlayerData>([this](net::PlayerUpd<net::DAbsWPos> selfCur, net::Bucket action, net::Bucket chat, bool canChat, bool canPaint, net::DStateSyncSeq sseq, net::DActionSyncSeq aseq) {
+		auto [cid, x, y, step, tid, tstate] = selfCur;
+		auto [arate, aper, aallowance] = action;
 		auto [crate, cper, callowance] = chat;
+		Bucket actionBkt(arate, aper, aallowance);
+		Bucket chatBkt(crate, cper, callowance);
 
 		std::printf(
-			"CursorData: ID=%u X=%i Y=%i Step=%u ToolID=%u PBucketRate=%u PBucketPer=%u PBucketAllowance=%f "
-			"CBucketRate=%u CBucketPer=%u CBucketAllowance=%f CanChat=%u CanPaint=%u\n",
-			cid, x, y, step, tid, prate, pper, pallowance, crate, cper, callowance, canChat, canPaint
+			"CPlayerData: ID=%llu X=%lld Y=%lld Step=%u ToolID=%u ABucketRate=%u ABucketPer=%u ABucketAllowance=%f "
+			"CBucketRate=%u CBucketPer=%u CBucketAllowance=%f CanChat=%u CanPaint=%u StateSeq=%u ActionSeq=%u\n",
+			cid.get(), x.get(), y.get(), step, tid, arate, aper, aallowance, crate, cper, callowance,
+			canChat, canPaint, sseq, aseq
 		);
 
-		// cid, prate and crate has type due to eclipse cdt bug
+		if (world) {
+			// TODO: move this into world
+			SelfCursor& sc = world->getCursor();
+			bool updated = sc.update(x, y, step, tid, tstate, actionBkt, chatBkt, sseq, aseq);
+			if (updated) {
+				world->getRenderer().queueRerender();
+				world->getRenderer().queueUiUpdate();
+			}
+			return;
+		}
+
 		preJoinSelfCursorData = std::make_unique<SelfCursor::Builder>();
 		SelfCursor::Builder& cur = *preJoinSelfCursorData.get();
 		cur.setUser(users.at(selfUid))
-			.setId(Cursor::Id{cid})
+			.setId(cid)
 			.setSpawnX(x)
 			.setSpawnY(y)
 			.setStep(step)
 			.setToolId(tid)
-			.setPaintBucket(Bucket(Bucket::Rate{prate}, pper, pallowance))
-			.setChatBucket(Bucket(Bucket::Rate{crate}, cper, callowance))
+			.setToolState(tstate)
+			.setActionBucket(actionBkt)
+			.setChatBucket(chatBkt)
 			.setCanChat(canChat)
-			.setCanPaint(canPaint);
+			.setCanPaint(canPaint)
+			.setStateSeq(sseq)
+			.setActionSeq(aseq);
 	});
 
-	pr.on<WorldData>(
+	pr.on<CPlayersUpdt>([this](net::DAbsUpdAreaPos uaX, net::DAbsUpdAreaPos uaY,
+			net::VPlayersHide hides, net::VPlayersShow shows, net::VPlayersUpdate updates) {
+		world->handleUpdates(uaX, uaY, std::move(hides), std::move(shows), std::move(updates));
+	});
+
+	pr.on<CWorldData>(
 		[this](std::string worldName, std::string motd, u32 bgClr, bool restricted, std::optional<User::Id> owner) {
 			std::printf("WorldData: Name=%s BgClr=%X Restricted=%u Owner=", worldName.c_str(), bgClr, restricted);
 			if (owner) {
@@ -236,7 +265,7 @@ void Client::registerPacketTypes() {
 			RGB_u bgClrU;
 			bgClrU.rgb = bgClr;
 			world = std::make_unique<World>(
-				im, std::move(worldName), std::move(preJoinSelfCursorData), bgClrU, restricted, std::move(owner)
+				*this, im, std::move(worldName), std::move(preJoinSelfCursorData), bgClrU, restricted, std::move(owner)
 			);
 
 			set_loadscreen_visible(false);
@@ -244,9 +273,19 @@ void Client::registerPacketTypes() {
 		}
 	);
 
-	pr.on<Stats>([this](u32 worldCursors, u32 globalCursors) { // this is only received if we're in a world
-		std::printf("Stats: CursorsInWorld=%u CursorsInServer=%u\n", worldCursors, globalCursors);
+	pr.on<CStats>([this](uvar worldCursors, uvar globalCursors) { // this is only received if we're in a world
+		std::printf("Stats: CursorsInWorld=%llu CursorsInServer=%llu\n", worldCursors.get(), globalCursors.get());
 		world->setCursorCount(worldCursors, globalCursors);
+	});
+
+	pr.on<CSubscribedAreas>([this](net::DAreaSyncSeq arseq, std::vector<std::tuple<net::DAbsWPos, net::DAbsWPos>> areasV) {
+		std::vector<twoi32> areas;
+		areas.reserve(areasV.size());
+		for (auto [x, y] : areasV) {
+			areas.emplace_back(mk_twoi32(x, y));
+		}
+
+		world->setSubscribedUpdateAreas(arseq, std::move(areas));
 	});
 }
 
@@ -344,6 +383,16 @@ void Client::doWsMessage(void* d, char* buf, sz_t s, bool txt) {
 
 World* Client::getWorld() {
 	return world.get();
+}
+
+User& Client::getUser(User::Id uid) {
+	auto [it, inserted] = users.try_emplace(uid, uid);
+
+	if (inserted) {
+		// load the user
+	}
+
+	return it->second;
 }
 
 void Client::doTick(void* d) {

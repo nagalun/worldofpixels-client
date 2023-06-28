@@ -19,18 +19,18 @@
 			"enable": true,
 			"allow_growing_tex": false,
 			"color": "#0000007F",
-			"blur": 1,
+			"blur": 2,
 			"offset_x": 1,
 			"offset_y": 1
 		},
 		"definitions": [
-			{"name": "Pencil", "hotspot": [4, 29]},
-			{"name": "Move", "hotspot": [16, 19]},
-			{"name": "Zoom", "hotspot": [14, 14]},
-			{"name": "Pipette", "hotspot": [4, 29]},
-			{"name": "Fill", "hotspot": [9, 27]},
-			{"name": "Export", "hotspot": [16, 16], "first_as_ui_only": true},
-			{"name": "Ruler", "hotspot": [16, 16], "first_as_ui_only": true}
+			{"name": "pencil", "hotspot": [4, 29]},
+			{"name": "move", "hotspot": [16, 19]},
+			{"name": "zoom", "hotspot": [14, 14]},
+			{"name": "pipette", "hotspot": [4, 29]},
+			{"name": "fill", "hotspot": [9, 27]},
+			{"name": "export", "hotspot": [16, 16], "first_as_ui_only": true},
+			{"name": "ruler", "hotspot": [16, 16], "first_as_ui_only": true}
 		]
 	}
 }

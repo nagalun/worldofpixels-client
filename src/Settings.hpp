@@ -42,6 +42,7 @@ struct Settings {
 
 	// general
 	Param<bool> showGrid{true};
+	Param<bool> invertClrs{false};
 	Param<bool> showProtectionZones{true};
 	Param<bool> hideAllPlayers{false};
 	Param<bool> nativeRes{true};

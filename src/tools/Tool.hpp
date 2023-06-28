@@ -7,6 +7,7 @@
 #include "util/NonCopyable.hpp"
 
 class ToolManager;
+class ToolStates;
 
 class Tool : NonCopyable {
 protected:
@@ -18,13 +19,16 @@ public:
 	virtual ~Tool();
 
 	virtual std::string_view getName() const = 0;
-	virtual std::uint8_t getToolVisualState() const;
+	// the visual name and state is the horizontal and vertical index of the toolset atlas to show, respectively
+	virtual std::string_view getToolVisualName(const ToolStates&) const = 0;
+	virtual std::uint8_t getToolVisualState(const ToolStates&) const;
 	virtual bool isEnabled() = 0;
 
-	// note: an empty network state must be valid, server may not send state in some circumstances
+	// note: an empty network state (0) must be valid, server may not send state in some circumstances
 	virtual std::uint8_t getNetId() const = 0;
-	virtual const std::vector<std::uint8_t>& getNetState() const;
-	virtual void setStateFromNet(std::vector<std::uint8_t>);
+	virtual std::uint64_t getNetState(const ToolStates&) const;
+	// a return value of true means the state changed meaningfully (i.e. appearance of the tool changed and needs rerender)
+	virtual bool setStateFromNet(ToolStates&, std::uint64_t);
 
 	virtual void onSelectionChanged(bool selected) = 0;
 

@@ -22,6 +22,8 @@ class ChunkRendererGlState {
 public:
 	ChunkRendererGlState();
 
+	bool ok() const;
+
 	void use();
 	TexturedChunkProgram& getTexChunkProg();
 	EmptyChunkProgram& getEmptyChunkProg();

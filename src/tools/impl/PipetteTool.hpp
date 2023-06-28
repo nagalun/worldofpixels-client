@@ -14,18 +14,27 @@ class PipetteTool : public Tool {
 	std::unique_ptr<Keybinds> kb;
 
 public:
+	class State {
+		bool clicking;
+
+	public:
+		State();
+
+		bool isClicking() const;
+		bool setClicking(bool st);
+	};
+
 	PipetteTool(std::tuple<ToolManager&, InputAdapter&>); // local ctor
-	PipetteTool(ToolManager&); // remote ctor
 	virtual ~PipetteTool();
 
 	static const char * getNameSt();
 	std::string_view getName() const override;
+	std::string_view getToolVisualName(const ToolStates&) const override;
 	bool isEnabled() override;
 
-	uint8_t getNetId() const override;
-//	const std::vector<std::uint8_t>& getNetState() const override;
-//	void setStateFromNet(std::vector<std::uint8_t>) override;
+	std::uint8_t getNetId() const override;
+	std::uint64_t getNetState(const ToolStates& ts) const override;
+	bool setStateFromNet(ToolStates& ts, std::uint64_t data) override;
 
 	void onSelectionChanged(bool selected) override;
 };
-

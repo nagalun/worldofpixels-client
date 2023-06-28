@@ -12,6 +12,7 @@
 #include "tools/impl/MoveTool.hpp"
 #include "tools/impl/ZoomTool.hpp"
 #include "tools/impl/PipetteTool.hpp"
+#include "util/Signal.hpp"
 
 class World;
 class InputAdapter;
@@ -22,34 +23,51 @@ public:
 	using ProvidersTuple = std::tuple<ColorProvider>;
 	using ToolsTuple = std::tuple<PencilTool, MoveTool, ZoomTool, PipetteTool>;
 
+	using StateTuple = std::tuple<
+			ColorProvider::State,
+			PencilTool::State,
+			MoveTool::State,
+			ZoomTool::State,
+			PipetteTool::State>;
+
+	// cur could be a non currently selected tool.
+	Signal<void(ToolStates&, Tool* cur)> onLocalStateChanged;
+
 private:
-	Tool* selectedTool;
 	World& w;
-	std::function<void(Tool* old, Tool* cur)> onSelectionChanged;
-	const bool local; // is this instance from local player or remote?
+	ToolStates& localState;
 	ProvidersTuple providers;
 	ToolsTuple tools;
 
 public:
-	ToolManager(World&, InputAdapter&); // local ctor
-	ToolManager(World&); // remote ctor
-
-	bool isLocal() const;
+	ToolManager(World&, ToolStates& localState, InputAdapter&);
 
 	World& getWorld();
 
 	template<typename Fn>
 	constexpr void forEachTool(Fn cb);
 
+	// Gets a tool or provider
 	template<typename T>
 	constexpr T& get();
 
+	ToolStates& getLocalState();
+	Tool* getByNetId(std::uint8_t tid);
+
+	// From local state
 	Tool* getSelectedTool();
+	// From specified state
+	Tool* getSelectedTool(const ToolStates& st);
+
+	std::uint64_t getState(const ToolStates&);
+	bool updateState(ToolStates&, std::uint8_t newTid, std::uint64_t newState);
+
 	template<typename T>
 	void selectTool();
 	void selectTool(Tool*);
 
-	void setOnSelectionChanged(std::function<void(Tool* old, Tool* cur)>);
+	template<typename T>
+	void emitLocalStateChanged();
 };
 
 #include "ToolManager.tpp" // IWYU pragma: keep

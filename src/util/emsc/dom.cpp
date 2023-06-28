@@ -275,7 +275,7 @@ EM_JS(std::size_t, eui_blob_url_from_buf, (const std::uint8_t * buf, std::size_t
 });
 
 EM_JS(void, eui_blob_url_revoke, (const char * url, std::size_t len), {
-	URL.revokeObjectURL(UTF8ToString(url, urllen));
+	URL.revokeObjectURL(UTF8ToString(url, len));
 });
 
 EM_JS(void, eui_get_evt_pointer_coords, (int * x, int * y, bool clampWin, int * oww, int * owh), {

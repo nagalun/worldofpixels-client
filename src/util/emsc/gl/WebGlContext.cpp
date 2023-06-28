@@ -10,6 +10,7 @@
 #include <emscripten/html5.h>
 
 #include "Settings.hpp"
+#include "util/emsc/time.hpp"
 
 /* used to reinitialize the canvas element on context losses and destruction */
 //extern "C" void reset_element(const char * target, std::size_t len);
@@ -44,10 +45,6 @@ WebGlContext::~WebGlContext() {
 	if (ctxInfo > 0) {
 		stopRenderLoop();
 		destroyRenderingContext();
-	}
-
-	if (targetCanvas) { // flashes white before fade in completes
-		reset_element(targetCanvas, std::strlen(targetCanvas));
 	}
 }
 
@@ -247,10 +244,18 @@ void WebGlContext::destroyRenderingContext() {
 		}
 
 		ctxInfo = 0;
+
+		if (targetCanvas) {
+			// destroys any remaining references to the rendering context.
+			// it would not allow to get a different ctx type otherwise
+			// makes the canvas flash to white, sadly
+			reset_element(targetCanvas, std::strlen(targetCanvas));
+		}
 	}
 }
 
 void WebGlContext::giveUp() {
+	destroyRenderingContext();
 	ctx_give_up();
 	std::exit(1);
 }
@@ -278,7 +283,6 @@ int WebGlContext::emEvent(int eventType, const void *, void * r) {
 		std::printf("[WebGlContext] Context lost!\n");
 		if (ctx.lostCb) { ctx.lostCb(); }
 		ctx.destroyRenderingContext();
-		reset_element(ctx.targetCanvas, std::strlen(ctx.targetCanvas));
 		return true;
 		break;
 
@@ -333,7 +337,7 @@ bool WebGlContext::resumeRendering() {
 }
 
 double WebGlContext::getTime() const {
-	return emscripten_get_now();
+	return ::getTime(true);
 }
 
 double WebGlContext::getDpr() const {

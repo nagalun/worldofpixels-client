@@ -3,10 +3,11 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
-#include <nlohmann/json.hpp>
 #include <string>
 #include <string_view>
 #include <vector>
+
+#include <json/jute.h>
 
 #include "Settings.hpp"
 #include "util/PngImage.hpp"
@@ -17,6 +18,10 @@
 #include "util/emsc/ui/BlobUrl.hpp"
 #include "util/fast_blur.hpp"
 #include "util/misc.hpp"
+
+const Theme::ToolStateInfo& Theme::ToolVisualInfo::getState(std::uint8_t st) const {
+	return st < states.size() ? states[st] : states[0];
+}
 
 void Theme::setEnabled(bool s) {
 	if (s && !enabled) {
@@ -59,16 +64,6 @@ Async<bool> Theme::generateStyle() {
 		));
 	}
 
-	for (const auto& tool : tools) {
-		generatedStyle.insertRuleBack(svprintf(
-			R"(
-[data-theme="%s"] .tool[data-tool="%s"]::after {
-	background-position: %dpx %dpx;
-})",
-			keyName.c_str(), tool.name.c_str(), -tool.column * toolSize, 0
-		));
-	}
-
 	{ // PROCESS TOOL ATLAS
 		PngImage iToolset;
 		{
@@ -84,21 +79,36 @@ Async<bool> Theme::generateStyle() {
 
 		std::uint32_t nrows = iToolset.getHeight() / toolSize;
 
-		PngImage iTool(toolSize, toolSize, {.rgb = 0});
-		PngImage iToolTmp(toolSize, toolSize, {.rgb = 0});
+		int iShadowBlur = shadowBlur;
+		std::int32_t leftPad = 0;
+		std::int32_t topPad = 0;
+		std::size_t maxToolSize = toolSize;
+
+		if (toolShadows != Theme::ShadowType::NONE) {
+			maxToolSize += std::max(std::abs(shadowOffsX), std::abs(shadowOffsY)) + iShadowBlur * 2;
+			leftPad = std::max(iShadowBlur - shadowOffsX, 0);
+			topPad = std::max(iShadowBlur - shadowOffsY, 0);
+		}
+
+		// make sure all the shadowed tools are going to fit in the toolset
+		PngImage iFinalToolset(tools.size() * maxToolSize, nrows * maxToolSize, {.rgb = 0});
+		PngImage iTool(maxToolSize, maxToolSize, {.rgb = 0});
+		PngImage iToolTmp(maxToolSize, maxToolSize, {.rgb = 0});
 		std::vector<std::uint8_t> fileBuf;
 
 		for (std::uint32_t t = 0; t < tools.size(); t++) {
 			auto& tool = tools[t];
 			std::uint32_t col = tool.column;
 			for (std::uint32_t row = tool.firstAsUiOnly ? 1 : 0; row < nrows; row++) {
-				iTool.paste(0, 0, iToolset, false, col * toolSize, row * toolSize, toolSize, toolSize);
+
+				iTool.allocate(maxToolSize, maxToolSize, {.rgb = 0});
+				iTool.paste(leftPad, topPad, iToolset, false, col * toolSize, row * toolSize, toolSize, toolSize);
 				if (iTool.isFullyTransparent()) {
 					// stop on the first blank tool row
 					break;
 				}
 
-				if (toolShadows != Theme::ShadowType::NONE) { /* TODO: resizing_render not yet implemented */
+				if (toolShadows != Theme::ShadowType::NONE) {
 					iTool.applyTransform([this, &iTool](std::uint32_t x, std::uint32_t y) -> RGB_u {
 						RGB_u src = shadowColor;
 						RGB_u cur = iTool.getPixel(x, y);
@@ -109,22 +119,44 @@ Async<bool> Theme::generateStyle() {
 						return {{src.c.r, src.c.g, src.c.b, fA}};
 					});
 
+					float sigma = shadowBlur;
 					iTool.move(shadowOffsX, shadowOffsY); // apply shadow offset
 					fast_gaussian_blur_3(
 						iTool.getData(), iToolTmp.getData(), iTool.getWidth(), iTool.getHeight(), iTool.getChannels(),
-						shadowBlur
+						sigma / 2.f
 					);
 					// now overlay the tool on top
-					iTool.paste(0, 0, iToolset, true, col * toolSize, row * toolSize, toolSize, toolSize);
-					// paste the resulting shadowed tool on the toolset, to use as atlas for rendering later
-					// if shadows are not enabled it'd be the same so no need to do it always
-					iToolset.paste(col * toolSize, row * toolSize, iTool, false);
+					iTool.paste(leftPad, topPad, iToolset, true, col * toolSize, row * toolSize, toolSize, toolSize);
 				}
 
-				fileBuf.clear();
+				// remove empty space from the image
+				auto [xoff, yoff] = iTool.fitToContent();
+				//auto [xoff, yoff] = std::make_pair(0,0);
+
+				std::uint16_t fxAltasX = col * maxToolSize;
+				std::uint16_t fxAtlasY = row * maxToolSize;
+				std::uint16_t fxAtlasW = iTool.getWidth();
+				std::uint16_t fxAtlasH = iTool.getHeight();
+
+				// calculate new hotspot
+				std::uint16_t fxHotspotX = std::max(leftPad + tool.hotspotX + xoff, 0);
+				std::uint16_t fxHotspotY = std::max(topPad + tool.hotspotY + yoff, 0);
+
+				// paste the resulting tool texture on the toolset, to use as atlas for rendering later
+				iFinalToolset.paste(fxAltasX, fxAtlasY, iTool, false);
+
 				iTool.writeFileOnMem(fileBuf);
-				auto& img =
-					tool.cursorUrl.emplace_back(eui::BlobUrl::fromBuf(fileBuf.data(), fileBuf.size(), "image/png"));
+
+				auto& img = tool.states.emplace_back(ToolStateInfo{
+					eui::BlobUrl::fromBuf(fileBuf.data(), fileBuf.size(), "image/png"),
+					fxHotspotX,
+					fxHotspotY,
+					fxAltasX,
+					fxAtlasY,
+					fxAtlasW,
+					fxAtlasH
+				});
+
 				int state = tool.firstAsUiOnly ? row - 1 : row;
 				// use the first tool state as fallback on unknown states
 				std::string stateRule(state == 0 ? "[data-tool-st]" : svprintf(R"([data-tool-st="%d"])", state));
@@ -134,16 +166,48 @@ Async<bool> Theme::generateStyle() {
 [data-theme="%s"][data-tool="%s"]%s #input {
 	cursor: url("%s") %d %d, auto;
 })",
-					keyName.c_str(), tool.name.c_str(), stateRule.c_str(), img.get().data(), tool.hotspotX,
-					tool.hotspotY
+					keyName.c_str(), tool.name.c_str(), stateRule.c_str(), img.fxTexUrl.get().data(),
+					img.fxHotspotX, img.fxHotspotY
 				));
 			}
 		}
 
-		fileBuf.clear();
-		iToolset.writeFileOnMem(fileBuf);
-		toolAtlasUrl = eui::BlobUrl::fromBuf(fileBuf.data(), fileBuf.size(), "image/png");
+		fxToolAtlas = std::move(iFinalToolset);
 	}
+
+	std::string cssCurUrls;
+	for (const auto& tool : tools) {
+		// since these rules will be for UI, if the texture has specified that the first row is for ui only
+		// we don't generate the following states.
+		std::size_t numRows = tool.states.size();
+		std::size_t numRowsUi = tool.firstAsUiOnly ? !tool.states.empty() : numRows;
+
+		for (std::uint32_t row = 0; row < numRowsUi; row++) {
+			std::string stateRule(row == 0 ? "[data-tool-st]" : svprintf(R"([data-tool-st="%d"])", row));
+			generatedStyle.insertRuleBack(svprintf(
+				R"(
+[data-theme="%s"] .tool[data-tool="%s"]%s::after {
+	background-position: %dpx %dpx;
+})",
+				keyName.c_str(), tool.name.c_str(), stateRule.c_str(), -tool.column * toolSize, -row * toolSize
+			));
+		}
+
+		for (std::uint32_t row = 0; row < numRows; row++) {
+			cssCurUrls += "url(\"";
+			cssCurUrls.append(tool.states[row].fxTexUrl.get());
+			cssCurUrls += "\") ";
+		}
+	}
+
+	// preload cursor textures to avoid incorrectly showing default cursor in some edge cases
+	generatedStyle.insertRuleBack(svprintf(
+		R"(
+[data-theme="%s"] #game-data::before {
+	content: %s;
+})",
+		keyName.c_str(), cssCurUrls.c_str()
+	));
 
 	// TODO: enable depending on user choice
 	loadExtraCss();
@@ -160,6 +224,14 @@ void Theme::loadExtraCss() {
 	extraCss->setDisabled(!enabled);
 	extraCss->appendToHead();
 }
+
+Theme::ToolVisualInfo* Theme::getToolInfo(std::string_view tname) {
+	auto it = std::find_if(tools.begin(), tools.end(), [tname] (const ToolVisualInfo& tinfo) {
+		return tinfo.name == tname;
+	});
+	return it != tools.end() ? &*it : nullptr;
+}
+
 
 ThemeManager::ThemeManager()
 : currentTheme(nullptr),
@@ -227,20 +299,19 @@ Async<> ThemeManager::loadBuiltinThemeList() {
 
 	availableThemes.emplace_back("default");
 
-	auto j(nlohmann::json::parse(data.get(), data.get() + len, nullptr, false));
-	if (!j.is_discarded() && j.is_array()) {
+	auto j(jute::parser::parse(std::string_view(data.get(), data.get() + len)));
+	if (j.is_array()) {
 		for (const auto& v : j) {
 			if (!v.is_string()) {
 				continue;
 			}
 
-			auto str = v.get<std::string>();
+			auto str = v.as_string();
 			if (str != "default") {
 				availableThemes.emplace_back(str);
 			}
 		}
 	}
-
 }
 
 Async<> ThemeManager::loadUserThemeList() {
@@ -273,65 +344,48 @@ Async<Theme*> ThemeManager::getOrLoadTheme(std::string_view keyName) {
 	Theme* resultingTheme = nullptr;
 	{
 		auto [data, len, err] = co_await async_request(svprintf("/theme/%s/theme.json", keyName.data()).data());
-		auto j(nlohmann::json::parse(data.get(), data.get() + len, nullptr, false));
+		auto j(jute::parser::parse(std::string_view(data.get(), data.get() + len)));
 
-		if (j.is_discarded() || !j.is_object()) {
+		if (!j.is_object()) {
 			co_return nullptr;
 		}
 
 		// TODO: crash-proof this (without exceptions it's painful)
 		// TODO: check input strings css safety (prevent css injection)
 		// TODO: check if a theme is currently being loaded
-		auto empty = nlohmann::json::object();
-		auto emptyArr = nlohmann::json::array();
 
-		auto uiIcons = j.contains("ui") && j["ui"].is_array() ? j["ui"] : emptyArr;
-		auto tools = j.contains("tools") && j["tools"].is_object() ? j["tools"] : empty;
-		auto toolDefs =
-			tools.contains("definitions") && tools["definitions"].is_array() ? tools["definitions"] : emptyArr;
-		auto shadow = tools.contains("shadow_opts") && tools["shadow_opts"].is_object() ? tools["shadow_opts"] : empty;
+		auto uiIcons = j["ui"];
+		auto toolDefs = j["tools"]["definitions"];
+		auto shadow = j["tools"]["shadow_opts"];
 
 		using ST = Theme::ShadowType;
 		Theme t{
 			.keyName{keyName},
-			.name{j.value<std::string>("theme_name", "Unknown")},
-			.description{j.value<std::string>("theme_desc", "A cool theme.")},
-			.iconSize = j.value<std::uint16_t>("icon_size_px", 32),
-			.toolSize = j.value<std::uint16_t>("tool_size_px", j.value<std::uint16_t>("icon_size_px", 32)),
-			.hasCss = j.value<bool>("has_css", false),
-			.toolShadows = shadow.value<bool>("enable", true)
-		                       ? (shadow.value<bool>("allow_growing_tex", false) ? ST::RESIZING_RENDER : ST::RENDER)
+			.name{j["theme_name"].as_string("Unknown")},
+			.description{j["theme_desc"].as_string("A cool theme.")},
+			.iconSize = j["icon_size_px"].as_int<std::uint16_t>(32),
+			.toolSize = j["tool_size_px"].as_int<std::uint16_t>(j["icon_size_px"].as_int<std::uint16_t>(32)),
+			.hasCss = j["has_css"].as_bool(false),
+			.toolShadows = shadow["enable"].as_bool(true)
+		                       ? (shadow["allow_growing_tex"].as_bool(false) ? ST::RESIZING_RENDER : ST::RENDER)
 		                       : ST::NONE,
-			.shadowBlur = shadow.value<std::uint8_t>("blur", 1),
-			.shadowOffsX = shadow.value<std::int8_t>("offset_x", 1),
-			.shadowOffsY = shadow.value<std::int8_t>("offset_y", 1),
-			.shadowColor = read_css_hex_color(shadow.value<std::string_view>("color", "#0000007F"))};
+			.shadowBlur = shadow["blur"].as_int<std::uint8_t>(1),
+			.shadowOffsX = shadow["offset_x"].as_int<std::int8_t>(1),
+			.shadowOffsY = shadow["offset_y"].as_int<std::int8_t>(1),
+			.shadowColor = color_from_css_hex(shadow["color"].as_string("#0000007F"))};
 
 		for (auto [it, col] = std::tuple{toolDefs.begin(), std::uint16_t{0}}; it != toolDefs.end(); it++, col++) {
 			auto& tool = *it;
-			if (!tool.contains("name") || !tool["name"].is_string()) {
+			if (!tool["name"].is_string()) {
 				continue;
 			}
 
-			std::uint16_t hx = 0;
-			std::uint16_t hy = 0;
-			bool firstUi = false;
-			if (tool.contains("hotspot") && tool["hotspot"].is_array() && tool["hotspot"].size() == 2) {
-				auto hs = tool["hotspot"];
-				if (hs[0].is_number_unsigned()) hx = hs[0].get<std::uint16_t>();
-				if (hs[1].is_number_unsigned()) hy = hs[1].get<std::uint16_t>();
-			}
-
-			if (tool.contains("first_as_ui_only") && tool["first_as_ui_only"].is_boolean()) {
-				firstUi = tool["first_as_ui_only"].get<bool>();
-			}
-
 			t.tools.emplace_back(Theme::ToolVisualInfo{
-				.name{tool["name"].get<std::string>()},
+				.name{tool["name"].as_string()},
 				.column = col,
-				.hotspotX = hx,
-				.hotspotY = hy,
-				.firstAsUiOnly = firstUi});
+				.hotspotX = tool["hotspot"][0].as_int<std::uint16_t>(0),
+				.hotspotY = tool["hotspot"][1].as_int<std::uint16_t>(0),
+				.firstAsUiOnly = tool["first_as_ui_only"].as_bool(false)});
 		}
 
 		for (auto [it, row] = std::tuple{uiIcons.begin(), std::uint16_t{0}}; it != uiIcons.end(); it++, row++) {
@@ -344,7 +398,7 @@ Async<Theme*> ThemeManager::getOrLoadTheme(std::string_view keyName) {
 					continue;
 				}
 
-				t.icons.emplace_back(Theme::UiIconInfo{.name = itCol->get<std::string>(), .row = row, .column = col});
+				t.icons.emplace_back(Theme::UiIconInfo{.name = itCol->as_string(), .row = row, .column = col});
 			}
 		}
 
@@ -372,4 +426,8 @@ Theme* ThemeManager::getTheme(std::string_view t) {
 	});
 
 	return it != loadedThemes.end() ? &*it : nullptr;
+}
+
+Theme* ThemeManager::getCurrentTheme() {
+	return currentTheme;
 }

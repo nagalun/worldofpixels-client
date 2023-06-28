@@ -5,9 +5,13 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cmath>
+#include <optional>
 
+#include "gl/CursorRendererGlState.hpp"
+#include "util/color.hpp"
 #include "util/explints.hpp"
 
+#define GL_GLEXT_PROTOTYPES
 #include <GLES2/gl2.h>
 #include <GLES2/gl2ext.h>
 
@@ -26,7 +30,7 @@ Renderer::Renderer(World& w)
   ctx("#world", "#loader"),
   view(1.0f),
   projection(1.0f),
-  lastRenderTime(ctx.getTime() / 1000.f),
+  lastRenderTime(ctx.getTime()),
   pendingRenderType(R_UI | R_WORLD),
   contextFailureCount(0),
   frameNum(0) {
@@ -41,9 +45,10 @@ Renderer::Renderer(World& w)
 	}
 
 	// we can't call unloadAllChunks yet because world hasn't been fully initialized, so skip that
-	resetGlState(false);
-	setupRenderingCallbacks();
-	ctx.startRenderLoop(Renderer::doRender, this);
+	bool ok = true;
+	ok &= resetGlState(false);
+	ok &= setupRenderingCallbacks();
+	ctx.startRenderLoop(ok ? Renderer::doRender : Renderer::doDelayedGlReset, this);
 
 	std::printf("[Renderer] Initialized\n");
 }
@@ -53,29 +58,16 @@ Renderer::~Renderer() {
 }
 
 sz_t Renderer::getMaxVisibleChunks() const {
+	if (!ctx.ok()) {
+		return 0;
+	}
+
 	auto s = ctx.getSize();
 	return (s.w / Chunk::size + 2) * (s.h / Chunk::size + 2);
 }
 
 const gl::GlContext& Renderer::getGlContext() const {
 	return ctx;
-}
-
-void Renderer::loadMissingChunks() {
-	auto s = ctx.getSize();
-
-	float hVpWidth = s.w / 2.f / getZoom();
-	float hVpHeight = s.h / 2.f / getZoom();
-	float tlx = std::floor((getX() - hVpWidth) / Chunk::size);
-	float tly = std::floor((getY() - hVpHeight) / Chunk::size);
-	float brx = std::floor((getX() + hVpWidth) / Chunk::size);
-	float bry = std::floor((getY() + hVpHeight) / Chunk::size);
-
-	for (; tly <= bry; tly += 1.f) {
-		for (float tlx2 = tlx; tlx2 <= brx; tlx2 += 1.f) {
-			w.getOrLoadChunk(tlx2, tly);
-		}
-	}
 }
 
 bool Renderer::isChunkVisible(Chunk::Pos px, Chunk::Pos py, float extraPxMargin) const {
@@ -177,7 +169,7 @@ void Renderer::queueRerenderSt() {
 }
 
 void Renderer::render() {
-	float now = ctx.getTime() / 1000.f;
+	float now = ctx.getTime();
 	float dt = now - lastRenderTime;
 
 	u8 nextRender = preRenderUpdates(now, dt);
@@ -225,6 +217,9 @@ bool Renderer::renderWorld(float now, float dt) {
 
 	bool shouldKeepRendering = false;
 	bool showGrid = Settings::get().showGrid;
+	bool invertClrs = Settings::get().invertClrs;
+	RGB_u clr = w.getBackgroundColor();
+	glm::vec3 clrv3{clr.c.r / 255.f, clr.c.g / 255.f, clr.c.b / 255.f};
 
 	float czoom = getZoom();
 	float hVpWidth = s.w / 2.f / czoom;
@@ -233,7 +228,6 @@ bool Renderer::renderWorld(float now, float dt) {
 	float tly = std::floor((getY() - hVpHeight) / Chunk::size);
 	float brx = std::floor((getX() + hVpWidth) / Chunk::size);
 	float bry = std::floor((getY() + hVpHeight) / Chunk::size);
-
 
 	bool glstActive = false;
 	for (auto ch : chunksToUpdate) {
@@ -256,35 +250,23 @@ bool Renderer::renderWorld(float now, float dt) {
 	LoadingChunkProgram& lcp = cRendererGl->getLoadChunkProg();
 	LoadState progInUse = LoadState::ERROR;
 
-	const auto& chunks = w.getChunkMap();
-	sz_t loadCount = 0;
+	// TODO: improve this
+	// RENDER CHUNKS
 	for (; tly <= bry; tly += 1.f) {
 		for (float tlx2 = tlx; tlx2 <= brx; tlx2 += 1.f) {
-			auto search = chunks.find(Chunk::key(tlx2, tly));
-			const ChunkGlState * glst = nullptr;
-			LoadState ls = LoadState::UNLOADED;
-
-			if (search == chunks.end()) {
-				if (++loadCount < 6) {
-					w.getOrLoadChunk(tlx2, tly);
-				}
-
-			} else {
-				glst = &search->second.getGlState();
-				ls = glst->getLoadState();
-
-				if (!search->second.isReady()) {
-					++loadCount;
-				}
-			}
+			Chunk* c = w.getChunk(tlx2, tly);
+			const ChunkGlState* glst = c != nullptr ? &c->getGlState() : nullptr;
+			LoadState ls = glst != nullptr ? glst->getLoadState() : LoadState::UNLOADED;
 
 			switch (ls) {
 				case LoadState::TEXTURED:
 					if (progInUse != LoadState::TEXTURED) {
 						tcp.use();
 						tcp.setUShowGrid(showGrid);
+						tcp.setUInvertColors(invertClrs);
 						tcp.setUZoom(getZoom());
 						tcp.setUMats(projection, view);
+						tcp.setUBgClr(clrv3);
 						progInUse = LoadState::TEXTURED;
 					}
 
@@ -301,8 +283,10 @@ bool Renderer::renderWorld(float now, float dt) {
 					if (progInUse != LoadState::EMPTY) {
 						ecp.use();
 						ecp.setUShowGrid(showGrid);
+						ecp.setUInvertColors(invertClrs);
 						ecp.setUZoom(getZoom());
 						ecp.setUMats(projection, view);
+						ecp.setUBgClr(clrv3);
 						progInUse = LoadState::EMPTY;
 					}
 
@@ -316,8 +300,10 @@ bool Renderer::renderWorld(float now, float dt) {
 					if (progInUse != LoadState::LOADING) {
 						lcp.use();
 						lcp.setUShowGrid(showGrid);
+						lcp.setUInvertColors(invertClrs);
 						lcp.setUZoom(getZoom());
 						lcp.setUMats(projection, view);
+						lcp.setUBgClr(clrv3);
 						lcp.setUTime(now);
 						progInUse = LoadState::LOADING;
 					}
@@ -331,6 +317,18 @@ bool Renderer::renderWorld(float now, float dt) {
 					break;
 			}
 		}
+	}
+
+	// RENDER PLAYERS
+	const auto& cursors = w.getCursors();
+	if (!cursors.empty()) {
+		auto& program = cCursorGl->getProgram();
+		cCursorGl->use();
+		program.setUMats(projection, view);
+		program.setUWorldZoom(getZoom());
+		program.setUDpr(ctx.getDpr());
+		shouldKeepRendering |= cCursorGl->uploadCurData(w.getToolManager(), cursors);
+		glDrawArraysInstancedANGLE(GL_TRIANGLES, 0, 6, cursors.size());
 	}
 
 	return shouldKeepRendering;
@@ -379,16 +377,14 @@ bool Renderer::resizeRenderingContext() {
 
 bool Renderer::setupRenderingContext() {
 	resizeRenderingContext();
+	setupView();
 
-	RGB_u bgClr = w.getBackgroundColor();
-	glClearColor(bgClr.c.r / 255.f, bgClr.c.g / 255.f, bgClr.c.b / 255.f, 1.0f);
+	glClearColor(0.f, 0.f, 0.f, 1.f);
+
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 	//glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 	//glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
-
-	setupView();
-
 	return true;
 }
 
@@ -411,12 +407,17 @@ bool Renderer::setupRenderingCallbacks() {
 		queueRerender();
 	});
 
+	skInvertClrsCh = Settings::get().invertClrs.connect([this] (auto) {
+		queueRerender();
+	});
+
 	return true;
 }
 
 void Renderer::destroyGlState() {
 	cRendererGl = std::nullopt;
 	cUpdaterGl = std::nullopt;
+	cCursorGl = std::nullopt;
 	w.unloadAllChunks();
 }
 
@@ -425,33 +426,46 @@ bool Renderer::resetGlState(bool unloadChunks) {
 		w.unloadAllChunks();
 	}
 
+	bool ok = true;
 	cRendererGl = ChunkRendererGlState{};
 	cUpdaterGl = ChunkUpdaterGlState{};
+	cCursorGl = CursorRendererGlState{};
 
-	setupRenderingContext();
+	ok &= cRendererGl->ok();
+	ok &= cUpdaterGl->ok();
+	ok &= cCursorGl->ok();
 
-	return true;
+	ok &= setupRenderingContext();
+
+	return ok;
 }
 
 void Renderer::delayedGlReset() {
-	if (!ctx.ok()) {
-		if (ctx.getTime() / 1000.f - lastRenderTime > 1.f && !ctx.activateRenderingContext(contextFailureCount > 4)) {
+	destroyGlState();
+	ctx.destroyRenderingContext();
+
+	bool ok = false;
+	if (ctx.getTime() - lastRenderTime > .5f) {
+		ok = ctx.activateRenderingContext(contextFailureCount >= 3) && resetGlState();
+
+		if (!ok) {
 			std::printf("[Renderer] Couldn't recreate the context. (%d)\n", contextFailureCount);
-			lastRenderTime = ctx.getTime() / 1000.f;
-			if (++contextFailureCount >= 8) {
-				std::printf("[Renderer] Giving up after 8 tries.");
-				ctx.stopRenderLoop();
-				ctx.giveUp();
-			}
+			lastRenderTime = ctx.getTime();
 		}
 
+		if (!ok && ++contextFailureCount >= 8) {
+			std::printf("[Renderer] Giving up after 8 tries.");
+			ctx.stopRenderLoop();
+			ctx.giveUp();
+		}
+	}
+
+	if (!ok) {
 		return;
 	}
 
-	if (!resetGlState()) {
-		std::printf("[Renderer] Couldn't reset the WebGL state.\n");
-		return;
-	}
+	// if we keep losing the webgl2 context use only webgl1
+	contextFailureCount = contextFailureCount >= 3 ? 3 : contextFailureCount;
 
 	ctx.startRenderLoop(Renderer::doRender, this);
 }

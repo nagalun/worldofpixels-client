@@ -76,8 +76,10 @@ void main() {
 #endif
 
 uniform bool showGrid;
+uniform bool invertClrs;
 uniform float chunkSize;
 uniform float zoom;
+uniform vec3 bgClr;
 uniform sampler2D pxTex;
 uniform sampler2D protTex;
 
@@ -112,15 +114,28 @@ vec4 smoothTexture2D(sampler2D tex, vec2 texCoord) {
 
 void main() {
 	vec4 texClr = smoothTexture2D(pxTex, vTexCoordV);
-	if (showGrid) {
-		float grid = gridMult();
-		float alpha = 1.0 - grid * (1.0 - texClr.a);
-		texClr.rgb *= texClr.a * grid / alpha;
-		texClr.a = alpha;
-	}
-	gl_FragColor = texClr;
-})"}; // skipping grid color: (0.0 * grid / alpha) +
+	texClr.rgb = bgClr.rgb * (1.0 - texClr.a) + texClr.rgb;
 
+	if (showGrid) {
+		float avg = dot(texClr.rgb, vec3(0.2126, 0.7152, 0.0722));
+
+		vec3 clr = avg < 0.3 ? -(vec3(1.0) - texClr.rgb) : texClr.rgb;
+		vec3 dist = clr.rgb - clr.rgb * gridMult();
+		dist *= avg < 0.3 ? 0.7 : 1.0;
+
+		texClr.rgb -= dist;
+	}
+
+	if (invertClrs) {
+		texClr.rgb = vec3(1.0) - texClr.rgb;
+	}
+
+	gl_FragColor = texClr;
+})"};
+// skipping grid color: (0.0 * grid / alpha) +
+// blending:
+// resultAlpha = 1 - (1 - overlay.alpha) * (1 - base.alpha)
+//(baseComponent * base.alpha * (1 - overlay.alpha) / resultAlpha) + (overlayComponent * overlay.alpha / resultAlpha)
 	static constexpr std::string_view emptyFragment{
 			R"(#version 100
 #ifdef GL_FRAGMENT_PRECISION_HIGH
@@ -130,8 +145,10 @@ void main() {
 #endif
 
 uniform bool showGrid;
+uniform bool invertClrs;
 uniform float chunkSize;
 uniform float zoom;
+uniform vec3 bgClr;
 
 varying vec2 vTexCoordV;
 varying vec2 vPosV;
@@ -139,7 +156,23 @@ varying vec2 vPosV;
 )" GLSL_GRID_FUNC R"(
 
 void main() {
-	gl_FragColor = vec4(0.0, 0.0, 0.0, showGrid ? 1.0 - gridMult() : 1.0);
+	vec4 texClr = vec4(bgClr, 1.0);
+
+	if (showGrid) {
+		float avg = dot(texClr.rgb, vec3(0.2126, 0.7152, 0.0722));
+
+		vec3 clr = avg < 0.3 ? -(vec3(1.0) - texClr.rgb) : texClr.rgb;
+		vec3 dist = clr.rgb - clr.rgb * gridMult();
+		dist *= avg < 0.3 ? 0.7 : 1.0;
+
+		texClr.rgb -= dist;
+	}
+
+	if (invertClrs) {
+		texClr.rgb = vec3(1.0) - texClr.rgb;
+	}
+
+	gl_FragColor = texClr;
 })"};
 
 	static constexpr std::string_view loadingFragment{
@@ -153,8 +186,10 @@ void main() {
 uniform float time;
 
 uniform bool showGrid;
+uniform bool invertClrs;
 uniform float chunkSize;
 uniform float zoom;
+uniform vec3 bgClr;
 
 varying vec2 vTexCoordV;
 varying vec2 vPosV;
@@ -186,7 +221,9 @@ void main() {
 	float mult2 = (sin(time * 2.0) / 4.0) + 1.0;
 	mult *= mult2;
 
-	gl_FragColor = vec4(0.0, 0.0, 0.0, 0.15 + 0.05 * mult);
+	vec4 texClr = vec4(bgClr, 1.0);
+	texClr.rgb *= 1.0 - 0.15 + 0.05 * mult;
+	gl_FragColor = invertClrs ? vec4(vec3(1.0) - texClr.rgb, texClr.a) : texClr;
 })"};
 
 	static constexpr std::initializer_list<const char *> attribs{

@@ -1,15 +1,18 @@
 #pragma once
 
+#include "tools/ToolManager.hpp"
 #include "util/emsc/ui/Button.hpp"
 #include "util/emsc/ui/Window.hpp"
 #include "util/NonCopyable.hpp"
 
 #include <vector>
 
-class ToolManager;
+class ToolStates;
+class Tool;
 
 class ToolWindow : public eui::Window, NonCopyable {
 	ToolManager& tm;
+	decltype(ToolManager::onLocalStateChanged)::SlotKey toolChSk;
 	std::vector<eui::Button> toolBtns;
 
 public:
@@ -18,5 +21,5 @@ public:
 	const ToolWindow& operator=(ToolWindow&&) noexcept;
 
 	void buildWindow();
-	void updatePointerCursor();
+	void updatePointerCursor(ToolStates& ts, Tool * t);
 };

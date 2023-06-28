@@ -6,6 +6,27 @@
 #include <string_view>
 #include <tuple>
 #include <utility>
+#include <string>
+
+union twoi32 {
+	struct {
+		std::int32_t x;
+		std::int32_t y;
+	} c;
+	std::uint64_t pos;
+};
+
+template<>
+struct std::hash<twoi32> {
+	std::size_t operator()(twoi32 s) const noexcept;
+};
+
+twoi32 mk_twoi32(std::int32_t x, std::int32_t y);
+std::strong_ordering operator<=>(const twoi32& a, const twoi32& b);
+bool operator==(const twoi32& a, const twoi32& b);
+
+// square distance
+std::uint32_t getDistance2dSq(twoi32 pos1, twoi32 pos2);
 
 template<typename Coord, typename Fn>
 void line(Coord x1, Coord y1, Coord x2, Coord y2, Fn& plot, bool skipfirst = true) {
@@ -72,4 +93,16 @@ std::string_view svprintf(const char * fmt, Args... args) {
 	}
 
 	return std::string_view(buf, written);
+}
+
+template<typename I>
+std::string n2hexstr(I w, std::size_t hex_len = sizeof(I) << 1) {
+	static const char * digits = "0123456789ABCDEF";
+	std::string rc(hex_len, '0');
+
+	for (std::size_t i = 0, j = (hex_len - 1) * 4; i < hex_len; ++i, j -= 4) {
+		rc[i] = digits[(w >> j) & 0x0F];
+	}
+
+	return rc;
 }

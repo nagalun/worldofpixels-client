@@ -1,22 +1,23 @@
 #include "Tool.hpp"
 
 #include "tools/ToolManager.hpp"
+#include <cstdint>
 
 Tool::Tool(ToolManager& tm)
 : tm(tm) { }
 
 Tool::~Tool() { }
 
-std::uint8_t Tool::getToolVisualState() const {
+std::uint8_t Tool::getToolVisualState(const ToolStates&) const {
 	return 0;
 }
 
-const std::vector<std::uint8_t>& Tool::getNetState() const {
-	static const std::vector<std::uint8_t> empty;
-	return empty;
+std::uint64_t Tool::getNetState(const ToolStates&) const {
+	return 0;
 }
 
-void Tool::setStateFromNet(std::vector<std::uint8_t> allocator) {
+bool Tool::setStateFromNet(ToolStates&, std::uint64_t) {
+	return false;
 }
 
 bool Tool::operator ==(const Tool& t) const {

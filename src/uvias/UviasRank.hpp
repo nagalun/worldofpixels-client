@@ -16,6 +16,7 @@ private:
 	bool selfManage;
 
 public:
+	UviasRank();
 	UviasRank(Id id, std::string name, bool superUser, bool selfManage);
 
 	Id getId() const;

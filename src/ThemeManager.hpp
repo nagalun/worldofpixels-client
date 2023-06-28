@@ -8,6 +8,7 @@
 
 #include "Settings.hpp"
 #include "util/NonCopyable.hpp"
+#include "util/PngImage.hpp"
 #include "util/Signal.hpp"
 #include "util/async.hpp"
 #include "util/color.hpp"
@@ -17,20 +18,28 @@
 struct Theme {
 	enum class ShadowType : std::uint8_t { NONE, RENDER, RESIZING_RENDER };
 
+	struct ToolStateInfo {
+		eui::BlobUrl fxTexUrl;
+		// processed atlas & tex url info
+		std::uint16_t fxHotspotX;
+		std::uint16_t fxHotspotY;
+		std::uint16_t fxAtlasX;
+		std::uint16_t fxAtlasY;
+		std::uint16_t fxAtlasW;
+		std::uint16_t fxAtlasH;
+	};
+
 	struct ToolVisualInfo {
-		std::vector<eui::BlobUrl> cursorUrl; // urls to every processed tool state
+		std::vector<ToolStateInfo> states;
 		std::string name;
 		std::uint16_t column;
+		// should probably allow different hotspots for different states
 		std::uint16_t hotspotX;
 		std::uint16_t hotspotY;
-		// processed atlas info (shadowed)
-		// std::uint16_t procHotspotX;
-		// std::uint16_t procHotspotY;
-		// std::uint16_t procAtlasX;
-		// std::uint16_t procAtlasY;
-		// std::uint16_t procAtlasW;
-		// std::uint16_t procAtlasH;
+
 		bool firstAsUiOnly;
+
+		const ToolStateInfo& getState(std::uint8_t) const;
 	};
 
 	struct UiIconInfo {
@@ -58,8 +67,9 @@ struct Theme {
 	std::vector<ToolVisualInfo> tools;
 	std::vector<UiIconInfo> icons;
 
-	eui::BlobUrl toolAtlasUrl;
+	PngImage fxToolAtlas;
 
+	ToolVisualInfo* getToolInfo(std::string_view name);
 	void setEnabled(bool s);
 	Async<bool> generateStyle();
 	void loadExtraCss();
@@ -83,6 +93,7 @@ public:
 	Async<bool> switchTheme(std::string_view);
 	Async<Theme*> getOrLoadTheme(std::string_view);
 	Theme* getTheme(std::string_view);
+	Theme* getCurrentTheme();
 
 	Signal<void(ThemeManager&)> onThemeListChanged;
 	Signal<void(Theme&)> onThemeLoaded;

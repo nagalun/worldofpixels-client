@@ -12,6 +12,7 @@ class GeneralSettings : public eui::Object {
 	using S = Settings;
 	eui::Object hdrAppearance;
 	LabelledOption<decltype(S::showGrid)> showGrid;
+	LabelledOption<decltype(S::invertClrs)> invertClrs;
 	LabelledOption<decltype(S::nativeRes)> nativeRes;
 	LabelledOption<decltype(S::showProtectionZones)> showProtectionZones;
 	LabelledOption<decltype(S::hideAllPlayers)> hideAllPlayers;
@@ -31,4 +32,3 @@ public:
 
 	std::string_view getTabName() const;
 };
-

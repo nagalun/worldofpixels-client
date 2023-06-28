@@ -207,6 +207,7 @@ static void encodePng(size_t pngWidth, size_t pngHeight, u8 chans, const u8* dat
 
 PngImage::PngImage()
 : data(nullptr),
+  realBufSize(0),
   w(0),
   h(0),
   chans(4) { }
@@ -326,7 +327,7 @@ void PngImage::paste(u32 dstX, u32 dstY, const PngImage& src, bool blending, u32
 	}
 }
 
-void PngImage::move(i32 offX, i32 offY) {
+void PngImage::move(i32 offX, i32 offY) { // is it worth the complexity to avoid the alloc & clone?
 	if (offX == 0 && offY == 0) {
 		return;
 	}
@@ -354,6 +355,50 @@ bool PngImage::isFullyTransparent() const {
 	return true;
 }
 
+std::pair<i32, i32> PngImage::fitToContent() {
+	if (getChannels() != 4) { return {0, 0}; }
+
+	u32 nw = w;
+	u32 nh = h;
+	i32 xoff = 0;
+	i32 yoff = 0;
+
+	// reduce top side of the image
+	for (u32 y = 0, x, i = 0; y < h; y++) {
+		for (x = 0; x < w && i == 0; i += getPixel(x++, y).c.a);
+		if (i) { break; }
+		yoff--;
+		nh--;
+	}
+
+	// reduce left side of the image
+	for (u32 x = 0, y, i = 0; x < w; x++) {
+		for (y = -yoff; y < h && i == 0; i += getPixel(x, y++).c.a);
+		if (i) { break; }
+		xoff--;
+		nw--;
+	}
+
+	// reduce bottom side of the image
+	for (i32 y = h - 1, x, i = 0; y >= -yoff; y--) {
+		for (x = w; x-- > -xoff && i == 0; i += getPixel(x, y).c.a);
+		if (i) { break; }
+		nh--;
+	}
+
+	// reduce right side of the image
+	for (i32 x = w - 1, y, i = 0; x >= -xoff; x--) {
+		for (y = nh + -yoff; y-- > -yoff && i == 0; i += getPixel(x, y).c.a);
+		if (i) { break; }
+		nw--;
+	}
+
+	move(xoff, yoff);
+	resize(nw, nh);
+
+	return {xoff, yoff};
+}
+
 void PngImage::setChunkReader(const std::string& s, std::function<bool(u8*, sz_t)> f) {
 	chunkReaders[s] = std::move(f);
 }
@@ -369,21 +414,79 @@ PngImage PngImage::clone() const {
 	c.chans = chans;
 	if (data) {
 		c.data = std::make_unique<u8[]>(w * h * chans);
+		c.realBufSize = w * h * chans;
 		std::memcpy(c.data.get(), data.get(), w * h * chans);
 	}
 
 	return c;
 }
 
-void PngImage::allocate(u32 newWidth, u32 newHeight, RGB_u bg, u8 newChans) {
-	if (!(newWidth == w && newHeight == h && newChans == chans && data.get())) {
-		data = std::make_unique<u8[]>(newWidth * newHeight * newChans);
+void PngImage::resize(u32 newWidth, u32 newHeight) {
+	if (w == newWidth && h == newHeight) { return; }
+	if (newWidth == 0 || newHeight == 0) {
+		data = nullptr;
+		realBufSize = 0;
+		w = 0;
+		h = 0;
+		return;
+	}
+
+	if (realBufSize < newWidth * newHeight * chans) {
+		auto newData = std::make_unique<u8[]>(newWidth * newHeight * chans);
+		std::memcpy(newData.get(), data.get(), w * h * chans);
+		data = std::move(newData);
+		realBufSize = newWidth * newHeight * chans;
+	}
+
+	u8 * d = data.get();
+	if (newWidth < w) {
+		// skips y = 0
+		u8 * prevRowEnd = &d[newWidth * chans];
+		for (u32 y = 1; y < h; y++) {
+			u8 * currRowStart = &d[y * w * chans];
+			std::memmove(prevRowEnd, currRowStart, newWidth * chans);
+			prevRowEnd += newWidth * chans;
+		}
+	} else if (newWidth > w) {
+		// same as above but in reverse order
+		// skips y = 0
+		u8 * destRowStart = &d[(newHeight - 1) * newWidth * chans];
+		for (u32 y = h - 1; y > 0; y--) {
+			u8 * currRowStart = &d[y * w * chans];
+			std::memmove(destRowStart, currRowStart, w * chans);
+			// fill the new pixels with zeroes
+			std::memset(destRowStart + w * chans, 0, (newWidth - w) * chans);
+			destRowStart -= newWidth * chans;
+		}
+		// fill new pixels on y = 0
+		std::memset(&d[w * chans], 0, (newWidth - w) * chans);
+	}
+
+	if (newHeight > h) {
+		// fill the new pixels with zeroes. more height is at the end so no skipping is necessary
+		std::memset(&d[h * newWidth * chans], 0, (newHeight - h) * newWidth * chans);
+	}
+
+	w = newWidth;
+	h = newHeight;
+}
+
+void PngImage::allocate(u32 newWidth, u32 newHeight, RGB_u bg, u8 newChans, bool reuse, bool initialize) {
+	if (newWidth != w || newHeight != h || newChans != chans || !data.get()) {
+
+		if (!reuse || !data.get() || realBufSize < newWidth * newHeight * newChans) {
+			data = std::make_unique<u8[]>(newWidth * newHeight * newChans);
+			realBufSize = newWidth * newHeight * newChans;
+		}
+
 		w = newWidth;
 		h = newHeight;
 		chans = newChans;
 	}
 
-	fill(bg);
+	if (initialize) {
+		fill(bg);
+	}
 }
 
 void PngImage::readFileOnMem(const u8 * filebuf, sz_t len, bool stripAlpha, bool addAlpha) {
@@ -392,6 +495,7 @@ void PngImage::readFileOnMem(const u8 * filebuf, sz_t len, bool stripAlpha, bool
 	w = img.w;
 	h = img.h;
 	chans = img.chans;
+	realBufSize = w * h * chans;
 }
 
 void PngImage::writeFileOnMem(std::vector<u8>& out) {

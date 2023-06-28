@@ -14,18 +14,28 @@ class MoveTool : public Tool {
 	std::unique_ptr<Keybinds> kb;
 
 public:
-	MoveTool(std::tuple<ToolManager&, InputAdapter&>); // local ctor
-	MoveTool(ToolManager&); // remote ctor
+	class State {
+		bool clicking;
+
+	public:
+		State();
+
+		bool isClicking() const;
+		bool setClicking(bool st);
+	};
+
+	MoveTool(std::tuple<ToolManager&, InputAdapter&>);
 	virtual ~MoveTool();
 
 	static const char * getNameSt();
 	std::string_view getName() const override;
+	std::string_view getToolVisualName(const ToolStates&) const override;
+	std::uint8_t getToolVisualState(const ToolStates& ts) const override;
 	bool isEnabled() override;
 
-	uint8_t getNetId() const override;
-//	const std::vector<std::uint8_t>& getNetState() const override;
-//	void setStateFromNet(std::vector<std::uint8_t>) override;
+	std::uint8_t getNetId() const override;
+	std::uint64_t getNetState(const ToolStates& ts) const override;
+	bool setStateFromNet(ToolStates&, std::uint64_t) override;
 
 	void onSelectionChanged(bool selected) override;
 };
-

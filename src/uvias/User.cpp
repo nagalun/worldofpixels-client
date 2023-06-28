@@ -1,5 +1,12 @@
 #include "uvias/User.hpp"
 
+#include "util/misc.hpp"
+
+User::User(User::Id uid)
+: uid(uid),
+  username(n2hexstr(uid)),
+  totalRep(0) { }
+
 User::User(User::Id uid, User::Rep totalRep, UviasRank rank, std::string u)
 : uid(uid),
   username(std::move(u)),

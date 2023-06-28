@@ -42,9 +42,9 @@ const ColorPicker& ColorPicker::operator =(ColorPicker&& o) noexcept {
 }
 
 
-void ColorPicker::setColor(RGB_u nclr) {
+bool ColorPicker::setColor(RGB_u nclr) {
 	if (nclr.rgb == color.rgb) {
-		return;
+		return false;
 	}
 
 	u32 cssClr = bswap_32(nclr.rgb);
@@ -53,6 +53,8 @@ void ColorPicker::setColor(RGB_u nclr) {
 	setProperty("value", hexClr);
 	setProperty("style.backgroundColor", hexClr);
 	color = nclr;
+
+	return true;
 }
 
 RGB_u ColorPicker::getColor() const {
@@ -71,5 +73,5 @@ bool ColorPicker::colorChanged() {
 RGB_u ColorPicker::readColor() const {
 	auto s = input.getProperty("value");
 
-	return read_css_hex_color(s);
+	return color_from_css_hex(s);
 }

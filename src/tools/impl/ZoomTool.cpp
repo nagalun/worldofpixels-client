@@ -7,6 +7,19 @@
 #include "world/World.hpp"
 #include "world/SelfCursor.hpp"
 
+ZoomTool::State::State()
+: zoom(0) { }
+
+std::int8_t ZoomTool::State::getZoom() const {
+	return zoom;
+}
+
+bool ZoomTool::State::setZoom(std::int8_t z) {
+	bool changed = z != zoom;
+	zoom = z;
+	return changed;
+}
+
 struct ZoomTool::Keybinds {
 	ImAction iSelectTool;
 	ImAction iCamZoomIn;
@@ -40,6 +53,7 @@ ZoomTool::ZoomTool(std::tuple<ToolManager&, InputAdapter&> params)
 	World& w = tm.getWorld();
 	Camera& c = w.getCamera();
 	SelfCursor& p = w.getCursor();
+	ZoomTool::State& st = tm.getLocalState().get<ZoomTool>();
 
 	kb->iSelectTool.setCb([this] (ImAction::Event& e, const InputInfo& ii) {
 		tm.selectTool<ZoomTool>();
@@ -50,6 +64,10 @@ ZoomTool::ZoomTool(std::tuple<ToolManager&, InputAdapter&> params)
 		float wx = p.getFinalX();
 		float wy = p.getFinalY();
 		c.setZoom(nz >= 32.f ? 32.f : nz, wx, wy);
+
+		if (st.setZoom(std::round(c.getZoom()))) {
+			tm.emitLocalStateChanged<ZoomTool>();
+		}
 	};
 
 	auto zoomOutCb = [&] (auto&, const auto& ii) {
@@ -57,6 +75,10 @@ ZoomTool::ZoomTool(std::tuple<ToolManager&, InputAdapter&> params)
 		float wx = p.getFinalX();
 		float wy = p.getFinalY();
 		c.setZoom(nz, wx, wy);
+
+		if (st.setZoom(std::round(c.getZoom()))) {
+			tm.emitLocalStateChanged<ZoomTool>();
+		}
 	};
 
 	kb->iCamZoomIn.setCb(zoomInCb);
@@ -79,15 +101,15 @@ ZoomTool::ZoomTool(std::tuple<ToolManager&, InputAdapter&> params)
 		float wx = p.getFinalX();
 		float wy = p.getFinalY();
 		c.setZoom(nz, wx, wy);
+
+		if (st.setZoom(std::round(c.getZoom()))) {
+			tm.emitLocalStateChanged<ZoomTool>();
+		}
 	});
 
 
 	onSelectionChanged(false);
 }
-
-// remote ctor
-ZoomTool::ZoomTool(ToolManager& tm)
-: Tool(tm) { }
 
 ZoomTool::~ZoomTool() { }
 
@@ -99,11 +121,11 @@ std::string_view ZoomTool::getName() const {
 	return getNameSt();
 }
 
-void ZoomTool::onSelectionChanged(bool selected) {
-	if (!kb) {
-		return;
-	}
+std::string_view ZoomTool::getToolVisualName(const ToolStates&) const {
+	return "zoom";
+}
 
+void ZoomTool::onSelectionChanged(bool selected) {
 	kb->iCamZoomIn.setEnabled(selected);
 	kb->iCamZoomOut.setEnabled(selected);
 }
@@ -113,6 +135,31 @@ bool ZoomTool::isEnabled() {
 }
 
 std::uint8_t ZoomTool::getNetId() const {
-	return 0;
+	return net::ToolId::TID_ZOOM;
 }
 
+// careful with endianness...
+union NetState {
+	struct __attribute__((packed)) {
+		std::int8_t zoom;
+	} f;
+	std::uint64_t data;
+};
+
+std::uint64_t ZoomTool::getNetState(const ToolStates& ts) const {
+	const auto& st = ts.get<ZoomTool>();
+
+	NetState netState{.data = 0};
+
+	netState.f.zoom = st.getZoom();
+
+	return netState.data;
+}
+
+bool ZoomTool::setStateFromNet(ToolStates& ts, std::uint64_t data) {
+	auto& st = ts.get<ZoomTool>();
+
+	NetState netState{.data = data};
+
+	return st.setZoom(netState.f.zoom);
+}

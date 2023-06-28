@@ -2,15 +2,18 @@
 
 #include <cstdio>
 
+#include "tools/ToolManager.hpp"
 #include "tools/providers/ColorProvider.hpp"
+
 #include "util/misc.hpp"
 #include "util/color.hpp"
 #include "util/byteswap.hpp"
 #include "util/explints.hpp"
 #include "util/emsc/dom.hpp"
 
-ColorWidget::ColorWidget(ColorProvider& clr)
-: clr(clr),
+ColorWidget::ColorWidget(ToolManager& tm, ColorProvider::State& clr)
+: tm(tm),
+  clr(clr),
   primaryClr(std::bind(&ColorWidget::updatePrimaryClr, this)),
   secondaryClr(std::bind(&ColorWidget::updateSecondaryClr, this)),
   paletteBtn("palette", "Palettes", false),
@@ -40,11 +43,13 @@ void ColorWidget::update() {
 	u32 cssPriClr = bswap_32(pClr.rgb);
 	u32 cssSecClr = bswap_32(sClr.rgb);
 
-	eui_root_css_property_set("--clr-pri", svprintf("#%08X", cssPriClr));
-	eui_root_css_property_set("--clr-sec", svprintf("#%08X", cssSecClr));
+	if (primaryClr.setColor(pClr)) {
+		eui_root_css_property_set("--clr-pri", svprintf("#%08X", cssPriClr));
+	}
 
-	primaryClr.setColor(pClr);
-	secondaryClr.setColor(sClr);
+	if (secondaryClr.setColor(sClr)) {
+		eui_root_css_property_set("--clr-sec", svprintf("#%08X", cssSecClr));
+	}
 }
 
 void ColorWidget::setPaletteTglFn(std::function<void(void)> cb) {
@@ -52,14 +57,25 @@ void ColorWidget::setPaletteTglFn(std::function<void(void)> cb) {
 }
 
 void ColorWidget::updatePrimaryClr() {
-	clr.setPrimaryColor(primaryClr.getColor());
+	RGB_u color = primaryClr.getColor();
+	if (clr.setPrimaryColor(color)) {
+		eui_root_css_property_set("--clr-pri", svprintf("#%08X", bswap_32(color.rgb)));
+		tm.emitLocalStateChanged<ColorProvider>();
+	}
 }
 
 void ColorWidget::updateSecondaryClr() {
-	clr.setSecondaryColor(secondaryClr.getColor());
+	RGB_u color = secondaryClr.getColor();
+	if (clr.setSecondaryColor(color)) {
+		eui_root_css_property_set("--clr-sec", svprintf("#%08X", bswap_32(color.rgb)));
+		tm.emitLocalStateChanged<ColorProvider>();
+	}
 }
 
 bool ColorWidget::swapColors() {
-	clr.swapColors();
+	if (clr.swapColors()) {
+		tm.emitLocalStateChanged<ColorProvider>();
+	}
+
 	return false;
 }

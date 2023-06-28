@@ -2,8 +2,10 @@
 
 #include <memory>
 #include <string>
+#include <tuple>
 #include <string_view>
 #include <unordered_map>
+
 #include "util/NonCopyable.hpp"
 #include "util/explints.hpp"
 #include "util/net/PacketReader.hpp"
@@ -49,8 +51,12 @@ public:
 	bool open(std::string wsUrl, std::string_view worldToJoin);
 	bool reconnect();
 	void close();
+	void send(std::tuple<std::unique_ptr<u8[]>, std::size_t> pkt);
+	void send(std::unique_ptr<u8[]> buf, std::size_t len);
 
 	World* getWorld();
+	// Can load through the ws connection or return cached object. Non-blocking and no cb, info missing while it loads.
+	User& getUser(User::Id uid);
 
 	bool freeMemory();
 

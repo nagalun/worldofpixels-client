@@ -8,6 +8,19 @@
 #include "tools/ToolManager.hpp"
 #include "tools/providers/ColorProvider.hpp"
 
+PipetteTool::State::State()
+: clicking(false) { }
+
+bool PipetteTool::State::setClicking(bool st) {
+	bool changed = st != clicking;
+	clicking = st;
+	return changed;
+}
+
+bool PipetteTool::State::isClicking() const {
+	return clicking;
+}
+
 struct PipetteTool::Keybinds {
 	ImAction iSelectTool;
 	ImAction iPickPrimaryColor;
@@ -15,8 +28,8 @@ struct PipetteTool::Keybinds {
 
 	Keybinds(InputAdapter& ia)
 	: iSelectTool(ia, "Select", T_ONPRESS),
-	  iPickPrimaryColor(ia, "Pick primary color", T_ONPRESS | T_ONMOVE),
-	  iPickSecondaryColor(ia, "Pick secondary color", T_ONPRESS | T_ONMOVE) {
+	  iPickPrimaryColor(ia, "Pick primary color", T_ONPRESS | T_ONMOVE | T_ONRELEASE),
+	  iPickSecondaryColor(ia, "Pick secondary color", T_ONPRESS | T_ONMOVE | T_ONRELEASE) {
 
 		iSelectTool.setDefaultKeybind("I");
 
@@ -32,26 +45,35 @@ PipetteTool::PipetteTool(std::tuple<ToolManager&, InputAdapter&> params)
 
 	World& w = tm.getWorld();
 	SelfCursor& sc = w.getCursor();
-	ColorProvider& clr = tm.get<ColorProvider>();
+	ColorProvider::State& clr = tm.getLocalState().get<ColorProvider>();
+	PipetteTool::State& st = tm.getLocalState().get<PipetteTool>();
 
 	kb->iSelectTool.setCb([this] (auto&, const auto&) {
 		tm.selectTool<PipetteTool>();
 	});
 
-	kb->iPickPrimaryColor.setCb([&] (auto&, const auto&) {
-		clr.setPrimaryColor(w.getPixel(sc.getX(), sc.getY()));
+	kb->iPickPrimaryColor.setCb([&] (auto&, const InputInfo& ii) {
+		bool upd = false;
+		upd |= clr.setPrimaryColor(w.getPixel(sc.getX(), sc.getY()));
+		upd |= st.setClicking(ii.getNumActivePointers() > 0);
+
+		if (upd) {
+			tm.emitLocalStateChanged<PipetteTool>();
+		}
 	});
 
-	kb->iPickSecondaryColor.setCb([&] (auto&, const auto&) {
-		clr.setSecondaryColor(w.getPixel(sc.getX(), sc.getY()));
+	kb->iPickSecondaryColor.setCb([&] (auto&, const InputInfo& ii) {
+		bool upd = false;
+		upd |= clr.setSecondaryColor(w.getPixel(sc.getX(), sc.getY()));
+		upd |= st.setClicking(ii.getNumActivePointers() > 0);
+
+		if (upd) {
+			tm.emitLocalStateChanged<PipetteTool>();
+		}
 	});
 
 	onSelectionChanged(false);
 }
-
-// remote ctor
-PipetteTool::PipetteTool(ToolManager& tm)
-: Tool(tm) { }
 
 PipetteTool::~PipetteTool() { }
 
@@ -63,11 +85,11 @@ std::string_view PipetteTool::getName() const {
 	return getNameSt();
 }
 
-void PipetteTool::onSelectionChanged(bool selected) {
-	if (!kb) {
-		return;
-	}
+std::string_view PipetteTool::getToolVisualName(const ToolStates&) const {
+	return "pipette";
+}
 
+void PipetteTool::onSelectionChanged(bool selected) {
 	kb->iPickPrimaryColor.setEnabled(selected);
 	kb->iPickSecondaryColor.setEnabled(selected);
 }
@@ -77,5 +99,15 @@ bool PipetteTool::isEnabled() {
 }
 
 std::uint8_t PipetteTool::getNetId() const {
-	return 1;
+	return net::ToolId::TID_PIPETTE;
+}
+
+std::uint64_t PipetteTool::getNetState(const ToolStates& ts) const {
+	const auto& st = ts.get<PipetteTool>();
+	return st.isClicking();
+}
+
+bool PipetteTool::setStateFromNet(ToolStates& ts, std::uint64_t netState) {
+	auto& st = ts.get<PipetteTool>();
+	return st.setClicking(netState & 1);
 }

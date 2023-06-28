@@ -23,3 +23,13 @@ template<typename T>
 void ToolManager::selectTool() {
 	selectTool(&std::get<T>(tools));
 }
+
+template<typename T>
+void ToolManager::emitLocalStateChanged() {
+	if constexpr (std::is_base_of_v<Tool, T>) {
+		onLocalStateChanged(getLocalState(), &get<T>());
+	} else {
+		// for provider updates just notify changes with the current tool
+		onLocalStateChanged(getLocalState(), getSelectedTool());
+	}
+}

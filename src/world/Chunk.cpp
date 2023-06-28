@@ -4,6 +4,7 @@
 #include <cmath>
 
 #include "util/BufferHelper.hpp"
+#include "util/emsc/time.hpp"
 #include "util/rle.hpp"
 #include "world/World.hpp"
 #include "Camera.hpp"
@@ -20,18 +21,10 @@ Chunk::Chunk(Pos x, Pos y, World& w)
   x(x),
   y(y),
   loaderRequest(nullptr, destroyWget),
-  canUnload(false),
-  downscaling(std::min(std::max(1.f, std::floor(1.f / w.getCamera().getZoom())), 16.f)) {
-
-	// terrible use of unique_ptr. 1 + needed because request id can be 0
-	loaderRequest.reset(reinterpret_cast<void *>(1 + async_request(
-			w.getChunkUrl(x, y), "GET", nullptr, this, true,
-			Chunk::loadCompleted, Chunk::loadFailed, nullptr)));
-
-	//std::printf("[Chunk] Created (%i, %i)\n", x, y);
-
-	preventUnloading(false);
-}
+  canUnload(true),
+  downscaling(std::min(std::max(1.f, std::floor(1.f / w.getCamera().getZoom())), 16.f)),
+  numErrors(0),
+  lastErrTs(0.f) { }
 
 Chunk::~Chunk() {
 	w.signalChunkUnloaded(this);
@@ -43,6 +36,10 @@ Chunk::Pos Chunk::getX() const {
 
 Chunk::Pos Chunk::getY() const {
 	return y;
+}
+
+twoi32 Chunk::getUpdArea() const {
+	return World::updAreaOf(getX() * Chunk::size, getY() * Chunk::size);
 }
 
 bool Chunk::setPixel(u16 pxX, u16 pxY, RGB_u clr, bool alphaBlending) {
@@ -95,9 +92,37 @@ const ChunkGlState& Chunk::getGlState() const {
 	return glst;
 }
 
+bool Chunk::tryLoad() {
+	if (isLoading()) {
+		return false;
+	}
+
+	// exponential backoff in case of load errors
+	if (glst.getLoadState() == ChunkGlState::LoadState::ERROR
+			&& (getTime() - lastErrTs) < std::pow(2.f, numErrors >= 3 ? 3 : numErrors)) {
+		return false;
+	}
+
+	preventUnloading(true);
+
+	glst.loading();
+	// terrible use of unique_ptr. 1 + needed because request id can be 0
+	loaderRequest.reset(reinterpret_cast<void *>(1 + async_request(
+			w.getChunkUrl(x, y), "GET", nullptr, this, true,
+			Chunk::loadCompleted, Chunk::loadFailed, nullptr)));
+
+	preventUnloading(false);
+	return true;
+}
+
+bool Chunk::isLoading() const {
+	return loaderRequest != nullptr;
+}
+
 bool Chunk::isReady() const {
 	// if no request pending, it means the chunk has been loaded (or failed to)
-	return !loaderRequest;
+	return !loaderRequest && glst.getLoadState() != ChunkGlState::LoadState::LOADING
+			&& glst.getLoadState() != ChunkGlState::LoadState::ERROR;
 }
 
 bool Chunk::shouldUnload() const {
@@ -108,8 +133,6 @@ bool Chunk::shouldUnload() const {
 void Chunk::preventUnloading(bool state) {
 	canUnload = !state;
 }
-
-
 
 void Chunk::loadCompleted(unsigned, void * e, void * buf, unsigned len) {
 	Chunk& c = *static_cast<Chunk *>(e);
@@ -148,7 +171,8 @@ void Chunk::loadCompleted(unsigned, void * e, void * buf, unsigned len) {
 	}
 
 	c.loaderRequest = nullptr;
-	c.w.signalChunkUpdated(&c);
+	c.numErrors = 0;
+	c.w.signalChunkLoaded(&c);
 
 	const char * status = "ed";
 	switch (loadStatus) {
@@ -174,6 +198,8 @@ void Chunk::loadFailed(unsigned, void * e, int code, const char * err) {
 	c.w.signalChunkUpdated(&c);
 
 	c.loaderRequest = nullptr;
+	++c.numErrors;
+	c.lastErrTs = getTime();
 	std::printf("[Chunk] Load request failed (%i, %i), (%i): %s\n", c.x, c.y, code, err);
 
 	c.preventUnloading(false);

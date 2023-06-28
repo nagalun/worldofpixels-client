@@ -16,6 +16,7 @@
 #include "world/Chunk.hpp"
 #include "gl/ChunkRendererGlState.hpp"
 #include "gl/ChunkUpdaterGlState.hpp"
+#include "gl/CursorRendererGlState.hpp"
 
 class World;
 
@@ -37,9 +38,11 @@ private:
 	gl::WebGlContext ctx;
 	std::optional<ChunkRendererGlState> cRendererGl;
 	std::optional<ChunkUpdaterGlState> cUpdaterGl;
+	std::optional<CursorRendererGlState> cCursorGl;
 	glm::mat4 view; // view matrix
 	glm::mat4 projection;
 	decltype(Settings::showGrid)::SlotKey skShowGridCh;
+	decltype(Settings::invertClrs)::SlotKey skInvertClrsCh;
 	float lastRenderTime;
 	u8 pendingRenderType;
 	u8 contextFailureCount;
@@ -54,7 +57,6 @@ public:
 	sz_t getMaxVisibleChunks() const;
 	const gl::GlContext& getGlContext() const;
 
-	void loadMissingChunks();
 	bool isChunkVisible(Chunk::Pos x, Chunk::Pos y, float extraPxMargin = 0.f) const;
 	bool isChunkVisible(const Chunk&, float extraPxMargin = 0.f) const;
 	void chunkToUpdate(Chunk *);

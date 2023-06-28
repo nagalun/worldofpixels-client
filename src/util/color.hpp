@@ -14,4 +14,6 @@ union RGB_u {
 	u32 rgb;
 };
 
-RGB_u read_css_hex_color(std::string_view);
+RGB_u color_from_css_hex(std::string_view);
+RGB_u color_from_rgb565(u16 clr);
+u16 color_to_rgb565(RGB_u clr);

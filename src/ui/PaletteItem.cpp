@@ -36,7 +36,7 @@ PaletteItem::PaletteItem(ColorProvider& clrp, std::vector<RGB_u> clrs)
 
 	for (RGB_u clr : clrs) {
 		auto& clrElem = colors.emplace_back(clr, [this, clr] {
-			this->clrp.setPrimaryColor(clr);
+			//this->clrp.setPrimaryColor(clr);
 		});
 
 		clrElem.appendTo(*this);
@@ -64,7 +64,7 @@ PaletteItem::PaletteItem(PaletteItem&& o) noexcept
   colors(std::move(o.colors)) {
 	for (auto& clr : colors) {
 		clr.setCb([this, clr{clr.getColor()}] {
-			this->clrp.setPrimaryColor(clr);
+			//this->clrp.setPrimaryColor(clr);
 		});
 	}
 }

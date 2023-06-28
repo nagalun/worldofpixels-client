@@ -15,6 +15,14 @@ ChunkGlState::ChunkGlState()
   protTex(nullptr),
   ls(LoadState::LOADING) { }
 
+bool ChunkGlState::loading() {
+	ls = LoadState::LOADING;
+	pixelTex = nullptr;
+	protTex = nullptr;
+	textureCache.freeMem();
+	return true;
+}
+
 bool ChunkGlState::loadEmpty() {
 	ls = LoadState::EMPTY;
 	return true;
@@ -84,6 +92,7 @@ void ChunkGlState::queueSetPixelWithBlending(u16 x, u16 y, RGB_u rgba) {
 		readTexToCache();
 	}
 
+	// blending is done in the cpu because opengl can't do accurate blending
 	textureCache.setPixel(x, y, rgba, true);
 	pendingPxUpdates.emplace_back(PxUpdate{x, y, textureCache.getPixel(x, y)});
 }

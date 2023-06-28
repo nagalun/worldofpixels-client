@@ -6,6 +6,7 @@
 #include <memory>
 
 #include "gl/ChunkGlState.hpp"
+#include "util/misc.hpp"
 #include "world/ChunkConstants.hpp"
 
 class World;
@@ -21,6 +22,8 @@ class Chunk : public ChunkConstants {
 	ChunkGlState glst;
 	bool canUnload;
 	u8 downscaling;
+	u8 numErrors;
+	float lastErrTs;
 
 public:
 	Chunk(Pos x, Pos y, World&);
@@ -28,6 +31,7 @@ public:
 
 	Pos getX() const;
 	Pos getY() const;
+	twoi32 getUpdArea() const;
 
 	bool setPixel(u16 x, u16 y, RGB_u, bool alphaBlending);
 	RGB_u getPixel(u16 x, u16 y) const;
@@ -37,6 +41,8 @@ public:
 	void setProtectionGid(ProtPos x, ProtPos y, ProtGid gid);
 	ProtGid getProtectionGid(ProtPos x, ProtPos y) const;
 
+	bool tryLoad();
+	bool isLoading() const;
 	bool isReady() const;
 	bool shouldUnload() const;
 	void preventUnloading(bool);

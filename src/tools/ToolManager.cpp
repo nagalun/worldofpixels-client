@@ -2,58 +2,87 @@
 
 #include <utility>
 
+#include "PacketDefinitions.hpp"
+#include "ToolStates.hpp"
+#include "tools/Tool.hpp"
 #include "util/misc.hpp"
 #include "InputManager.hpp"
 
-ToolManager::ToolManager(World& w, InputAdapter& ia)
-: selectedTool(nullptr),
-  w(w),
-  local(true),
+ToolManager::ToolManager(World& w, ToolStates& localState, InputAdapter& ia)
+: w(w),
+  localState(localState),
   providers(cartesian_make_tuple<ProvidersTuple>(std::forward_as_tuple(*this, ia.mkAdapter("Tools")))),
-  tools(cartesian_make_tuple<ToolsTuple>(std::forward_as_tuple(*this, ia.mkAdapter("Tools")))) {
-	selectTool<MoveTool>();
-}
-
-ToolManager::ToolManager(World& w)
-: selectedTool(nullptr),
-  w(w),
-  local(false),
-  providers(cartesian_make_tuple<ProvidersTuple>(*this)),
-  tools(cartesian_make_tuple<ToolsTuple>(*this)) { }
-
-bool ToolManager::isLocal() const {
-	return local;
-}
+  tools(cartesian_make_tuple<ToolsTuple>(std::forward_as_tuple(*this, ia.mkAdapter("Tools")))) { }
 
 World& ToolManager::getWorld() {
 	return w;
 }
 
+ToolStates& ToolManager::getLocalState() {
+	return localState;
+}
+
+Tool* ToolManager::getByNetId(std::uint8_t id) {
+	Tool* r = nullptr;
+	// TODO: optimize this
+	forEachTool([id, &r] (int i, Tool& t) {
+		if (id == t.getNetId()) {
+			r = &t;
+		}
+	});
+
+	return r;
+}
+
 Tool* ToolManager::getSelectedTool() {
-	return selectedTool;
+	return getSelectedTool(localState);
 }
 
-void ToolManager::setOnSelectionChanged(std::function<void(Tool* old, Tool* cur)> cb) {
-	onSelectionChanged = std::move(cb);
+Tool* ToolManager::getSelectedTool(const ToolStates& ts) {
+	return getByNetId(ts.getSelectedToolNetId());
 }
 
-void ToolManager::selectTool(Tool* tool) {
-	if (tool == selectedTool) {
+void ToolManager::selectTool(Tool* newTool) {
+	ToolStates& ts = getLocalState();
+	Tool* oldTool = getSelectedTool();
+
+	if (oldTool == newTool) {
 		return;
 	}
 
-	Tool* oldTool = selectedTool;
-	selectedTool = tool;
+	std::uint8_t newTid = net::ToolId::TID_UNKNOWN;
 
 	if (oldTool != nullptr) {
 		oldTool->onSelectionChanged(false);
 	}
 
-	if (selectedTool != nullptr) {
-		selectedTool->onSelectionChanged(true);
+	if (newTool != nullptr) {
+		newTool->onSelectionChanged(true);
+		newTid = newTool->getNetId();
 	}
 
-	if (onSelectionChanged) {
-		onSelectionChanged(oldTool, selectedTool);
+	ts.setSelectedToolNetId(newTid);
+
+	onLocalStateChanged(ts, newTool);
+}
+
+std::uint64_t ToolManager::getState(const ToolStates& ts) {
+	Tool* t = getSelectedTool(ts);
+	if (!t) {
+		return 0;
 	}
+
+	return t->getNetState(ts);
+}
+
+bool ToolManager::updateState(ToolStates& ts, std::uint8_t newTid, std::uint64_t newState) {
+	bool updated = ts.getSelectedToolNetId() != newTid;
+	ts.setSelectedToolNetId(newTid);
+	Tool* t = getSelectedTool(ts);
+
+	if (t) {
+		updated |= t->setStateFromNet(ts, newState);
+	}
+
+	return updated;
 }

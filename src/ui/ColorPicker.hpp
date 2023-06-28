@@ -18,11 +18,10 @@ public:
 	ColorPicker(ColorPicker&&) noexcept;
 	const ColorPicker& operator=(ColorPicker&&) noexcept;
 
-	void setColor(RGB_u);
+	bool setColor(RGB_u);
 	RGB_u getColor() const;
 
 private:
 	bool colorChanged();
 	RGB_u readColor() const;
 };
-

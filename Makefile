@@ -45,7 +45,12 @@ OPT_DBG += -O0 -g -gdwarf-5 -gsplit-dwarf -gpubnames
 OPT_DBG += -ffile-prefix-map=$(CURDIR)=.
 #-gseparate-dwarf=$(TARGET:.js=.dbg.wasm)
 LD_DBG  += $(OPT_DBG)
-LD_DBG  += -s ERROR_ON_WASM_CHANGES_AFTER_LINK=1 -s ASSERTIONS=1
+LD_DBG  += -s ERROR_ON_WASM_CHANGES_AFTER_LINK=1 -s ASSERTIONS=1 -s WASM_BIGINT=1
+
+OPT_LDBG += -O2
+OPT_LDBG += -ffile-prefix-map=$(CURDIR)=.
+LD_LDBG  += $(OPT_DBG)
+LD_LDBG  += -s ERROR_ON_WASM_CHANGES_AFTER_LINK=1 -s ASSERTIONS=1 -s WASM_BIGINT=1
 
 ifdef DISABLE_AUTO_REFRESH
 OPT_DBG += -D DISABLE_AUTO_REFRESH=1
@@ -60,7 +65,6 @@ EM_CONF_LD += -s GL_SUPPORT_AUTOMATIC_ENABLE_EXTENSIONS=0 -s GL_SUPPORT_SIMPLE_E
 EM_CONF_LD += -s GL_EXTENSIONS_IN_PREFIXED_FORMAT=0 -s GL_EMULATE_GLES_VERSION_STRING_FORMAT=0
 
 EM_CONF_LD += -s INITIAL_MEMORY=8MB -s TOTAL_STACK=32KB -s ALLOW_MEMORY_GROWTH=0 -s ABORTING_MALLOC=0 #-s MALLOC=emmalloc
-EM_CONF_LD += -s WASM_BIGINT=1
 EM_CONF_LD += -s FETCH_SUPPORT_INDEXEDDB=0 -s WEBGL2_BACKWARDS_COMPATIBILITY_EMULATION=1
 EM_CONF_LD += -s HTML5_SUPPORT_DEFERRING_USER_SENSITIVE_REQUESTS=0
 EM_CONF_LD += -s INCOMING_MODULE_JS_API=[] -s EXPORTED_RUNTIME_METHODS=['callMain']
@@ -85,11 +89,11 @@ CPPFLAGS += -iquote ./src/
 LDFLAGS  += -lGL
 
 
-.PHONY: all dbg udbg rel static clean .FORCE
+.PHONY: all dbg udbg ldbg rel static clean .FORCE
 
 .FORCE:
 
-all: dbg
+all: ldbg
 
 udbg: DEFS += -D OWOP_VERSION='$(TREE_STATE)' -D DEBUG=1
 udbg: CPPFLAGS += $(OPT_DBG) $(DEFS) -fsanitize=address,undefined
@@ -103,13 +107,20 @@ dbg: LDFLAGS += $(LD_DBG)
 dbg: PPFLAGS += $(DEFS)
 dbg: static $(TARGET)
 
+# light debug
+ldbg: DEFS += -D OWOP_VERSION='$(TREE_STATE)' -D DEBUG=1
+ldbg: CPPFLAGS += $(OPT_LDBG) $(DEFS)
+ldbg: LDFLAGS += $(LD_LDBG)
+ldbg: PPFLAGS += $(DEFS)
+ldbg: static $(TARGET)
+
 rel: DEFS += -D OWOP_VERSION='$(TREE_STATE)'
 rel: CPPFLAGS += $(OPT_REL) $(DEFS)
 rel: LDFLAGS  += $(LD_REL)
 rel: PPFLAGS += $(DEFS)
 rel: static $(TARGET)
 
-$(TARGET): $(OBJ_FILES)
+$(TARGET): $(OBJ_FILES) build/jute.o
 	$(CXX) $(LDFLAGS) -o $@ $^ $(LDLIBS)
 	$(DWP) -e $(@:.js=.wasm) -o $(@:.js=.wasm.dwp)
 
@@ -135,6 +146,9 @@ $(OBJ_DIR)/main.o: .FORCE
 
 $(OUT_DIR) $(patsubst %/,%,$(sort $(dir $(OBJ_FILES)))):
 	@mkdir -p $@
+
+build/jute.o: lib/json/jute.cpp
+	$(CXX) $(CPPFLAGS) -c -o $@ $<
 
 clean:
 	- $(RM) -r $(OBJ_DIR) ./$(OUT_DIR)/* $(STATIC_DIR)/preprocessor/static_files.txt $(STATIC_DIR)/theme/builtin.json

@@ -1,4 +1,5 @@
 #include "util/Bucket.hpp"
+#include "emsc/time.hpp"
 
 Bucket::Bucket(Bucket::Rate rate, Bucket::Per per)
 : rate(rate),
@@ -25,7 +26,7 @@ void Bucket::set(Bucket::Rate nrate, Bucket::Per nper, Bucket::Allowance nallowa
 }
 
 bool Bucket::canSpend(Rate count) const {
-	const auto now = std::chrono::steady_clock::now();
+	const auto now = getStClock(true);
 	std::chrono::duration<Allowance> passed = now - lastCheck;
 	Allowance ace = allowance + passed.count() * (static_cast<Allowance>(rate) / per);
 
@@ -37,7 +38,7 @@ bool Bucket::canSpend(Rate count) const {
 }
 
 bool Bucket::spend(Rate count) {
-	const auto now = std::chrono::steady_clock::now();
+	const auto now = getStClock(true);
 	std::chrono::duration<Allowance> passed = now - lastCheck;
 	lastCheck = now;
 	allowance += passed.count() * (static_cast<Allowance>(rate) / per);

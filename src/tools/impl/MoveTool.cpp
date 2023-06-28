@@ -5,6 +5,7 @@
 #include <chrono>
 
 #include "InputManager.hpp"
+#include "PacketDefinitions.hpp"
 #include "tools/ToolManager.hpp"
 #include "world/World.hpp"
 #include "world/SelfCursor.hpp"
@@ -12,6 +13,19 @@
 
 #include <glm/geometric.hpp>
 #include <glm/vec2.hpp>
+
+MoveTool::State::State()
+: clicking(false) { }
+
+bool MoveTool::State::isClicking() const {
+	return clicking;
+}
+
+bool MoveTool::State::setClicking(bool st) {
+	bool changed = st != clicking;
+	clicking = st;
+	return changed;
+}
 
 struct MoveTool::Keybinds {
 	ImAction iSelectTool;
@@ -52,6 +66,7 @@ MoveTool::MoveTool(std::tuple<ToolManager&, InputAdapter&> params)
 
 	Camera& c = tm.getWorld().getCamera();
 	SelfCursor& sc = tm.getWorld().getCursor();
+	MoveTool::State& st = tm.getLocalState().get<MoveTool>();
 
 	kb->iSelectTool.setCb([this] (auto&, const auto&) {
 		tm.selectTool<MoveTool>();
@@ -95,6 +110,10 @@ MoveTool::MoveTool(std::tuple<ToolManager&, InputAdapter&> params)
 		auto moveTime = ii.getTimestamp();
 		const auto& po = ii.getPointers();
 		int numActivePtrs = ii.getNumActivePointers();
+
+		if (st.setClicking(numActivePtrs > 0)) {
+			tm.emitLocalStateChanged<MoveTool>();
+		}
 
 		if (ev.getActivationType() & (T_ONPRESS | T_ONCANCEL)) {
 			c.setMomentum(0.f, 0.f);
@@ -147,10 +166,6 @@ MoveTool::MoveTool(std::tuple<ToolManager&, InputAdapter&> params)
 	onSelectionChanged(false);
 }
 
-// remote ctor
-MoveTool::MoveTool(ToolManager& tm)
-: Tool(tm) { }
-
 MoveTool::~MoveTool() { }
 
 const char * MoveTool::getNameSt() {
@@ -161,11 +176,11 @@ std::string_view MoveTool::getName() const {
 	return getNameSt();
 }
 
-void MoveTool::onSelectionChanged(bool selected) {
-	if (!kb) {
-		return;
-	}
+std::string_view MoveTool::getToolVisualName(const ToolStates&) const {
+	return "move";
+}
 
+void MoveTool::onSelectionChanged(bool selected) {
 	kb->iCamPan.setEnabled(selected);
 }
 
@@ -174,5 +189,20 @@ bool MoveTool::isEnabled() {
 }
 
 std::uint8_t MoveTool::getNetId() const {
-	return 1;
+	return net::ToolId::TID_MOVE;
+}
+
+std::uint8_t MoveTool::getToolVisualState(const ToolStates& ts) const {
+	const auto& st = ts.get<MoveTool>();
+	return st.isClicking() ? 1 : 0;
+}
+
+std::uint64_t MoveTool::getNetState(const ToolStates& ts) const {
+	const auto& st = ts.get<MoveTool>();
+	return st.isClicking();
+}
+
+bool MoveTool::setStateFromNet(ToolStates& ts, std::uint64_t netState) {
+	auto& st = ts.get<MoveTool>();
+	return st.setClicking(netState & 1);
 }

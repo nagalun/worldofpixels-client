@@ -25,6 +25,10 @@ ChunkUpdaterGlState::ChunkUpdaterGlState()
 	vao.enableAttribs(ChunkUpdaterShader::attribs.size());
 }
 
+bool ChunkUpdaterGlState::ok() const {
+	return fb.get() && verts.get() && updateBuf.get() && cup.get() && vao.get();
+}
+
 void ChunkUpdaterGlState::use() {
 	vao.use();
 	cup.use();

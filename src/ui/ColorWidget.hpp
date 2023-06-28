@@ -2,21 +2,23 @@
 
 #include <cstdint>
 
+#include "tools/providers/ColorProvider.hpp"
 #include "ui/misc/UiButton.hpp"
 #include "ui/ColorPicker.hpp"
 #include "util/NonCopyable.hpp"
 
-class ColorProvider;
+class ToolManager;
 
 class ColorWidget : public eui::Object, NonCopyable {
-	ColorProvider& clr;
+	ToolManager& tm;
+	ColorProvider::State& clr;
 	ColorPicker primaryClr;
 	ColorPicker secondaryClr;
 	UiButton paletteBtn;
 	UiButton swapBtn;
 
 public:
-	ColorWidget(ColorProvider&);
+	ColorWidget(ToolManager& tm, ColorProvider::State&);
 
 	void update();
 	void setPaletteTglFn(std::function<void(void)>);

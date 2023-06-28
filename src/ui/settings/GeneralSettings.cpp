@@ -5,6 +5,7 @@
 GeneralSettings::GeneralSettings()
 : hdrAppearance("h1"),
   showGrid(S::get().showGrid, "Show grid"),
+  invertClrs(S::get().invertClrs, "Inverted world colors"),
   nativeRes(S::get().nativeRes, "Native resolution"),
   showProtectionZones(S::get().showProtectionZones, "Show protection zones"),
   hideAllPlayers(S::get().hideAllPlayers, "Hide all players"),
@@ -18,6 +19,7 @@ GeneralSettings::GeneralSettings()
 	hdrAppearance.setProperty("textContent", "Appearance");
 	hdrAppearance.appendTo(*this);
 	showGrid.appendTo(*this);
+	invertClrs.appendTo(*this);
 	nativeRes.appendTo(*this);
 	showProtectionZones.appendTo(*this);
 	hideAllPlayers.appendTo(*this);

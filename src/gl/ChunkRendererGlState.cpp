@@ -15,6 +15,10 @@ ChunkRendererGlState::ChunkRendererGlState()
 	vao.enableAttribs(ChunkShader::attribs.size());
 }
 
+bool ChunkRendererGlState::ok() const {
+	return verts.get() && texturedProg.get() && emptyProg.get() && loadingProg.get() && vao.get();
+}
+
 void ChunkRendererGlState::use() {
 	vao.use();
 }

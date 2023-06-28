@@ -37,9 +37,10 @@ private:
 public:
 	ChunkUpdaterGlState();
 
+	bool ok() const;
+
 	void use();
 	void uploadPxData(const std::vector<PxUpdate>&);
 	void uploadProtData(const std::vector<ProtUpdate>&);
 	void nullDataBuffer(sz_t nullSize);
 };
-

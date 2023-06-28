@@ -19,20 +19,20 @@
 	"tools": {
 		"shadow_opts": {
 			"enable": true,
-			"allow_growing_tex": false,
+			"allow_growing_tex": true,
 			"color": "#0000007F",
-			"blur": 2,
+			"blur": 4,
 			"offset_x": 2,
 			"offset_y": 2
 		},
 		"definitions": [
-			{"name": "Pencil", "hotspot": [7, 2]},
-			{"name": "Move", "hotspot": [18, 18]},
-			{"name": "Zoom", "hotspot": [22, 13]},
-			{"name": "Pipette", "hotspot": [3, 32]},
-			{"name": "Fill", "hotspot": [7, 34]},
-			{"name": "Export", "hotspot": [0, 3]},
-			{"name": "Ruler", "hotspot": [0, 3]}
+			{"name": "pencil", "hotspot": [7, 2]},
+			{"name": "move", "hotspot": [18, 18]},
+			{"name": "zoom", "hotspot": [22, 13]},
+			{"name": "pipette", "hotspot": [3, 32]},
+			{"name": "fill", "hotspot": [7, 34]},
+			{"name": "export", "hotspot": [0, 3]},
+			{"name": "ruler", "hotspot": [0, 3]}
 		]
 	}
 }

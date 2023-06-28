@@ -14,19 +14,22 @@ class ColorProvider : NonCopyable {
 	struct LocalContext;
 	std::unique_ptr<LocalContext> lctx;
 
-	RGB_u primaryColor;
-	RGB_u secondaryColor;
-
 public:
-	ColorProvider(std::tuple<ToolManager&, InputAdapter&>); // local ctor
-	ColorProvider(ToolManager&); // remote ctor
+	class State {
+		RGB_u primaryColor;
+		RGB_u secondaryColor;
+
+	public:
+		State();
+
+		RGB_u getPrimaryColor() const;
+		RGB_u getSecondaryColor() const;
+
+		bool swapColors();
+		bool setPrimaryColor(RGB_u);
+		bool setSecondaryColor(RGB_u);
+	};
+
+	ColorProvider(std::tuple<ToolManager&, InputAdapter&> params);
 	~ColorProvider();
-
-	RGB_u getPrimaryColor() const;
-	RGB_u getSecondaryColor() const;
-
-	void swapColors();
-	void setPrimaryColor(RGB_u);
-	void setSecondaryColor(RGB_u);
 };
-

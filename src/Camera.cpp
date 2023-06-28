@@ -1,4 +1,5 @@
 #include "Camera.hpp"
+#include "util/emsc/time.hpp"
 
 #include <emscripten.h>
 #include <cmath>
@@ -30,14 +31,14 @@ float Camera::getY() const {
 }
 
 float Camera::getDx() const {
-	float elapsedMs = emscripten_get_now() - momentumStartTs;
+	float elapsedMs = getTime() * 1000.f - momentumStartTs;
 	float curExp = std::exp(-elapsedMs / timeConstantMs);
 	float curDx = momentumDx * curExp;
 	return curDx;
 }
 
 float Camera::getDy() const {
-	float elapsedMs = emscripten_get_now() - momentumStartTs;
+	float elapsedMs = getTime() * 1000.f - momentumStartTs;
 	float curExp = std::exp(-elapsedMs / timeConstantMs);
 	float curDy = momentumDy * curExp;
 	return curDy;
@@ -96,12 +97,10 @@ void Camera::translate(float dx, float dy) {
 }
 
 void Camera::setMomentum(float dx, float dy) {
-	using namespace std::chrono;
-	using fmillis = duration<float, std::milli>;
 	momentumDx = dx;
 	momentumDy = dy;
 	if (momentumDx != 0.f || momentumDy != 0.f) {
-		momentumStartTs = duration_cast<fmillis>(steady_clock::now().time_since_epoch()).count();
+		momentumStartTs = getTime(true) * 1000.f;
 	}
 }
 

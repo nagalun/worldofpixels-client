@@ -1,5 +1,10 @@
 #include "uvias/UviasRank.hpp"
 
+UviasRank::UviasRank()
+: id(0),
+  superUser(false),
+  selfManage(false) { }
+
 UviasRank::UviasRank(UviasRank::Id id, std::string name, bool superUser, bool selfManage)
 : name(std::move(name)),
   id(id),

@@ -38,6 +38,7 @@ private:
 public:
 	ChunkGlState();
 
+	bool loading();
 	bool loadEmpty();
 	bool loadTextures(PngImage&&, const ChunkConstants::ProtTexture&);
 	bool loadError();

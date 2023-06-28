@@ -12,10 +12,14 @@ ChunkProgram::ChunkProgram(std::string_view fshdr)
   uMat(findUniform("mat")),
   uZoom(findUniform("zoom")),
   uShowGrid(findUniform("showGrid")),
+  uInvertClrs(findUniform("invertClrs")),
   uChunkSize(findUniform("chunkSize")),
   uOffset(findUniform("chunkOffset")),
+  uBgClr(findUniform("bgClr")),
+  lastBgClr(0.f),
   lastZoom(0.f),
-  lastShowGrid(false) {
+  lastShowGrid(false),
+  lastInvertClrs(false) {
 	use();
 	setUShowGrid(true);
 	setUChunkSize(Chunk::size);
@@ -28,12 +32,26 @@ void ChunkProgram::setUShowGrid(bool show) {
 	}
 }
 
+void ChunkProgram::setUInvertColors(bool invert) {
+	if (lastInvertClrs != invert) {
+		glUniform1i(uInvertClrs, invert);
+		lastInvertClrs = invert;
+	}
+}
+
 void ChunkProgram::setUChunkSize(float chunkSize) {
 	glUniform1f(uChunkSize, chunkSize);
 }
 
 void ChunkProgram::setUOffset(glm::vec2 chunkOffset) {
 	glUniform2f(uOffset, chunkOffset.x, chunkOffset.y);
+}
+
+void ChunkProgram::setUBgClr(glm::vec3 bgClr) {
+	if (lastBgClr != bgClr) {
+		glUniform3f(uBgClr, bgClr.r, bgClr.g, bgClr.b);
+		lastBgClr = bgClr;
+	}
 }
 
 void ChunkProgram::setUMats(const glm::mat4& proj, const glm::mat4& view) {

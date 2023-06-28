@@ -17,6 +17,7 @@ private:
 	UviasRank rank;
 
 public:
+	User(Id);
 	User(Id, Rep total, UviasRank, std::string);
 
 	Id getId() const;

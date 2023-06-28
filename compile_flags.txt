@@ -13,7 +13,7 @@
 -DGLM_FORCE_PRECISION_MEDIUMP_FLOAT
 -D__EMSCRIPTEN__=1
 -I/home/eldit/.emsdk/upstream/emscripten/system/include/
--I./lib/glm/
+-I./lib/
 -iquote
 ./src/
 -DDEBUG=1

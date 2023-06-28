@@ -31,10 +31,13 @@ button.owop-ui:active::after, a.owop-ui:active::after {
 	filter: brightness(0.8);
 }
 
-#game-data::after { /* preload textures */
+#game-data::before, #game-data::after { /* preload textures, used by loaded theme */
 	position: absolute;
 	width: 0;
 	height: 0;
+}
+
+#game-data::after { /* preload textures */
 	content: var(--tex-url-tools) var(--tex-url-tools-text)
 		var(--tex-url-border) var(--tex-url-border-active) var(--tex-url-ui);
 }
